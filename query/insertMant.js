@@ -1,8 +1,8 @@
 const mysql = require('../database/index');
 
-function insertar (folio,fcreacion,falta,descrip,callback){
-    mysql.query(`Insert into mantenimiento (folioMant, F_creacion, F_alta, descrip) values ("${folio}", "${fcreacion}", "${falta}", "${descrip}")`, function(error,respuesta){
-        
+function insertar (folioMant, falta, fabricacion, tipoAct,  modelo, capacidad, clasificacion, nmotor, tipocontmate, especificacion, marca, descripadi,descripgen,idubicacion, callback){
+    mysql.query(`Insert into mantenimiento (folioMant, falta, fabricacion, tipoAct,  modelo, capacidad, clasificacion, nmotor, tipocontmate, especificacion, marca, descripadi,descripgen,idubicacion)
+         values ("${folioMant}", "${falta}", "${fabricacion}", "${tipoAct}","${modelo}","${capacidad}","${clasificacion}","${nmotor}","${tipocontmate}","${especificacion}","${marca}","${descripadi}","${descripgen}","${idubicacion}")`, function(error,respuesta){
         if(error){
             callback(null,{
                   mensaje:  error
@@ -10,7 +10,7 @@ function insertar (folio,fcreacion,falta,descrip,callback){
         }
         else{
             callback(null,{
-                mensaje:  'Datos guardados con el id => ' + respuesta.insertId
+                mensaje: folioMant //'Datos guardados con el id => ' + respuesta.insertId
             })
 
         }

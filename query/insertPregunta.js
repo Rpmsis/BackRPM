@@ -1,7 +1,7 @@
 const mysql = require('../database/index');
 
-function insertar (responsable, preguntas, areas, periodo, activo, fecha, inconformidad,  estatus, callback){
-    mysql.query(`Insert into forms (responsable, preguntas, areas, periodo, activo, fechaInicio, inconformidad, estatus) values ("${responsable}", "${preguntas}", "${areas}", "${periodo}","${activo}","${fecha}", "${inconformidad}", "${estatus}")`, function(error,respuesta){
+function insertar (responsable, preguntas,  periodo,  fecha,  inconformidad,  estatus, callback){
+    mysql.query(`Insert into forms (responsable, preguntas, periodo, folioActivo, Fcreacion, fechaInicio, inconformidad, estatus) values ("${responsable}", "${preguntas}", "${periodo}","${periodo}","${fecha}","${fecha}", "${inconformidad}", "${estatus}")`, function(error,respuesta){
         
         if(error){
             callback(null,{

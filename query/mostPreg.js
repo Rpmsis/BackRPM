@@ -13,7 +13,7 @@ function mostrar (callback){
                 respuesta
             })
         }
-        console.log(respuesta);
+        //console.log(respuesta);
     });
 
 }

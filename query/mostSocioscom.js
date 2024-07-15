@@ -18,4 +18,3 @@ function mostrar (callback){
 
 }
 module.exports = mostrar
-

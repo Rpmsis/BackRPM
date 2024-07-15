@@ -1,7 +1,7 @@
 const mysql = require('../database/index');
 
-function insertar (folio,fcreacion,falta,descrip, callback){
-    mysql.query(`Insert into activosfijos (folioActivo, Fcreacion, Falta, descripcion) values ("${folio}", "${fcreacion}", "${falta}", "${descrip}")`, function(error,respuesta){
+function insertar (folio,fcreacion, callback){
+    mysql.query(`Insert into activosfijos (folioActivo, Fcreacion) values ("${folio}", "${fcreacion}")`, function(error,respuesta){
         
         if(error){
             callback(null,{
@@ -10,7 +10,7 @@ function insertar (folio,fcreacion,falta,descrip, callback){
         }
         else{
             callback(null,{
-                mensaje:  'Datos guardados con el id => ' + respuesta.insertId
+                mensaje:  folio//'Datos guardados con el id => ' + respuesta.insertId
             })
 
         }

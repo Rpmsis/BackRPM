@@ -1,7 +1,7 @@
 const mysql = require('../database/index');
 
 function mostrar (callback){
-    mysql.query(`Select * from activosfijos`, function(error,respuesta){
+    mysql.query(`Select * from respuesta`, function(error,respuesta){
         
         if(error){
             callback(null,{

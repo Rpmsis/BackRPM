@@ -4,21 +4,39 @@ const moment = require('moment');
 const jwt = require('jsonwebtoken');
 const most = require('./query/mostrar');
 const mostPreg = require('./query/mostPreg');
+const mostUnidad = require('./query/mostUnidad');
+const mostRespuesta = require('./query/mostRespuesta');
+const mostActmantt = require('./query/mostActmantt');
+const mostmantt = require('./query/mostMantt');
+const mostubi = require('./query/mostUbi');
+const mostActif = require('./query/mostActvif');
+const mostConsumible = require('./query/mostConsumible');
 const Folio = require('./query/folio')
+const Folioconsumible = require('./query/folioconsumible')
 const inserPre = require('./query/insertPregunta');
 const inser = require('./query/insertar');
 const inserMante = require('./query/insertMant');
 const inserInsumos = require('./query/insertInsumos');
-const elim = require('./query/eliminar');
+const inserUnidad = require('./query/insertUnidad');
+const inserRespuesta = require('./query/insertrespuesta');
+const inserUbi = require('./query/insertUbi');
+const inserActif = require('./query/insertActif');
+const inserConsumible = require('./query/insertConsumible');
 const editPreg = require('./query/actualizarPreg');
+const editDesinsum = require('./query/actualizarDesinsum');
+const editMantt = require('./query/actualizarmantt');
+const editActi = require('./query/actualizarActi');
+const editConsu = require('./query/actualizarConsu');
+const elim = require('./query/eliminar');
 const verificar_Token = require('./middleware/Valida_Token');
 const app = express()
 const port = 3001
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cors());
-const fecha = moment().format("DD-MM-YY");
+const fecha = moment().format("YYYY-MM-DD");
 
+/* Mostrar */
 app.get('/activosFijos', (req, res) => {
     most(function (error, respuesta) {
 
@@ -33,11 +51,10 @@ app.get('/activosFijos', (req, res) => {
                 respuesta
             })
         }
-        console.log(respuesta);
+        //console.log(respuesta);
     })
 }
 )
-
 app.get('/folio', (req, res) => {
     Folio(function (error, respuesta) {
 
@@ -52,12 +69,10 @@ app.get('/folio', (req, res) => {
                 respuesta
             })
         }
-        console.log(respuesta);
+        //console.log(respuesta);
     })
 }
 )
-
-
 app.get('/preguntas', (req, res) => {
     mostPreg(function (error, respuesta) {
 
@@ -72,16 +87,232 @@ app.get('/preguntas', (req, res) => {
                 respuesta
             })
         }
-        console.log(respuesta);
+        //console.log(respuesta);
     })
 }
 )
+app.get('/unidades', (req, res) => {
+    mostUnidad(function (error, respuesta) {
 
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            res.status(200).json({
+                respuesta
+            })
+        }
+        //console.log(respuesta);
+    })
+}
+)
+app.get('/respuestas', (req, res) => {
+    mostRespuesta(function (error, respuesta) {
+
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            res.status(200).json({
+                respuesta
+            })
+        }
+        //console.log(respuesta);
+    })
+}
+)
+app.get('/actmantt', (req, res) => {
+    mostActmantt(function (error, respuesta) {
+
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            res.status(200).json({
+                respuesta
+            })
+        }
+        //onsole.log(respuesta);
+    })
+}
+)
+app.get('/mantenimiento', (req, res) => {
+    mostmantt(function (error, respuesta) {
+
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            res.status(200).json({
+                respuesta
+            })
+        }
+        //console.log(respuesta);
+    })
+}
+)
+app.get('/ubicacion', (req, res) => {
+    mostubi(function (error, respuesta) {
+
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            res.status(200).json({
+                respuesta
+            })
+        }
+        //console.log(respuesta);
+    })
+}
+)
+app.get('/actividades', (req, res) => {
+    mostActif(function (error, respuesta) {
+
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            res.status(200).json({
+                respuesta
+            })
+        }
+        //console.log(respuesta);
+    })
+}
+)
+app.get('/folioconsumible', (req, res) => {
+    Folioconsumible(function (error, respuesta) {
+
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            res.status(200).json({
+                respuesta
+            })
+        }
+        //console.log(respuesta);
+    })
+}
+)
+app.get('/consumibles', (req, res) => {
+    mostConsumible(function (error, respuesta) {
+
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            res.status(200).json({
+                respuesta
+            })
+        }
+        //console.log(respuesta);
+    })
+}
+)
+/* Fin de mostrar */
+
+/* Insertar */
 app.post('/insertarForms', verificar_Token, (req, res) => {
     const usuario = req.usuario;
     console.log(usuario)
-    if (usuario.nombre && req.body.pregunta && req.body.areas && req.body.periodo && req.body.activo && fecha && req.body.inconformidad && req.body.estatus) {
-        inserPre(usuario.nombre, req.body.pregunta, req.body.areas, req.body.periodo, req.body.activo, fecha, req.body.inconformidad, req.body.estatus, function (error, respuesta) {
+    if (usuario.nombre && req.body.pregunta && req.body.periodo && fecha && req.body.inconformidad && req.body.estatus) {
+        inserPre(usuario.nombre, req.body.pregunta, req.body.periodo, fecha, req.body.inconformidad, req.body.estatus, function (error, respuesta) {
+
+            if (error) {
+                console.log(error)
+                res.status(404).json({
+                    mensaje: respuesta.mensaje
+                })
+            }
+            else {
+                res.status(200).json({
+                    mensaje: respuesta.mensaje
+                })
+            }
+            //console.log(respuesta);
+        })
+
+    }
+    else {
+        console.log("Existen datos vacíos");
+        res.status(400).json({
+            mensaje: "Existen datos vacíos"
+        });
+    }
+})
+app.post('/insertarUnidad', (req, res) => {
+    Folio(function (error, respuesta) {
+        if (error) {
+            console.log(error);
+            res.status(500).json({
+                mensaje: "Error al obtener el folio"
+            });
+        } else {
+            // Una vez que tenemos el folio, procedemos con la inserción
+            const folio = respuesta.folio;
+            console.log("Folio obtenido: ", folio)
+            if (folio && fecha && req.body.Falta && req.body.descrip) {
+                inserUnidad(folio, fecha, req.body.Falta, req.body.descrip, function (errorUnidad, respuestaUnidad) {
+                    if (errorUnidad) {
+                        console.error(errorUnidad);
+                        return res.status(404).json({ mensaje: respuestaUnidad.mensaje });
+                    } else {
+                        inser(folio, fecha, req.body.Falta, req.body.descrip, function (errorInser, respuestaInser) {
+                            if (errorInser) {
+                                console.error(errorInser);
+                                return res.status(404).json({ mensaje: respuestaInser.mensaje });
+                            } else {
+                                // Si no hay errores en ninguna de las inserciones, envía una respuesta exitosa
+                                res.status(200).json({
+                                    mensaje: "Ambas inserciones realizadas con éxito",
+                                    respuestaUnidad: respuestaUnidad,
+                                    respuestaInser: respuestaInser
+                                });
+                            }
+                        });
+
+                    }
+                });
+
+            } else {
+                console.log("Existen datos vacíos");
+                res.status(400).json({
+                    mensaje: "Existen datos vacíos"
+                });
+            }
+
+        }
+    })
+})
+app.post('/insertarRes', (req, res) => {
+    if (req.body.idPregunta && req.body.folioActivo && fecha && req.body.resp) {
+        inserRespuesta(req.body.idPregunta, req.body.folioActivo, fecha, req.body.resp, function (error, respuesta) {
 
             if (error) {
                 console.log(error)
@@ -112,42 +343,6 @@ app.post('/insertarForms', verificar_Token, (req, res) => {
     }
 ) */
 
-app.post('/insertarFolio', (req, res) => {
-    // Llamamos a la función que obtiene el folio
-    Folio(function (error, respuesta) {
-        if (error) {
-            console.log(error);
-            res.status(500).json({
-                mensaje: "Error al obtener el folio"
-            });
-        } else {
-            // Una vez que tenemos el folio, procedemos con la inserción
-            const folio = respuesta.folio;
-            console.log("Folio obtenido: ", folio)
-            if (folio && fecha && req.body.falta && req.body.descrip) {
-                inser(folio, fecha, req.body.falta, req.body.descrip, function (error, respuesta) {
-                    if (error) {
-                        console.log(error);
-                        res.status(404).json({
-                            mensaje: respuesta.mensaje
-                        });
-                    } else {
-                        res.status(200).json({
-                            mensaje: respuesta.mensaje,
-                            folio: folio
-                        });
-                    }
-                });
-            } else {
-                console.log("Existen datos vacíos");
-                res.status(400).json({
-                    mensaje: "Existen datos vacíos"
-                });
-            }
-        }
-    });
-});
-
 app.post('/insertarInsumos', (req, res) => {
     Folio(function (error, respuesta) {
         if (error) {
@@ -159,8 +354,8 @@ app.post('/insertarInsumos', (req, res) => {
             // Una vez que tenemos el folio, procedemos con la inserción
             const folio = respuesta.folio;
             console.log("Folio obtenido: ", folio)
-            if (folio && fecha && req.body.falta && req.body.descrip && req.body.prov && req.body.fDOS && req.body.monto && req.body.fadqui && req.body.numserie) {
-                inserInsumos(folio, fecha, req.body.falta, req.body.descrip, req.body.prov, req.body.fDOS, req.body.monto, req.body.fadqui, req.body.numserie, function (error, respuesta) {
+            if (folio && fecha && req.body.tipoAct && req.body.falta && req.body.descrip && req.body.proveedor && req.body.folioOC && req.body.monto && req.body.fadqui && req.body.numserie) {
+                inserInsumos(folio, fecha, req.body.tipoAct, req.body.falta, req.body.descrip, req.body.proveedor, req.body.folioOC, req.body.monto, req.body.fadqui, req.body.numserie, function (error, respuesta) {
 
                     if (error) {
                         console.log(error)
@@ -176,7 +371,7 @@ app.post('/insertarInsumos', (req, res) => {
                     //console.log(respuesta);
                 })
             } else {
-                console.log("Existen datos vacíos");
+                //console.log("Existen datos vacíos");
                 res.status(400).json({
                     mensaje: "Existen datos vacíos"
                 });
@@ -186,8 +381,8 @@ app.post('/insertarInsumos', (req, res) => {
     })
 
 })
-
 app.post('/insertarMante', (req, res) => {
+    console.log(req.body);
     Folio(function (error, respuesta) {
         if (error) {
             console.log(error);
@@ -197,42 +392,366 @@ app.post('/insertarMante', (req, res) => {
         } else {
             // Una vez que tenemos el folio, procedemos con la inserción
             const folio = respuesta.folio;
-            console.log("Folio obtenido: ", folio)
-            if (folio && fecha && req.body.falta && req.body.descrip) {
-                inserMante(folio, fecha, req.body.falta, req.body.descrip, function (errorMante, respuestaMante) {
-                    if (errorMante) {
-                        console.error(errorMante);
-                        return res.status(404).json({ mensaje: respuestaMante.mensaje });
-                    }
+            const tipo = req.body.tipoAct;
+            const noaplica = "NA";
+            if (tipo) {
+                if (tipo === "MONTACARGAS" || tipo === "MAQUINARIA" || tipo === "VEHÍCULOS" || tipo === "HERRAMIENTA") {
+                    if (tipo === "MONTACARGAS") {
+                        if (req.body.folioActivo && fecha && noaplica && req.body.tipoAct && req.body.modelo && req.body.capacidad && req.body.clasificacion && noaplica && noaplica && noaplica && noaplica && noaplica && noaplica) {
+                            inserMante(req.body.folioActivo, fecha, noaplica, req.body.tipoAct, req.body.modelo, req.body.capacidad, req.body.clasificacion, noaplica, noaplica, noaplica, noaplica, noaplica, noaplica, req.body.idubicacion, function (errorMante, respuestaMante) {
+                                if (errorMante) {
+                                    console.error(errorMante);
+                                    return res.status(404).json({ mensaje: respuestaMante.mensaje });
+                                }
+                                else {
+                                    // Si no hay errores en ninguna de las inserciones, envía una respuesta exitosa
+                                    res.status(200).json({
+                                        mensaje: "Datos guardados con exito",
+                                        respuestaMante: respuestaMante,
+                                    });
+                                }
+                            });
+                        }
+                        else {
+                            //console.log("Existen datos vacíos");
+                            res.status(400).json({
+                                mensaje: "Existen datos vacíos"
+                            });
 
-                    inser(folio, fecha, req.body.falta, req.body.descrip, function (errorInser, respuestaInser) {
-                        if (errorInser) {
-                            console.error(errorInser);
-                            return res.status(404).json({ mensaje: respuestaInser.mensaje });
+                        }
+                    }
+                    else {
+                        if (tipo === "MAQUINARIA") {
+                            if (req.body.folioActivo && fecha && noaplica && req.body.tipoAct && req.body.modelo && req.body.capacidad && req.body.clasificacion && noaplica && noaplica && noaplica && noaplica && noaplica && noaplica && noaplica) {
+                                inserMante(req.body.folioActivo, fecha, noaplica, req.body.tipoAct, req.body.modelo, req.body.capacidad, req.body.clasificacion, noaplica, noaplica, noaplica, noaplica, noaplica, noaplica, req.body.idubicacion, function (errorMante, respuestaMante) {
+                                    if (errorMante) {
+                                        console.error(errorMante);
+                                        return res.status(404).json({ mensaje: respuestaMante.mensaje });
+                                    }
+                                    else {
+                                        // Si no hay errores envía una respuesta exitosa
+                                        res.status(200).json({
+                                            mensaje: "Datos guardados con exito",
+                                            respuestaMante: respuestaMante,
+                                        });
+                                    }
+                                });
+
+                            }
+                            else {
+                                //console.log("Existen datos vacíos");
+                                res.status(400).json({
+                                    mensaje: "Existen datos vacíos"
+                                });
+
+                            }
+                        }
+                        else {
+                            if (tipo === "VEHÍCULOS") {
+                                if (req.body.folioActivo && fecha && noaplica && req.body.tipoAct && req.body.modelo && noaplica && req.body.clasificacion && req.body.nmotor && noaplica && noaplica && noaplica && noaplica && noaplica) {
+                                    inserMante(req.body.folioActivo, fecha, noaplica, req.body.tipoAct, req.body.modelo, noaplica, req.body.clasificacion, req.body.nmotor, noaplica, noaplica, noaplica, noaplica, noaplica, req.body.idubicacion, function (errorMante, respuestaMante) {
+                                        if (errorMante) {
+                                            console.error(errorMante);
+                                            return res.status(404).json({ mensaje: respuestaMante.mensaje });
+                                        }
+                                        else {
+                                            // Si no hay errores en ninguna de las inserciones, envía una respuesta exitosa
+                                            res.status(200).json({
+                                                mensaje: "Datos guardados con exito",
+                                                respuestaMante: respuestaMante,
+                                            });
+                                        }
+                                    });
+                                }
+                                else {
+                                    //console.log("Existen datos vacíos");
+                                    res.status(400).json({
+                                        mensaje: "Existen datos vacíos"
+                                    });
+                                }
+                            } else {
+                                if (tipo === "HERRAMIENTA") {
+                                    if (req.body.folioActivo && fecha && noaplica && req.body.tipoAct && req.body.modelo && noaplica && noaplica && noaplica && noaplica && noaplica && req.body.marca && noaplica && noaplica && noaplica) {
+                                        inserMante(req.body.folioActivo, fecha, noaplica, req.body.tipoAct, req.body.modelo, noaplica, noaplica, noaplica, noaplica, noaplica, req.body.marca, noaplica, noaplica, req.body.idubicacion, function (errorMante, respuestaMante) {
+                                            if (errorMante) {
+                                                console.error(errorMante);
+                                                return res.status(404).json({ mensaje: respuestaMante.mensaje });
+                                            }
+                                            else {
+                                                // Si no hay errores en ninguna de las inserciones, envía una respuesta exitosa
+                                                res.status(200).json({
+                                                    mensaje: "Datos guardados con exito",
+                                                    respuestaMante: respuestaMante,
+                                                });
+                                            }
+                                        });
+                                    }
+                                    else {
+                                        //console.log("Existen datos vacíos");
+                                        res.status(400).json({
+                                            mensaje: "Existen datos vacíos"
+                                        });
+
+                                    }
+
+
+                                }
+                            }
                         }
 
-                        // Si no hay errores en ninguna de las inserciones, envía una respuesta exitosa
-                        res.status(200).json({
-                            mensaje: "Ambas inserciones realizadas con éxito",
-                            respuestaMante: respuestaMante,
-                            respuestaInser: respuestaInser
-                        });
-                    });
-                });
 
-            } else {
-                console.log("Existen datos vacíos");
+                    }
+
+                } else {
+                    if (tipo === "INFRAESTRUCTURA") {
+                        if (folio && fecha && noaplica && req.body.tipoAct && noaplica && noaplica && req.body.clasificacion && noaplica && noaplica && noaplica && noaplica && req.body.descripadi && req.body.descripgen && req.body.idubicacion) {
+                            inserMante(folio, fecha, noaplica, req.body.tipoAct, noaplica, noaplica, req.body.clasificacion, noaplica, noaplica, noaplica, noaplica, req.body.descripadi, req.body.descripgen, req.body.idubicacion, function (errorMante, respuestaMante) {
+                                if (errorMante) {
+                                    console.error(errorMante);
+                                    return res.status(404).json({ mensaje: respuestaMante.mensaje });
+                                } else {
+                                    inser(folio, fecha, function (errorInser, respuestaInser) {
+                                        if (errorInser) {
+                                            console.error(errorInser);
+                                            return res.status(404).json({ mensaje: respuestaInser.mensaje });
+                                        } else {
+                                            // Si no hay errores en ninguna de las inserciones, envía una respuesta exitosa
+                                            res.status(200).json({
+                                                mensaje: respuestaMante.mensaje,
+                                                /* respuestaMante: respuestaMante,
+                                                respuestaInser: respuestaInser */
+                                            });
+
+                                        }
+                                    });
+                                }
+                            });
+                        }
+                        else {
+                            //console.log("Existen datos vacíos");
+                            res.status(400).json({
+                                mensaje: "Existen datos vacíos"
+                            });
+                        }
+
+
+                    }
+                    else {
+                        if (tipo === "EQUIPOS DE CONTENCIÓN" || tipo === "EQUIPOS PARA MANEJO DE MATERIALES") {
+                            if (folio && fecha && req.body.fabricacion && req.body.tipoAct && noaplica && req.body.capacidad && req.body.clasificacion && noaplica && req.body.tipocontmate && req.body.espeficicacion && noaplica && noaplica && req.body.descripgen && req.body.idubicacion) {
+                                inserMante(folio, fecha, req.body.fabricacion, req.body.tipoAct, noaplica, req.body.capacidad, req.body.clasificacion, noaplica, req.body.tipocontmate, req.body.espeficicacion, noaplica, noaplica, req.body.descripgen, req.body.idubicacion, function (errorMante, respuestaMante) {
+                                    if (errorMante) {
+                                        console.error(errorMante);
+                                        return res.status(404).json({ mensaje: respuestaMante.mensaje });
+                                    } else {
+                                        inser(folio, fecha, function (errorInser, respuestaInser) {
+                                            if (errorInser) {
+                                                console.error(errorInser);
+                                                return res.status(404).json({ mensaje: respuestaInser.mensaje });
+                                            } else {
+                                                // Si no hay errores en ninguna de las inserciones, envía una respuesta exitosa
+                                                res.status(200).json({
+                                                    mensaje: respuestaMante.mensaje,
+                                                    /* respuestaMante: respuestaMante,
+                                                    respuestaInser: respuestaInser */
+                                                });
+                                            }
+                                        });
+                                    }
+                                });
+                            }
+                            else {
+                                //console.log("Existen datos vacíos");
+                                res.status(400).json({
+                                    mensaje: "Existen datos vacíos"
+                                });
+
+                            }
+
+                        }
+                    }
+                }
+            }
+            else {
+                //console.log("Existen datos vacíos");
                 res.status(400).json({
                     mensaje: "Existen datos vacíos"
                 });
             }
 
+
+        }
+    })
+})
+app.post('/insertarUbi', (req, res) => {
+    if (fecha && req.body.descrip && req.body.area) {
+        inserUbi(fecha, req.body.descrip, req.body.area, function (error, respuesta) {
+
+            if (error) {
+                console.log(error)
+                res.status(404).json({
+                    mensaje: respuesta.mensaje
+                })
+            }
+            else {
+                res.status(200).json({
+                    mensaje: respuesta.mensaje
+                })
+            }
+            //console.log(respuesta);
+        })
+
+    }
+    else {
+        console.log("Existen datos vacíos");
+        res.status(400).json({
+            mensaje: "Existen datos vacíos"
+        });
+    }
+})
+app.post('/insertarActif', (req, res) => {
+    //console.log(req.body);
+    // timestandar,hora,minutos
+    if (req.body.actividad && fecha && req.body.kg && req.body.material && req.body.ubicacion && req.body.minutos) {
+        if(req.body.hora){
+            if (req.body.hora <= 24 && req.body.hora >= 1 && req.body.minutos <= 55 && req.body.minutos >= 1) {
+                //console.log(req.body.hora, req.body.minutos)
+                var tiempoest = 0;
+                const horaN = parseInt(req.body.hora) * 60;
+                tiempoest = horaN + parseInt(req.body.minutos);
+                console.log(tiempoest);
+                inserActif( req.body.actividad, fecha, req.body.kg,req.body.material,req.body.ubicacion,tiempoest,req.body.hora, req.body.minutos, function (error, respuesta) {
+    
+                if (error) {
+                    console.log(error)
+                    res.status(404).json({
+                        mensaje: respuesta.mensaje
+                    })
+                }
+                else {
+                    res.status(200).json({
+                        mensaje: respuesta.mensaje
+                    })
+                }
+                //console.log(respuesta);
+            }) 
+            }
+            else {
+                console.log("Algo esta mal en hora y minutos")
+                console.log("Existen datos vacíos");
+                res.status(400).json({
+                    mensaje: "Los valores de hora y minutos son incorrectos"
+                });
+    
+            }
+
+        }
+        else{
+            if (req.body.minutos <= 55 && req.body.minutos >= 1) {
+                const hora= 0;
+                inserActif( req.body.actividad, fecha, req.body.kg,req.body.material,req.body.ubicacion,req.body.minutos,hora, req.body.minutos, function (error, respuesta) {
+    
+                if (error) {
+                    console.log(error)
+                    res.status(404).json({
+                        mensaje: respuesta.mensaje
+                    })
+                }
+                else {
+                    res.status(200).json({
+                        mensaje: respuesta.mensaje
+                    })
+                }
+                //console.log(respuesta);
+            }) 
+            }
+            else {
+                console.log("Algo esta mal en hora y minutos")
+                console.log("Existen datos vacíos");
+                res.status(400).json({
+                    mensaje: "Los valores de minutos son incorrectos"
+                });
+    
+            }
+        }
+
+    }
+    else {
+        console.log("Existen datos vacíos");
+        res.status(400).json({
+            mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
+        });
+    }
+})
+app.post('/insertarConsumibles', (req, res) => {
+    Folioconsumible(function (error, respuesta) {
+        if (error) {
+            console.log(error);
+            res.status(500).json({
+                mensaje: "Error al obtener el folio"
+            });
+        } else {
+            // Una vez que tenemos el folio, procedemos con la inserción
+            const folio = respuesta.folio;
+            //console.log("Folio obtenido: ", folio)
+            if (folio && fecha && req.body.unidadmedida && req.body.fracciones && req.body.tipo && req.body.descripcion) {
+                if(req.body.enteros){
+                    if(req.body.enteros>=1 && req.body.fracciones>=1 && req.body.fracciones<=1000 ){
+                        var canestandar = 0;
+                        const Nenteros = parseInt(req.body.enteros) * 1000;
+                        canestandar = parseInt(req.body.fracciones) + Nenteros;
+
+                        console.log("Todo bien",canestandar);
+                        inserConsumible(folio,fecha,req.body.unidadmedida,req.body.enteros,req.body.fracciones,canestandar,req.body.tipo,req.body.descripcion, function (error, respuesta) {
+                            if (error) {
+                                console.log(error)
+                                res.status(404).json({
+                                    mensaje: respuesta.mensaje
+                                })
+                            }
+                            else {
+                                res.status(200).json({
+                                    mensaje: respuesta.mensaje
+                                })
+                            }
+                            //console.log(respuesta);
+                        })
+
+                    }
+                }
+                else{
+                    const enteros = 0;
+                    inserConsumible(folio,fecha,req.body.unidadmedida,enteros,req.body.fracciones,req.body.fracciones,req.body.tipo,req.body.descripcion, function (error, respuesta) {
+                        if (error) {
+                            console.log(error)
+                            res.status(404).json({
+                                mensaje: respuesta.mensaje
+                            })
+                        }
+                        else {
+                            res.status(200).json({
+                                mensaje: respuesta.mensaje
+                            })
+                        }
+                        //console.log(respuesta);
+                    })
+
+                }
+            } else {
+                //console.log("Existen datos vacíos");
+                res.status(400).json({
+                    mensaje: "Existen datos vacíos"
+                });
+            } 
+
         }
     })
 
-
 })
+/* Fin de insertar */
 
+
+/* Actualizar */
 app.put('/actualizarPreg', (req, res) => {
     if (req.body.idForms && req.body.preguntas && req.body.estatus) {
         editPreg(req.body.idForms, req.body.preguntas, req.body.estatus, function (error, respuesta) {
@@ -258,8 +777,188 @@ app.put('/actualizarPreg', (req, res) => {
         });
     }
 })
+app.put('/actualizarDesinsum', (req, res) => {
+    if (req.body.folioActivo && req.body.descripgen) {
+        //console.log(req.body)
+        editDesinsum(req.body.folioActivo, req.body.descripgen, function (error, respuesta) {
+            if (error) {
+                console.log(error)
+                res.status(404).json({
+                    mensaje: respuesta.mensaje
+                })
+            }
+            else {
+                res.status(200).json({
+                    mensaje: respuesta.mensaje
+                })
+            }
+            console.log(respuesta);
+        })
+    }
+    else {
+        console.log("Existen datos vacíos");
+        res.status(400).json({
+            mensaje: "Existen datos vacíos"
+        });
+    }
+})
+app.put('/actualizarmantt', (req, res) => {
+    if (req.body.id && req.body.idubicacion) {
+        //console.log(req.body)
+        editMantt(req.body.id, req.body.idubicacion, function (error, respuesta) {
+            if (error) {
+                console.log(error)
+                res.status(404).json({
+                    mensaje: respuesta.mensaje
+                })
+            }
+            else {
+                res.status(200).json({
+                    mensaje: respuesta.mensaje
+                })
+            }
+            console.log(respuesta);
+        })
+    }
+    else {
+        console.log("Existen datos vacíos");
+        res.status(400).json({
+            mensaje: "Existen datos vacíos"
+        });
+    }
+})
+app.put('/actualizaractivi', (req, res) => {
+    if (req.body.idactividades && req.body.actividad && req.body.kg && req.body.material && req.body.ubicacion && req.body.minutos) {
+        if(req.body.hora){
+            //console.log(req.body);
+            if (req.body.hora <= 24 && req.body.hora >= 1 && req.body.minutos <= 55 && req.body.minutos >= 1) {
+                //console.log(req.body.hora, req.body.minutos)
+                var tiempoest = 0;
+                const horaN = parseInt(req.body.hora) * 60;
+                tiempoest = horaN + parseInt(req.body.minutos);
+                console.log(tiempoest);
+                editActi( req.body.idactividades,req.body.actividad, req.body.kg,req.body.material,req.body.ubicacion,tiempoest,req.body.hora, req.body.minutos, function (error, respuesta) {
+    
+                if (error) {
+                    console.log(error)
+                    res.status(404).json({
+                        mensaje: respuesta.mensaje
+                    })
+                }
+                else {
+                    res.status(200).json({
+                        mensaje: respuesta.mensaje
+                    })
+                }
+                //console.log(respuesta);
+            }) 
+            }
+            else {
+                console.log("Algo esta mal en hora y minutos")
+                console.log("Existen datos vacíos");
+                res.status(400).json({
+                    mensaje: "Los valores de hora y minutos son incorrectos"
+                });
+    
+            }
+
+        }
+        else{
+            if (req.body.minutos <= 55 && req.body.minutos >= 1) {
+                //console.log(req.body);
+                const hora= 0;
+                editActi(req.body.idactividades, req.body.actividad, req.body.kg,req.body.material,req.body.ubicacion,req.body.minutos,hora, req.body.minutos, function (error, respuesta) {
+    
+                if (error) {
+                    console.log(error)
+                    res.status(404).json({
+                        mensaje: respuesta.mensaje
+                    })
+                }
+                else {
+                    res.status(200).json({
+                        mensaje: respuesta.mensaje
+                    })
+                }
+                //console.log(respuesta);
+            }) 
+            }
+            else {
+                console.log("Algo esta mal en hora y minutos")
+                console.log("Existen datos vacíos");
+                res.status(400).json({
+                    mensaje: "Los valores de minutos son incorrectos"
+                });
+    
+            }
+        }
+
+    }
+    else {
+        console.log("Existen datos vacíos");
+        res.status(400).json({
+            mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
+        });
+    }
+})
+app.put('/actualizarconsu', (req, res) => {
+
+    if (req.body.id && req.body.unidadmedida && req.body.fracciones && req.body.tipo && req.body.descripcion) {
+        if(req.body.enteros){
+            if(req.body.enteros>=1 && req.body.fracciones>=1 && req.body.fracciones<=1000 ){
+                var canestandar = 0;
+                const Nenteros = parseInt(req.body.enteros) * 1000;
+                canestandar = parseInt(req.body.fracciones) + Nenteros;
+                console.log("Todo bien",canestandar);
+                editConsu(req.body.id,req.body.unidadmedida,req.body.enteros,req.body.fracciones,canestandar,req.body.tipo,req.body.descripcion, function (error, respuesta) {
+                    if (error) {
+                        console.log(error)
+                        res.status(404).json({
+                            mensaje: respuesta.mensaje
+                        })
+                    }
+                    else {
+                        res.status(200).json({
+                            mensaje: respuesta.mensaje
+                        })
+                    }
+                    //console.log(respuesta);
+                })
+
+            }
+        }
+        else{
+            const enteros = 0;
+            editConsu(req.body.id,enteros,req.body.fracciones,req.body.fracciones,req.body.tipo,req.body.descripcion, function (error, respuesta) {
+                if (error) {
+                    console.log(error)
+                    res.status(404).json({
+                        mensaje: respuesta.mensaje
+                    })
+                }
+                else {
+                    res.status(200).json({
+                        mensaje: respuesta.mensaje
+                    })
+                }
+                //console.log(respuesta);
+            })
+
+        }
+    } else {
+        //console.log("Existen datos vacíos");
+        res.status(400).json({
+            mensaje: "Existen datos vacíos"
+        });
+    } 
+
+        
+})
+/* Fin de actualizar */
 
 
+
+/* Borrar */
 app.delete('/eliminar', (req, res) => {
     if (req.body.id) {
         elim(req.body.id, function (error, respuesta) {
@@ -284,7 +983,7 @@ app.delete('/eliminar', (req, res) => {
         });
     }
 })
-
+/* Fin de borrar */
 
 
 app.listen(port, () => {
