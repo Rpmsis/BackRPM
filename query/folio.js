@@ -23,8 +23,8 @@ async function mostFolio(callback) {
         else {
             if (respuesta && respuesta.length > 0) {
                 const fechaFolio = respuesta[0].folioActivo.toString().substring(0, 6);
-                console.log("Ultima fecha => " + fechaFolio)
-                console.log("Fecha actual => " + fecha)
+                /* console.log("Ultima fecha => " + fechaFolio)
+                console.log("Fecha actual => " + fecha) */
                 if (fecha === fechaFolio) {
                     const numFolio = respuesta[0].folioActivo.toString().substring(6);
                     /* console.log("Número de folio=> "+numFolio) */

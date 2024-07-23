@@ -18,7 +18,7 @@ function actualizar (idproveedor, nombre, email, movil, tel, rsocial, rfc,
         }
         else{
             callback(null,{
-                mensaje: 'Actividad actualizada' //'Pregunta actualizado con el id => ' + id
+                mensaje: 'Proveedor registrado' //'Pregunta actualizado con el id => ' + id
             })
         }
         console.log(respuesta);

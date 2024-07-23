@@ -1,7 +1,7 @@
 const mysql = require('../database/index');
 
-function actualizar (id, actividad,kg,material,ubicacion, timestandar,hora,minutos, callback){
-    mysql.query(`Update actividades  set actividad = '${actividad}', kg = '${kg}', material = '${material}', ubicacion = '${ubicacion}', timestandar = '${timestandar}', hora = '${hora}', minutos = '${minutos}' WHERE idactividades = '${id}' `, function(error,respuesta){
+function actualizar (id, actividad, timestandar,hora,minutos, callback){
+    mysql.query(`Update actividades  set actividad = '${actividad}', timestandar = '${timestandar}', hora = '${hora}', minutos = '${minutos}' WHERE idactividades = '${id}' `, function(error,respuesta){
         
         if(error){
             callback(null,{

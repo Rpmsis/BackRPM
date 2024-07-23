@@ -1,5 +1,6 @@
 const express = require('express')
 const cors = require('cors');
+const axios = require('axios');
 const moment = require('moment');
 const jwt = require('jsonwebtoken');
 const most = require('./query/mostrar');
@@ -13,6 +14,8 @@ const mostubi = require('./query/mostUbi');
 const mostActif = require('./query/mostActvif');
 const mostConsumible = require('./query/mostConsumible');
 const mostProveedores = require('./query/mostProveedores');
+const mostUsuarioprov = require('./query/mostUsuarioprov');
+const mostMaterial = require('./query/mostMaterial');
 const Folio = require('./query/folio')
 const Folioconsumible = require('./query/folioconsumible')
 const inserPre = require('./query/insertPregunta');
@@ -24,13 +27,19 @@ const inserRespuesta = require('./query/insertrespuesta');
 const inserUbi = require('./query/insertUbi');
 const inserActif = require('./query/insertActif');
 const inserConsumible = require('./query/insertConsumible');
+const insertarProveedor = require('./query/insertProveedores');
+const insertarUsuarioprov = require('./query/insertUsuarioprov');
+const insertarMaterial = require('./query/insertMaterial');
 const editPreg = require('./query/actualizarPreg');
 const editDesinsum = require('./query/actualizarDesinsum');
 const editMantt = require('./query/actualizarmantt');
 const editActi = require('./query/actualizarActi');
 const editConsu = require('./query/actualizarConsu');
 const editInsumos = require('./query/actualizarInsumos');
+const editProv = require('./query/actualizarProv');
+const editMaterial = require('./query/actualizarMate');
 const elim = require('./query/eliminar');
+const elimUsuarioprov = require('./query/eliminarUsuarioprov');
 const verificar_Token = require('./middleware/Valida_Token');
 const app = express()
 const port = 3001
@@ -274,6 +283,72 @@ app.get('/proveedores', (req, res) => {
     })
 }
 )
+app.get('/Usuarioprov', (req, res) => {
+    mostUsuarioprov(function (error, respuesta) {
+
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            res.status(200).json({
+                respuesta
+            })
+        }
+        //console.log(respuesta);
+    })
+}
+)
+app.get('/codigo_postal', async (req, res) => {
+    /* EJEMPLO DE CONSULTA: `http://localhost:3001/codigo_postal?cp=${cp}` */
+    const cp = req.query.cp;
+    //console.log(cp)
+    if (!cp || !/^\d{5}$/.test(cp)) {
+        res.status(404).json({ mensaje: 'El código postal no es correcto' });
+    }
+    else {
+        try {
+            const response = await axios.get(`https://api.tau.com.mx/dipomex/v1/codigo_postal`, {
+                params: { cp },
+                headers: {
+                    APIKEY: '7a20c08510d424b52e0e07809120c919163ba494', // Reemplaza con tu API Key
+                },
+            });
+            const datosback = response.data;
+            if (response.status === 500) {
+                res.status(404).json({ error: 'Error interno en el servidor externo' });
+            }
+            res.status(200).json({
+                datosback
+            })
+        } catch (error) {
+            //console.error('Error al obtener el código postal:', error);
+            //res.status(error.response ? error.response.status : 400).json({ error: 'Error al obtener el código postal' });
+            return res.status(404).json({ error: 'El código postal no existe' });
+        }
+
+    }
+});
+app.get('/material', (req, res) => {
+    mostMaterial(function (error, respuesta) {
+
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            res.status(200).json({
+                respuesta
+            })
+        }
+        //console.log(respuesta);
+    })
+}
+)
 /* Fin de mostrar */
 
 /* Insertar */
@@ -376,11 +451,11 @@ app.post('/insertarRes', (req, res) => {
     }
 })
 
-/* Enviar los datos de un solo id para mostrar, actualizar o eliminar
- app.put('/personas/:id', (req, res) => {
-    console.log(req.params)
-    }
-) */
+//Enviar los datos de un solo id para mostrar, actualizar o eliminar
+/* app.put('/personas/:id', (req, res) => {
+   console.log(req.params)
+   }
+)  */
 
 app.post('/insertarInsumos', (req, res) => {
     Folio(function (error, respuesta) {
@@ -447,8 +522,7 @@ app.post('/insertarMante', (req, res) => {
                                 else {
                                     // Si no hay errores en ninguna de las inserciones, envía una respuesta exitosa
                                     res.status(200).json({
-                                        mensaje: "Datos guardados con exito",
-                                        respuestaMante: respuestaMante,
+                                        mensaje: respuestaMante.mensaje,
                                     });
                                 }
                             });
@@ -473,8 +547,7 @@ app.post('/insertarMante', (req, res) => {
                                         else {
                                             // Si no hay errores envía una respuesta exitosa
                                             res.status(200).json({
-                                                mensaje: "Datos guardados con exito",
-                                                respuestaMante: respuestaMante,
+                                                mensaje: respuestaMante.mensaje,
                                             });
                                         }
                                     });
@@ -497,10 +570,20 @@ app.post('/insertarMante', (req, res) => {
                                             return res.status(404).json({ mensaje: respuestaMante.mensaje });
                                         }
                                         else {
-                                            // Si no hay errores envía una respuesta exitosa
-                                            res.status(200).json({
-                                                mensaje: "Datos guardados con exito",
-                                                respuestaMante: respuestaMante,
+                                            inser(folio, fecha, function (errorInser, respuestaInser) {
+                                                if (errorInser) {
+                                                    console.error(errorInser);
+                                                    return res.status(404).json({ mensaje: respuestaInser.mensaje });
+                                                } else {
+                                                    // Si no hay errores en ninguna de las inserciones, envía una respuesta exitosa
+                                                    res.status(200).json({
+                                                        mensaje: respuestaMante.mensaje,
+                                                        /* respuestaMante: respuestaMante,
+                                                        respuestaInser: respuestaInser */
+                                                    });
+        
+                                                    console.log("RESPUESTA",respuestaMante.mensaje)
+                                                }
                                             });
                                         }
                                     });
@@ -526,8 +609,7 @@ app.post('/insertarMante', (req, res) => {
                                         else {
                                             // Si no hay errores en ninguna de las inserciones, envía una respuesta exitosa
                                             res.status(200).json({
-                                                mensaje: "Datos guardados con exito",
-                                                respuestaMante: respuestaMante,
+                                                mensaje: respuestaMante.mensaje,
                                             });
                                         }
                                     });
@@ -549,8 +631,7 @@ app.post('/insertarMante', (req, res) => {
                                             else {
                                                 // Si no hay errores en ninguna de las inserciones, envía una respuesta exitosa
                                                 res.status(200).json({
-                                                    mensaje: "Datos guardados con exito",
-                                                    respuestaMante: respuestaMante,
+                                                    mensaje: respuestaMante.mensaje,
                                                 });
                                             }
                                         });
@@ -591,6 +672,7 @@ app.post('/insertarMante', (req, res) => {
                                                 respuestaInser: respuestaInser */
                                             });
 
+                                            console.log("RESPUESTA",respuestaMante.mensaje)
                                         }
                                     });
                                 }
@@ -681,65 +763,137 @@ app.post('/insertarUbi', (req, res) => {
 app.post('/insertarActif', (req, res) => {
     //console.log(req.body);
     // timestandar,hora,minutos
-    if (req.body.actividad && fecha && req.body.kg && req.body.material && req.body.ubicacion && req.body.minutos) {
-        if (req.body.hora) {
-            if (req.body.hora <= 24 && req.body.hora >= 1 && req.body.minutos <= 55 && req.body.minutos >= 0) {
-                //console.log(req.body.hora, req.body.minutos)
-                var tiempoest = 0;
-                const horaN = parseInt(req.body.hora) * 60;
-                tiempoest = horaN + parseInt(req.body.minutos);
-                console.log(tiempoest);
-                inserActif(req.body.actividad, fecha, req.body.kg, req.body.material, req.body.ubicacion, tiempoest, req.body.hora, req.body.minutos, function (error, respuesta) {
+    const fam = "NA";
+    const proc = "NA";
+    if (req.body.unidad&& req.body.responsable && req.body.actividad && fecha && req.body.ubicacion && req.body.minutos) {
+        if (req.body.unidad === "SI") {
+            if (req.body.kg && req.body.familias && req.body.productos) {
+                if (req.body.hora) {
+                    if (req.body.hora <= 24 && req.body.hora >= 1 && req.body.minutos <= 55 && req.body.minutos >= 0) {
+                        //console.log(req.body.hora, req.body.minutos)
+                        var tiempoest = 0;
+                        const horaN = parseInt(req.body.hora) * 60;
+                        tiempoest = horaN + parseInt(req.body.minutos);
+                        console.log(tiempoest);
+                        inserActif(req.body.actividad, fecha, req.body.kg, req.body.familias, req.body.productos, req.body.ubicacion, tiempoest, req.body.hora, req.body.minutos, function (error, respuesta) {
 
-                    if (error) {
-                        console.log(error)
-                        res.status(404).json({
-                            mensaje: respuesta.mensaje
+                            if (error) {
+                                console.log(error)
+                                res.status(404).json({
+                                    mensaje: respuesta.mensaje
+                                })
+                            }
+                            else {
+                                res.status(200).json({
+                                    mensaje: respuesta.mensaje
+                                })
+                            }
+                            //console.log(respuesta);
                         })
                     }
                     else {
-                        res.status(200).json({
-                            mensaje: respuesta.mensaje
+                        console.log("Algo esta mal en hora y minutos")
+                        console.log("Existen datos vacíos");
+                        res.status(400).json({
+                            mensaje: "Los valores de hora y minutos son incorrectos"
+                        });
+
+                    }
+
+                }
+                else {
+                    if (req.body.minutos <= 55 && req.body.minutos >= 1) {
+                        const hora = 0;
+                        inserActif(req.body.actividad, fecha, req.body.kg, req.body.familias, req.body.productos, req.body.ubicacion, req.body.minutos, hora, req.body.minutos, function (error, respuesta) {
+
+                            if (error) {
+                                console.log(error)
+                                res.status(404).json({
+                                    mensaje: respuesta.mensaje
+                                })
+                            }
+                            else {
+                                res.status(200).json({
+                                    mensaje: respuesta.mensaje
+                                })
+                            }
+                            //console.log(respuesta);
                         })
                     }
-                    //console.log(respuesta);
-                })
-            }
-            else {
-                console.log("Algo esta mal en hora y minutos")
-                console.log("Existen datos vacíos");
-                res.status(400).json({
-                    mensaje: "Los valores de hora y minutos son incorrectos"
-                });
+                    else {
+                        console.log("Algo esta mal en hora y minutos")
+                        console.log("Existen datos vacíos");
+                        res.status(400).json({
+                            mensaje: "Los valores de minutos son incorrectos"
+                        });
 
+                    }
+                }
             }
-
         }
         else {
-            if (req.body.minutos <= 55 && req.body.minutos >= 1) {
-                const hora = 0;
-                inserActif(req.body.actividad, fecha, req.body.kg, req.body.material, req.body.ubicacion, req.body.minutos, hora, req.body.minutos, function (error, respuesta) {
+            if (req.body.unidad === "NO") {
+                if (req.body.hora) {
+                    if (req.body.hora <= 24 && req.body.hora >= 1 && req.body.minutos <= 55 && req.body.minutos >= 0) {
+                        //console.log(req.body.hora, req.body.minutos)
+                        var tiempoest = 0;
+                        const horaN = parseInt(req.body.hora) * 60;
+                        tiempoest = horaN + parseInt(req.body.minutos);
+                        console.log(tiempoest);
+                        inserActif(req.body.responsable, req.body.actividad, fecha, req.body.kg, fam, proc, req.body.ubicacion, tiempoest, req.body.hora, req.body.minutos, function (error, respuesta) {
 
-                    if (error) {
-                        console.log(error)
-                        res.status(404).json({
-                            mensaje: respuesta.mensaje
+                            if (error) {
+                                console.log(error)
+                                res.status(404).json({
+                                    mensaje: respuesta.mensaje
+                                })
+                            }
+                            else {
+                                res.status(200).json({
+                                    mensaje: respuesta.mensaje
+                                })
+                            }
+                            //console.log(respuesta);
                         })
                     }
                     else {
-                        res.status(200).json({
-                            mensaje: respuesta.mensaje
+                        console.log("Algo esta mal en hora y minutos")
+                        console.log("Existen datos vacíos");
+                        res.status(400).json({
+                            mensaje: "Los valores de hora y minutos son incorrectos"
+                        });
+
+                    }
+
+                }
+                else {
+                    if (req.body.minutos <= 55 && req.body.minutos >= 1) {
+                        const hora = 0;
+                        inserActif(req.body.responsable, req.body.actividad, fecha, req.body.kg, fam, proc, req.body.ubicacion, req.body.minutos, hora, req.body.minutos, function (error, respuesta) {
+
+                            if (error) {
+                                console.log(error)
+                                res.status(404).json({
+                                    mensaje: respuesta.mensaje
+                                })
+                            }
+                            else {
+                                res.status(200).json({
+                                    mensaje: respuesta.mensaje
+                                })
+                            }
+                            //console.log(respuesta);
                         })
                     }
-                    //console.log(respuesta);
-                })
-            }
-            else {
-                console.log("Algo esta mal en hora y minutos")
-                console.log("Existen datos vacíos");
-                res.status(400).json({
-                    mensaje: "Los valores de minutos son incorrectos"
-                });
+                    else {
+                        console.log("Algo esta mal en hora y minutos")
+                        console.log("Existen datos vacíos");
+                        res.status(400).json({
+                            mensaje: "Los valores de minutos son incorrectos"
+                        });
+
+                    }
+                }
 
             }
         }
@@ -819,14 +973,81 @@ app.post('/insertarConsumibles', (req, res) => {
 })
 app.post('/insertarProveedor', (req, res) => {
     const foliorpm = "FOLIORPM";
-    if (foliorpm && fecha && req.body.nombre && req.body.email && req.body.movil && req.body.tel && req.body.rsocial && req.body.rfc &&
-        req.body.rfiscal && req.body.cfdi && req.body.fpago && req.body.calle && req.body.next && req.body.colonia && req.body.ninten && req.body.municipio && 
-        req.body.ciudad && req.body.cpostal && req.body.cnombre && req.body.cemail && req.body.cmovil && req.body.ctel && req.body.beneficiario && req.body.nombanco && 
-        req.body.clabe && req.body.cuenta && req.body.refpago && req.body.credito && req.body.cdias) {
-        inserInsumos(foliorpm, fecha, req.body.nombre, req.body.email, req.body.movil, req.body.tel, req.body.rsocial, req.body.rfc,
-            req.body.rfiscal, req.body.cfdi, req.body.fpago, req.body.calle, req.body.next, req.body.colonia, req.body.ninten, req.body.municipio, 
-            req.body.ciudad, req.body.cpostal, req.body.cnombre, req.body.cemail, req.body.cmovil, req.body.ctel, req.body.beneficiario, req.body.nombanco, 
+    if (req.body.idusuarioprov && foliorpm && fecha && req.body.nombre && req.body.email && req.body.movil && req.body.tel && req.body.rsocial && req.body.rfc &&
+        req.body.rfiscal && req.body.cfdi && req.body.fpago && req.body.calle && req.body.next && req.body.colonia && req.body.ninten && req.body.municipio &&
+        req.body.ciudad && req.body.cpostal && req.body.cnombre && req.body.cemail && req.body.cmovil && req.body.ctel && req.body.beneficiario && req.body.nombanco &&
+        req.body.clabe && req.body.cuenta && req.body.refpago && req.body.credito) {
+        insertarProveedor(foliorpm, fecha, req.body.nombre, req.body.email, req.body.movil, req.body.tel, req.body.rsocial, req.body.rfc,
+            req.body.rfiscal, req.body.cfdi, req.body.fpago, req.body.calle, req.body.next, req.body.colonia, req.body.ninten, req.body.municipio,
+            req.body.ciudad, req.body.cpostal, req.body.cnombre, req.body.cemail, req.body.cmovil, req.body.ctel, req.body.beneficiario, req.body.nombanco,
             req.body.clabe, req.body.cuenta, req.body.refpago, req.body.credito, req.body.cdias, function (error, respuesta) {
+
+                if (error) {
+                    console.log(error)
+                    res.status(404).json({
+                        mensaje: respuesta.mensaje
+                    })
+                }
+                else {
+                    elimUsuarioprov(req.body.idusuarioprov, function (error, respuesta) {
+
+                        if (error) {
+                            console.log(error)
+                            res.status(404).json({
+                                mensaje: respuesta.mensaje
+                            })
+                        }
+                        else {
+                            res.status(200).json({
+                                mensaje: respuesta.mensaje
+                            })
+                        }
+                        console.log(respuesta);
+                    })
+                }
+                //console.log(respuesta);
+            })
+    } else {
+        //console.log("Existen datos vacíos");
+        res.status(400).json({
+            mensaje: "Existen datos vacíos"
+        });
+    }
+})
+app.post('/insertarUsuariprov', (req, res) => {
+    const foliorpm = "FOLIORPM";
+    if (foliorpm && fecha && req.body.nombre && req.body.email && req.body.movil && req.body.tel && req.body.rsocial && req.body.rfc &&
+        req.body.rfiscal && req.body.cfdi && req.body.fpago && req.body.calle && req.body.next && req.body.colonia && req.body.ninten && req.body.municipio &&
+        req.body.ciudad && req.body.cpostal && req.body.cnombre && req.body.cemail && req.body.cmovil && req.body.ctel && req.body.beneficiario && req.body.nombanco &&
+        req.body.clabe && req.body.cuenta && req.body.refpago && req.body.credito) {
+        insertarUsuarioprov(foliorpm, fecha, req.body.nombre, req.body.email, req.body.movil, req.body.tel, req.body.rsocial, req.body.rfc,
+            req.body.rfiscal, req.body.cfdi, req.body.fpago, req.body.calle, req.body.next, req.body.colonia, req.body.ninten, req.body.municipio,
+            req.body.ciudad, req.body.cpostal, req.body.cnombre, req.body.cemail, req.body.cmovil, req.body.ctel, req.body.beneficiario, req.body.nombanco,
+            req.body.clabe, req.body.cuenta, req.body.refpago, req.body.credito, req.body.cdias, function (error, respuesta) {
+
+                if (error) {
+                    console.log(error)
+                    res.status(404).json({
+                        mensaje: respuesta.mensaje
+                    })
+                }
+                else {
+                    res.status(200).json({
+                        mensaje: respuesta.mensaje
+                    })
+                }
+                //console.log(respuesta);
+            })
+    } else {
+        //console.log("Existen datos vacíos");
+        res.status(400).json({
+            mensaje: "Existen datos vacíos"
+        });
+    }
+})
+app.post('/insertarMaterial', (req, res) => {
+    if (fecha && req.body.fam && req.body.produc) {
+        insertarMaterial(fecha, req.body.fam, req.body.produc, function (error, respuesta) {
 
             if (error) {
                 console.log(error)
@@ -841,14 +1062,15 @@ app.post('/insertarProveedor', (req, res) => {
             }
             //console.log(respuesta);
         })
-    } else {
-        //console.log("Existen datos vacíos");
+
+    }
+    else {
+        console.log("Existen datos vacíos");
         res.status(400).json({
             mensaje: "Existen datos vacíos"
         });
     }
 })
-
 /* Fin de insertar */
 
 
@@ -929,7 +1151,8 @@ app.put('/actualizarmantt', (req, res) => {
     }
 })
 app.put('/actualizaractivi', (req, res) => {
-    if (req.body.idactividades && req.body.actividad && req.body.kg && req.body.material && req.body.ubicacion && req.body.minutos) {
+    console.log(req.body)
+    if (req.body.idactividades && req.body.actividad && req.body.hora && req.body.minutos) {
         if (req.body.hora) {
             //console.log(req.body);
             if (req.body.hora <= 24 && req.body.hora >= 1 && req.body.minutos <= 55 && req.body.minutos >= 1) {
@@ -938,7 +1161,7 @@ app.put('/actualizaractivi', (req, res) => {
                 const horaN = parseInt(req.body.hora) * 60;
                 tiempoest = horaN + parseInt(req.body.minutos);
                 console.log(tiempoest);
-                editActi(req.body.idactividades, req.body.actividad, req.body.kg, req.body.material, req.body.ubicacion, tiempoest, req.body.hora, req.body.minutos, function (error, respuesta) {
+                editActi(req.body.idactividades, req.body.actividad, tiempoest, req.body.hora, req.body.minutos, function (error, respuesta) {
 
                     if (error) {
                         console.log(error)
@@ -968,7 +1191,7 @@ app.put('/actualizaractivi', (req, res) => {
             if (req.body.minutos <= 55 && req.body.minutos >= 1) {
                 //console.log(req.body);
                 const hora = 0;
-                editActi(req.body.idactividades, req.body.actividad, req.body.kg, req.body.material, req.body.ubicacion, req.body.minutos, hora, req.body.minutos, function (error, respuesta) {
+                editActi(req.body.idactividades, req.body.actividad, req.body.minutos, hora, req.body.minutos, function (error, respuesta) {
 
                     if (error) {
                         console.log(error)
@@ -1058,6 +1281,61 @@ app.put('/actualizarconsu', (req, res) => {
 app.put('/actualizarInsumos', (req, res) => {
     if (req.body.IdInsumos && req.body.proveedor && req.body.monto && req.body.Numserie && req.body.folioOC) {
         editInsumos(req.body.IdInsumos, req.body.proveedor, req.body.monto, req.body.Numserie, req.body.folioOC, function (error, respuesta) {
+
+            if (error) {
+                console.log(error)
+                res.status(404).json({
+                    mensaje: respuesta.mensaje
+                })
+            }
+            else {
+                res.status(200).json({
+                    mensaje: respuesta.mensaje
+                })
+            }
+            console.log(respuesta);
+        })
+    }
+    else {
+        console.log("Existen datos vacíos");
+        res.status(400).json({
+            mensaje: "Existen datos vacíos"
+        });
+    }
+})
+app.put('/actualizarProv', (req, res) => {
+    if (req.body.idproveedor && req.body.nombre && req.body.email && req.body.movil && req.body.tel && req.body.rsocial && req.body.rfc &&
+        req.body.rfiscal && req.body.cfdi && req.body.fpago && req.body.calle && req.body.next && req.body.colonia && req.body.ninten && req.body.municipio &&
+        req.body.ciudad && req.body.cpostal && req.body.cnombre && req.body.cemail && req.body.cmovil && req.body.ctel && req.body.beneficiario && req.body.nombanco &&
+        req.body.clabe && req.body.cuenta && req.body.refpago && req.body.credito) {
+        editProv(req.body.idproveedor, req.body.nombre, req.body.email, req.body.movil, req.body.tel, req.body.rsocial, req.body.rfc,
+            req.body.rfiscal, req.body.cfdi, req.body.fpago, req.body.calle, req.body.next, req.body.colonia, req.body.ninten, req.body.municipio,
+            req.body.ciudad, req.body.cpostal, req.body.cnombre, req.body.cemail, req.body.cmovil, req.body.ctel, req.body.beneficiario, req.body.nombanco,
+            req.body.clabe, req.body.cuenta, req.body.refpago, req.body.credito, req.body.cdias, function (error, respuesta) {
+
+                if (error) {
+                    console.log(error)
+                    res.status(404).json({
+                        mensaje: respuesta.mensaje
+                    })
+                }
+                else {
+                    res.status(200).json({
+                        mensaje: respuesta.mensaje
+                    })
+                }
+                //console.log(respuesta);
+            })
+    } else {
+        //console.log("Existen datos vacíos");
+        res.status(400).json({
+            mensaje: "Existen datos vacíos"
+        });
+    }
+})
+app.put('/actualizarPreg', (req, res) => {
+    if (req.body.idmaterial && req.body.familia && req.body.producto) {
+        editMaterial(req.body.idmaterial, req.body.familia, req.body.producto, function (error, respuesta) {
 
             if (error) {
                 console.log(error)
