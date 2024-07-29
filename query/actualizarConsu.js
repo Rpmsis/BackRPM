@@ -1,8 +1,8 @@
 const mysql = require('../database/index');
 
-function actualizar (id, unidadmedida,enteros,fracciones,canestandar,tipo,descripcion, callback){
+function actualizar (id, cantidad,costo, codigobarras, callback){
 
-    mysql.query(`Update consumibles  set unidadmedida = '${unidadmedida}', enteros = '${enteros}', fracciones = '${fracciones}', canestandar = '${canestandar}', tipo = '${tipo}', descripcion = '${descripcion}' WHERE idconsumible = '${id}' `, function(error,respuesta){
+    mysql.query(`Update consumibles  set cantidad = '${cantidad}',costo = '${costo}', codigobarras = '${codigobarras}'  WHERE idconsumibles = '${id}' `, function(error,respuesta){
         
         if(error){
             callback(null,{

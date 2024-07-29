@@ -1,8 +1,8 @@
 const mysql = require('../database/index');
 
-function insertar(folioActivo,fecha,unidadmedida,cantidad,tipo,descripcion,codigobarras, callback) {
-    mysql.query(`Insert into consumibles (folioActivo,fecha,unidadmedida,cantidad,tipo,descripcion,codigobarras) 
-        values ("${folioActivo}", "${fecha}", "${unidadmedida}", "${cantidad}", "${tipo}","${descripcion}","${codigobarras}")`, function (error, respuesta) {
+function insertar(folioActivo,fecha, costo, cantidad, reponsable, area, tipo, callback) {
+    mysql.query(`Insert into movimientos (folioActivo,fecha, costo, cantidad, responsable, area, tipo) 
+        values ("${folioActivo}", "${fecha}", "${costo}", "${cantidad}", "${reponsable}","${area}","${tipo}")`, function (error, respuesta) {
 
         if (error) {
             callback(null, {
@@ -13,7 +13,6 @@ function insertar(folioActivo,fecha,unidadmedida,cantidad,tipo,descripcion,codig
             callback(null, {
                 mensaje: folioActivo//'Datos guardados con el id => ' + respuesta.insertId
             })
-
         }
         console.log(respuesta);
     });

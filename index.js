@@ -17,6 +17,9 @@ const mostProveedores = require('./query/mostProveedores');
 const mostUsuarioprov = require('./query/mostUsuarioprov');
 const mostMaterial = require('./query/mostMaterial');
 const mostAsignacion = require('./query/mostAsignactivi');
+const mostMovimientos = require('./query/mostMovimientos');
+const mostCompra = require('./query/mostCompra');
+const mostCbarrasconsu = require('./query/mostCbarrasconsu');
 const Folio = require('./query/folio')
 const Folioconsumible = require('./query/folioconsumible')
 const inserPre = require('./query/insertPregunta');
@@ -32,6 +35,8 @@ const insertarProveedor = require('./query/insertProveedores');
 const insertarUsuarioprov = require('./query/insertUsuarioprov');
 const insertarMaterial = require('./query/insertMaterial');
 const insertarAsigactivi = require('./query/insertAsigactivi');
+const insertarCompra = require('./query/insertCompra');
+const insertarMovimiento = require('./query/insertMovimiento');
 const editPreg = require('./query/actualizarPreg');
 const editDesinsum = require('./query/actualizarDesinsum');
 const editMantt = require('./query/actualizarmantt');
@@ -44,6 +49,7 @@ const editAsignacion = require('./query/actualizarAsigactivi');
 const elim = require('./query/eliminar');
 const elimUsuarioprov = require('./query/eliminarUsuarioprov');
 const verificar_Token = require('./middleware/Valida_Token');
+const { rawListeners } = require('./database');
 const app = express()
 const port = 3001
 app.use(express.json());
@@ -332,7 +338,7 @@ app.get('/codigo_postal', async (req, res) => {
         }
 
     }
-});
+})
 app.get('/material', (req, res) => {
     mostMaterial(function (error, respuesta) {
 
@@ -371,7 +377,62 @@ app.get('/asignacion', verificar_Token, (req, res) => {
         }
         //console.log(respuesta);
     })
-});
+})
+app.get('/movimientos', (req, res) => {
+    const cb = req.query.cb;
+    mostMovimientos(cb, function (error, respuesta) {
+
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            res.status(200).json({
+                respuesta
+            })
+        }
+        //console.log(respuesta);
+    })
+})
+app.get('/compras', (req, res) => {
+    const compra = req.query.compra;
+    mostCompra(compra,function (error, respuesta) {
+
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            res.status(200).json({
+                respuesta
+            })
+        }
+        //console.log(respuesta);
+    })
+}
+)
+app.get('/cbconsumibles', (req, res) => {
+    mostCbarrasconsu(function (error, respuesta) {
+
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            res.status(200).json({
+                respuesta
+            })
+        }
+        //console.log(respuesta);
+    })
+}
+)
 /* Fin de mostrar */
 
 /* Insertar */
@@ -784,7 +845,7 @@ app.post('/insertarUbi', (req, res) => {
     }
 })
 app.post('/insertarActif', (req, res) => {
-    //console.log(req.body);
+    console.log(req.body);
     // timestandar,hora,minutos
     const fam = "NA";
     const proc = "NA";
@@ -892,7 +953,7 @@ app.post('/insertarActif', (req, res) => {
                 else {
                     if (req.body.minutos <= 55 && req.body.minutos >= 1) {
                         const hora = 0;
-                        inserActif(req.body.responsable, req.body.actividad, fecha, req.body.kg, fam, proc, req.body.ubicacion, req.body.minutos, hora, req.body.minutos, function (error, respuesta) {
+                        inserActif(req.body.actividad, fecha, req.body.kg, fam, proc, req.body.ubicacion, req.body.minutos, hora, req.body.minutos, function (error, respuesta) {
 
                             if (error) {
                                 console.log(error)
@@ -939,71 +1000,23 @@ app.post('/insertarConsumibles', (req, res) => {
         } else {
             // Una vez que tenemos el folio, procedemos con la inserción
             const folio = respuesta.folio;
-            //console.log("Folio obtenido: ", folio)
-            if (folio && fecha && req.body.unidadmedida && req.body.tipo && req.body.descripcion && req.body.oc && req.body.proveedor && req.body.costo) {
-                if (req.body.tipo === "PIEZAS") {
-                    if (req.body.canestandar) {
-                        inserConsumible(folio, fecha, req.body.unidadmedida, req.body.enteros, req.body.fracciones, req.body.canestandar, req.body.tipo, req.body.descripcion, req.body.oc, req.body.proveedor, req.body.costo, function (error, respuesta) {
-                            if (error) {
-                                console.log(error)
-                                res.status(404).json({
-                                    mensaje: respuesta.mensaje
-                                })
-                            }
-                            else {
-                                res.status(200).json({
-                                    mensaje: respuesta.mensaje
-                                })
-                            }
-                            //console.log(respuesta);
+            console.log("Folio obtenido: ", folio)
+            if (folio && fecha && req.body.unidadmedida && req.body.tipo && req.body.descripcion) {
+                /* folioActivo,fecha,unidadmedida,cantidad,tipo,descripcion,codigobarras */
+                inserConsumible(folio, fecha, req.body.unidadmedida, req.body.cantidad, req.body.tipo, req.body.descripcion, req.body.codigobarras, function (error, respuesta) {
+                    if (error) {
+                        console.log(error)
+                        res.status(404).json({
+                            mensaje: respuesta.mensaje
                         })
-                    }
-                }
-                else {
-                    if (req.body.enteros) {
-                        if (req.body.enteros >= 1 && req.body.fracciones >= 1 && req.body.fracciones <= 1000) {
-                            var canestandar = 0;
-                            const Nenteros = parseInt(req.body.enteros) * 1000;
-                            canestandar = parseInt(req.body.fracciones) + Nenteros;
-
-                            console.log("Todo bien", canestandar);
-                            inserConsumible(folio, fecha, req.body.unidadmedida, req.body.enteros, req.body.fracciones, canestandar, req.body.tipo, req.body.descripcion, req.body.oc, req.body.proveedor, req.body.costo, function (error, respuesta) {
-                                if (error) {
-                                    console.log(error)
-                                    res.status(404).json({
-                                        mensaje: respuesta.mensaje
-                                    })
-                                }
-                                else {
-                                    res.status(200).json({
-                                        mensaje: respuesta.mensaje
-                                    })
-                                }
-                                //console.log(respuesta);
-                            })
-
-                        }
                     }
                     else {
-                        const enteros = 0;
-                        inserConsumible(folio, fecha, req.body.unidadmedida, enteros, req.body.fracciones, req.body.fracciones, req.body.tipo, req.body.descripcion, req.body.oc, req.body.proveedor, req.body.costo, function (error, respuesta) {
-                            if (error) {
-                                console.log(error)
-                                res.status(404).json({
-                                    mensaje: respuesta.mensaje
-                                })
-                            }
-                            else {
-                                res.status(200).json({
-                                    mensaje: respuesta.mensaje
-                                })
-                            }
-                            //console.log(respuesta);
+                        res.status(200).json({
+                            mensaje: respuesta.mensaje
                         })
-
                     }
-
-                }
+                    //console.log(respuesta);
+                })
             } else {
                 //console.log("Existen datos vacíos");
                 res.status(400).json({
@@ -1143,6 +1156,160 @@ app.post('/insertarAsigactividad', verificar_Token, (req, res) => {
         });
     }
 })
+app.post('/insertarCompra', (req, res) => {
+    mostConsumible(function (error, respuesta) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            const datos = respuesta.respuesta.find((filtro)=> filtro.folioActivo === req.body.folioActivo);
+            const ultimacantidad = datos.cantidad;
+            console.log("Ultima cantidad = ",ultimacantidad);
+            if(ultimacantidad >=0){
+                if (req.body.idconsumibles && req.body.folioActivo && fecha && req.body.proveedor && req.body.cantidad && req.body.costo && req.body.oc&& req.body.descrip) {
+                    const cantidadactual = parseInt(ultimacantidad) + parseInt(req.body.cantidad);
+                    const costoTotal= parseInt(req.body.costo)/parseInt(req.body.cantidad);
+                    const costounitario = Math.round((costoTotal+ Number.EPSILON) * 100) / 100;
+                    console.log(costounitario);
+                    if(req.body.codigobarras){
+                        insertarCompra(req.body.folioActivo, fecha, req.body.proveedor, req.body.cantidad, costounitario, req.body.oc,req.body.codigobarras,req.body.descrip,function (error, respuesta) {
+                            if (error) {
+                                console.log(error)
+                                res.status(404).json({
+                                    mensaje: respuesta.mensaje
+                                })
+                            }
+                            else {
+                                editConsu(req.body.idconsumibles,cantidadactual, costounitario, req.body.codigobarras, function (error, respuesta) {
+                                    if (error) {
+                                        console.log(error)
+                                        res.status(404).json({
+                                            mensaje: respuesta.mensaje
+                                        })
+                                    }
+                                    else {
+                                        res.status(200).json({
+                                            mensaje: respuesta.mensaje
+                                        })
+                                    }
+                                    //console.log(respuesta);
+                                })
+                            }
+                            //console.log(respuesta);
+                        })
+                    }
+                    else{
+                        insertarCompra(req.body.folioActivo, fecha, req.body.proveedor, req.body.cantidad, costounitario, req.body.oc,req.body.folioActivo,req.body.descrip, function (error, respuesta) {
+                            if (error) {
+                                console.log(error)
+                                res.status(404).json({
+                                    mensaje: respuesta.mensaje
+                                })
+                            }
+                            else {
+                                editConsu(req.body.idconsumibles,cantidadactual, costounitario, req.body.folioActivo, function (error, respuesta) {
+                                    if (error) {
+                                        console.log(error)
+                                        res.status(404).json({
+                                            mensaje: respuesta.mensaje
+                                        })
+                                    }
+                                    else {
+                                        res.status(200).json({
+                                            mensaje: respuesta.mensaje
+                                        })
+                                    }
+                                    //console.log(respuesta);
+                                })
+                            }
+                            //console.log(respuesta);
+                        })
+                    } 
+            
+                }
+                else {
+                    console.log("Existen datos vacíos");
+                    res.status(400).json({
+                        mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
+                    });
+                } 
+
+            }
+            else {
+                console.log("No existe cantidad");
+                res.status(400).json({
+                    mensaje: "No existe cantidad"
+                });
+            } 
+        }
+        //console.log(respuesta);
+    })
+})
+app.post('/insertarMovimiento', (req, res) => {
+    console.log(req.body);
+    mostConsumible(function (error, respuesta) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            //console.log(respuesta)
+            const datos = respuesta.respuesta.find((filtro)=> filtro.folioActivo === req.body.folioActivo);
+            console.log(datos);
+            const ultimacantidad = datos.cantidad;
+            console.log("Ultima cantidad = ",ultimacantidad);
+           if (req.body.folioActivo && fecha && req.body.costo && req.body.cantidad && req.body.responsable  && req.body.tipo) {
+                if(ultimacantidad>=req.body.cantidad){
+                    const area = "TECNOLOGÍAS DE LA INFORMACIÓN"
+                    const cantidadactual = parseInt(ultimacantidad) - parseInt(req.body.cantidad);
+                    insertarMovimiento(req.body.folioActivo, fecha, req.body.costo, req.body.cantidad, req.body.responsable, area, req.body.tipo, function (error, respuesta) {
+                        if (error) {
+                            console.log(error)
+                            res.status(404).json({
+                                mensaje: respuesta.mensaje
+                            })
+                        }
+                        else {
+                            editConsu(req.body.idconsumibles,cantidadactual, req.body.costo, req.body.codigobarras, function (error, respuesta) {
+                                if (error) {
+                                    console.log(error)
+                                    res.status(404).json({
+                                        mensaje: respuesta.mensaje
+                                    })
+                                }
+                                else {
+                                    res.status(200).json({
+                                        mensaje: respuesta.mensaje
+                                    })
+                                }
+                                //console.log(respuesta);
+                            }) 
+                        }
+                        //console.log(respuesta);
+                    })
+                }
+                else{
+                    res.status(400).json({
+                        mensaje: "CANTIDAD INSUFICIENTE"
+                    });
+                } 
+        
+            }
+            else {
+                console.log("Existen datos vacíos");
+                res.status(400).json({
+                    mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
+                });
+            }  
+        }
+        //console.log(respuesta);
+    })
+})
 /* Fin de insertar */
 
 
@@ -1224,7 +1391,7 @@ app.put('/actualizarmantt', (req, res) => {
 })
 app.put('/actualizaractivi', (req, res) => {
     console.log(req.body)
-    if (req.body.idactividades && req.body.actividad && req.body.hora && req.body.minutos) {
+    if (req.body.idactividades && req.body.actividad && req.body.minutos) {
         if (req.body.hora) {
             //console.log(req.body);
             if (req.body.hora <= 24 && req.body.hora >= 1 && req.body.minutos <= 55 && req.body.minutos >= 1) {
@@ -1298,49 +1465,21 @@ app.put('/actualizaractivi', (req, res) => {
     }
 })
 app.put('/actualizarconsu', (req, res) => {
-
-    if (req.body.id && req.body.unidadmedida && req.body.fracciones && req.body.tipo && req.body.descripcion) {
-        if (req.body.enteros) {
-            if (req.body.enteros >= 1 && req.body.fracciones >= 1 && req.body.fracciones <= 1000) {
-                var canestandar = 0;
-                const Nenteros = parseInt(req.body.enteros) * 1000;
-                canestandar = parseInt(req.body.fracciones) + Nenteros;
-                console.log("Todo bien", canestandar);
-                editConsu(req.body.id, req.body.unidadmedida, req.body.enteros, req.body.fracciones, canestandar, req.body.tipo, req.body.descripcion, function (error, respuesta) {
-                    if (error) {
-                        console.log(error)
-                        res.status(404).json({
-                            mensaje: respuesta.mensaje
-                        })
-                    }
-                    else {
-                        res.status(200).json({
-                            mensaje: respuesta.mensaje
-                        })
-                    }
-                    //console.log(respuesta);
+    if (req.body.idconsumibles && req.body.unidadmedida && req.body.tipo && req.body.descripcion) {
+        editConsu(req.body.idconsumibles, req.body.unidadmedida, req.body.tipo, req.body.descripcion, function (error, respuesta) {
+            if (error) {
+                console.log(error)
+                res.status(404).json({
+                    mensaje: respuesta.mensaje
                 })
-
             }
-        }
-        else {
-            const enteros = 0;
-            editConsu(req.body.id, enteros, req.body.fracciones, req.body.fracciones, req.body.tipo, req.body.descripcion, function (error, respuesta) {
-                if (error) {
-                    console.log(error)
-                    res.status(404).json({
-                        mensaje: respuesta.mensaje
-                    })
-                }
-                else {
-                    res.status(200).json({
-                        mensaje: respuesta.mensaje
-                    })
-                }
-                //console.log(respuesta);
-            })
-
-        }
+            else {
+                res.status(200).json({
+                    mensaje: respuesta.mensaje
+                })
+            }
+            //console.log(respuesta);
+        })
     } else {
         //console.log("Existen datos vacíos");
         res.status(400).json({

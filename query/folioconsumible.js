@@ -13,7 +13,7 @@ fecha+01
 
 */
 async function mostFolio(callback) {
-    mysql.query(`select folioActivo from consumibles order by idconsumible desc limit 1`, function (error, respuesta) {
+    mysql.query(`select folioActivo from consumibles order by idconsumibles desc limit 1`, function (error, respuesta) {
         if (error) {
             console.log(error)
             callback(null, {
