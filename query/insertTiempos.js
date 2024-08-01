@@ -12,7 +12,7 @@ function insertar (fecha, horainicio, status, motivo, idcontrolactivi, callback)
         }
         else{
             callback(null,{
-                mensaje:  folio//'Datos guardados con el id => ' + respuesta.insertId
+                mensaje:  "Inicia la actividad"//'Datos guardados con el id => ' + respuesta.insertId
             })
 
         }
