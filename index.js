@@ -24,6 +24,8 @@ const mostControlactivi = require('./query/mostControlactivi');
 const mostControlasignados = require('./query/mostControlasig');
 const mostAsigdiario = require('./query/mostAsigdiario');
 const mostHistorialcb = require('./query/mostHistorialcb');
+const mostInsumoasig = require('./query/mostAsignacion');
+const mostPrestamo = require('./query/mostPrestamo');
 const Folio = require('./query/folio')
 const Folioconsumible = require('./query/folioconsumible')
 const inserPre = require('./query/insertPregunta');
@@ -43,6 +45,8 @@ const insertarCompra = require('./query/insertCompra');
 const insertarMovimiento = require('./query/insertMovimiento');
 const insertarControlactivi = require('./query/insertControlactivi');
 const insertarTiempos = require('./query/insertTiempos');
+const insertarInsumoasig = require('./query/insertAsignacion');
+const insertarPrestamo = require('./query/insertPrestamo');
 const editPreg = require('./query/actualizarPreg');
 const editDesinsum = require('./query/actualizarDesinsum');
 const editMantt = require('./query/actualizarmantt');
@@ -52,6 +56,9 @@ const editInsumos = require('./query/actualizarInsumos');
 const editProv = require('./query/actualizarProv');
 const editMaterial = require('./query/actualizarMate');
 const editAsignacion = require('./query/actualizarAsigactivi');
+const editPrestamo = require('./query/actualizarPrestamo');
+const editCanconsumo = require('./query/actualizarCanconsumo');
+const editControlstatus = require('./query/actualizarControlstatus');
 const elim = require('./query/eliminar');
 const elimUsuarioprov = require('./query/eliminarUsuarioprov');
 const verificar_Token = require('./middleware/Valida_Token');
@@ -511,6 +518,24 @@ app.get('/Historialcb', (req, res) => {
     })
 }
 )
+app.get('/Prestamo', (req, res) => {
+    const responsable = req.query.responsable;
+    mostPrestamo(responsable, function (error, respuesta) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            res.status(200).json({
+                respuesta
+            })
+        }
+        //console.log(respuesta);
+    })
+}
+)
 /* Fin de mostrar */
 
 /* Insertar */
@@ -930,14 +955,19 @@ app.post('/insertarActif', (req, res) => {
     if (req.body.unidad && req.body.actividad && fecha && req.body.ubicacion && req.body.minutos) {
         if (req.body.unidad === "SI") {
             if (req.body.kg && req.body.familias && req.body.productos) {
+                const minutos= parseFloat(req.body.minutos);
                 if (req.body.hora) {
-                    if (req.body.hora <= 24 && req.body.hora >= 1 && req.body.minutos <= 55 && req.body.minutos >= 0) {
+                    const hora = parseFloat(req.body.hora);
+                    if (Number.isInteger(hora) && hora <= 24 && hora >= 1 && Number.isInteger(minutos) && minutos <= 55 && minutos >= 0) {
                         //console.log(req.body.hora, req.body.minutos)
                         var tiempoest = 0;
+                        const kilos = req.body.kg;
                         const horaN = parseInt(req.body.hora) * 60;
                         tiempoest = horaN + parseInt(req.body.minutos);
+                        const eficiencia1= (60*kilos)/tiempoest;
+                        const eficiencia = Math.round((eficiencia1 + Number.EPSILON) * 100) / 100;
                         console.log(tiempoest);
-                        inserActif(req.body.actividad, fecha, req.body.kg, req.body.familias, req.body.productos, req.body.ubicacion, tiempoest, req.body.hora, req.body.minutos, function (error, respuesta) {
+                        inserActif(req.body.actividad, fecha, req.body.kg, req.body.familias, req.body.productos, req.body.ubicacion, tiempoest, hora, minutos, eficiencia, function (error, respuesta) {
 
                             if (error) {
                                 console.log(error)
@@ -964,9 +994,12 @@ app.post('/insertarActif', (req, res) => {
 
                 }
                 else {
-                    if (req.body.minutos <= 55 && req.body.minutos >= 1) {
+                    if (Number.isInteger(minutos) && minutos <= 55 && minutos >= 1) {
+                        const kilos= req.body.kg;
                         const hora = 0;
-                        inserActif(req.body.actividad, fecha, req.body.kg, req.body.familias, req.body.productos, req.body.ubicacion, req.body.minutos, hora, req.body.minutos, function (error, respuesta) {
+                        const eficiencia1 = (60*kilos)/minutos;
+                        const eficiencia = Math.round((eficiencia1 + Number.EPSILON) * 100) / 100;
+                        inserActif(req.body.actividad, fecha, req.body.kg, req.body.familias, req.body.productos, req.body.ubicacion, req.body.minutos, hora, req.body.minutos, eficiencia,  function (error, respuesta) {
 
                             if (error) {
                                 console.log(error)
@@ -995,14 +1028,19 @@ app.post('/insertarActif', (req, res) => {
         }
         else {
             if (req.body.unidad === "NO") {
+                const minutos= parseFloat(req.body.minutos);
                 if (req.body.hora) {
-                    if (req.body.hora <= 24 && req.body.hora >= 1 && req.body.minutos <= 55 && req.body.minutos >= 0) {
+                    const hora = parseFloat(req.body.hora);
+                    if (Number.isInteger(hora) && req.body.hora <= 24 && req.body.hora >= 1 && Number.isInteger(minutos) && req.body.minutos <= 55 && req.body.minutos >= 0) {
                         //console.log(req.body.hora, req.body.minutos)
                         var tiempoest = 0;
+                        const kilos = 0;
                         const horaN = parseInt(req.body.hora) * 60;
                         tiempoest = horaN + parseInt(req.body.minutos);
+                        const eficiencia1= 60/tiempoest;
+                        const eficiencia = Math.round((eficiencia1 + Number.EPSILON) * 100) / 100;
                         console.log(tiempoest);
-                        inserActif(req.body.actividad, fecha, req.body.kg, fam, proc, req.body.ubicacion, tiempoest, req.body.hora, req.body.minutos, function (error, respuesta) {
+                        inserActif(req.body.actividad, fecha, kilos, fam, proc, req.body.ubicacion, tiempoest, req.body.hora, req.body.minutos, eficiencia, function (error, respuesta) {
 
                             if (error) {
                                 console.log(error)
@@ -1031,7 +1069,10 @@ app.post('/insertarActif', (req, res) => {
                 else {
                     if (req.body.minutos <= 55 && req.body.minutos >= 1) {
                         const hora = 0;
-                        inserActif(req.body.actividad, fecha, req.body.kg, fam, proc, req.body.ubicacion, req.body.minutos, hora, req.body.minutos, function (error, respuesta) {
+                        const kilos = 0;
+                        const eficiencia1 = 60/parseInt(req.body.minutos);
+                        const eficiencia = Math.round((eficiencia1 + Number.EPSILON) * 100) / 100;
+                        inserActif(req.body.actividad, fecha, kilos, fam, proc, req.body.ubicacion, req.body.minutos, hora, req.body.minutos, eficiencia, function (error, respuesta) {
 
                             if (error) {
                                 console.log(error)
@@ -1080,8 +1121,12 @@ app.post('/insertarConsumibles', (req, res) => {
             const folio = respuesta.folio;
             console.log("Folio obtenido: ", folio)
             if (folio && fecha && req.body.unidadmedida && req.body.tipo && req.body.descripcion) {
+                const cantidad= 0;
+                const codigobarras= "";
+                const costo= 0;
+
                 /* folioActivo,fecha,unidadmedida,cantidad,tipo,descripcion,codigobarras */
-                inserConsumible(folio, fecha, req.body.unidadmedida, req.body.cantidad, req.body.tipo, req.body.descripcion, req.body.codigobarras, function (error, respuesta) {
+                inserConsumible(folio, fecha, req.body.unidadmedida, cantidad, costo, req.body.tipo, req.body.descripcion, codigobarras, function (error, respuesta) {
                     if (error) {
                         console.log(error)
                         res.status(404).json({
@@ -1182,7 +1227,7 @@ app.post('/insertarUsuariprov', (req, res) => {
 })
 app.post('/insertarMaterial', (req, res) => {
     if (fecha && req.body.fam && req.body.produc) {
-        insertarMaterial(fecha, req.body.fam, req.body.produc, function (error, respuesta) {
+        mostMaterial(function (error, respuesta) {
 
             if (error) {
                 console.log(error)
@@ -1191,18 +1236,40 @@ app.post('/insertarMaterial', (req, res) => {
                 })
             }
             else {
-                res.status(200).json({
-                    mensaje: respuesta.mensaje
-                })
+                const materiales = respuesta.respuesta;
+                //console.log(materiales);
+                const nuevomaterial = respuesta.respuesta.find((filtro) => filtro.familia=== req.body.fam && filtro.producto === req.body.produc);
+                if(nuevomaterial){
+                    console.log("El material ya existe");
+                    res.status(400).json({
+                        mensaje: "El material ya existe"
+                    });
+                }else{
+                    insertarMaterial(fecha, req.body.fam, req.body.produc, function (error, respuesta) {
+
+                        if (error) {
+                            console.log(error)
+                            res.status(404).json({
+                                mensaje: respuesta.mensaje
+                            })
+                        }
+                        else {
+                            res.status(200).json({
+                                mensaje: respuesta.mensaje
+                            })
+                        }
+                        //console.log(respuesta);
+                    })
+
+                }
             }
             //console.log(respuesta);
         })
-
     }
     else {
         console.log("Existen datos vacíos");
         res.status(400).json({
-            mensaje: "Existen datos vacíos"
+            mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
         });
     }
 })
@@ -1232,8 +1299,9 @@ app.post('/insertarAsigactividad', verificar_Token, (req, res) => {
                 }
                 else {
                     console.log("No existe esta actividad");
-                    insertarAsigactivi(fecha, usuario.nombre, req.body.fechainicio, req.body.empresa, req.body.idactividad, function (error, respuesta) {
-
+                    const status = "ACTIVO"
+                    const motivo = ""
+                    insertarAsigactivi(fecha, usuario.nombre, req.body.fechainicio, req.body.empresa, req.body.idactividad, status, motivo, function (error, respuesta) {
                         if (error) {
                             console.log(error)
                             res.status(404).json({
@@ -1269,6 +1337,7 @@ app.post('/insertarCompra', (req, res) => {
             })
         }
         else {
+            console.log(respuesta.respuesta);
             const datos = respuesta.respuesta.find((filtro) => filtro.folioActivo === req.body.folioActivo);
             const ultimacantidad = datos.cantidad;
             console.log("Ultima cantidad = ", ultimacantidad);
@@ -1358,9 +1427,9 @@ app.post('/insertarCompra', (req, res) => {
                 })
             }
             else {
-                console.log("No existe cantidad");
+                console.log("No existe cantidad en consumibles");
                 res.status(400).json({
-                    mensaje: "No existe cantidad"
+                    mensaje: "No existe cantidad en consumibles"
                 });
             }
         }
@@ -1368,7 +1437,7 @@ app.post('/insertarCompra', (req, res) => {
     })
 })
 app.post('/insertarMovimiento', (req, res) => {
-    console.log(req.body);
+    //console.log(req.body);
     mostConsumible(function (error, respuesta) {
         if (error) {
             console.log(error)
@@ -1377,12 +1446,12 @@ app.post('/insertarMovimiento', (req, res) => {
             })
         }
         else {
-            //console.log(respuesta)
-            const datos = respuesta.respuesta.find((filtro) => filtro.folioActivo === req.body.folioActivo);
-            //console.log(datos);
-            const ultimacantidad = datos.cantidad;
-            console.log("Ultima cantidad = ", ultimacantidad);
             if (req.body.folioActivo && fecha && req.body.costo && req.body.cantidad && req.body.responsable && req.body.tipo) {
+                //console.log(respuesta)
+                const datos = respuesta.respuesta.find((filtro) => filtro.folioActivo === req.body.folioActivo);
+                //console.log(datos);
+                const ultimacantidad = datos.cantidad;
+                console.log("Ultima cantidad = ", ultimacantidad);
                 const cantidad = parseFloat(req.body.cantidad);
                 if (Number.isInteger(cantidad) && cantidad >= 1 && cantidad <= ultimacantidad) {
                     const area = "TECNOLOGÍAS DE LA INFORMACIÓN"
@@ -1485,9 +1554,11 @@ app.post('/insertarControl', (req, res) => {
 })
 app.post('/insertarTiempo', (req, res) => {
     const horainicio = moment().format('HH:mm');
+    const horafin= "NA";
+    const timestandar= 0;
     if (fecha && horainicio && req.body.status && req.body.idcontrolactivi) {
         if (req.body.motivo) {
-            insertarTiempos(fecha, horainicio, req.body.status, req.body.motivo, req.body.idcontrolactivi, function (error, respuesta) {
+            insertarTiempos(fecha, horainicio, horafin, timestandar, req.body.status, req.body.motivo, req.body.idcontrolactivi, function (error, respuesta) {
                 if (error) {
                     console.log(error)
                     res.status(404).json({
@@ -1495,8 +1566,19 @@ app.post('/insertarTiempo', (req, res) => {
                     })
                 }
                 else {
-                    res.status(200).json({
-                        mensaje: respuesta.mensaje
+                    editControlstatus(req.body.idcontrolactivi, req.body.status, function (error, respuesta) {
+                        if (error) {
+                            console.log(error)
+                            res.status(404).json({
+                                mensaje: respuesta.mensaje
+                            })
+                        }
+                        else {
+                            res.status(200).json({
+                                mensaje: respuesta.mensaje
+                            })
+                        }
+                        console.log(respuesta);
                     })
                 }
                 //console.log(respuesta);
@@ -1504,7 +1586,7 @@ app.post('/insertarTiempo', (req, res) => {
         }
         else {
             const motivo = "INICIO";
-            insertarTiempos(fecha, horainicio, req.body.status, motivo, req.body.idcontrolactivi, function (error, respuesta) {
+            insertarTiempos(fecha, horainicio, horafin, timestandar, req.body.status, motivo, req.body.idcontrolactivi, function (error, respuesta) {
 
                 if (error) {
                     console.log(error)
@@ -1513,8 +1595,19 @@ app.post('/insertarTiempo', (req, res) => {
                     })
                 }
                 else {
-                    res.status(200).json({
-                        mensaje: respuesta.mensaje
+                    editControlstatus(req.body.idcontrolactivi, req.body.status, function (error, respuesta) {
+                        if (error) {
+                            console.log(error)
+                            res.status(404).json({
+                                mensaje: respuesta.mensaje
+                            })
+                        }
+                        else {
+                            res.status(200).json({
+                                mensaje: respuesta.mensaje
+                            })
+                        }
+                        console.log(respuesta);
                     })
                 }
                 //console.log(respuesta);
@@ -1529,6 +1622,112 @@ app.post('/insertarTiempo', (req, res) => {
             mensaje: "Existen datos vacíos"
         });
     }
+})
+app.post('/insertarInsumoasig', (req, res) => {
+    /* folioInsumos, fecha, responsable, area, cantidad, costo, */
+    if (req.body.folioInsumos && req.body.responsable) {
+        mostInsumos(function (error, respuesta) {
+            if (error) {
+                console.log(error)
+                res.status(404).json({
+                    mensaje: respuesta.mensaje
+                })
+            }
+            else {
+                const nuevoInsumo = respuesta.respuesta.find((filtro)=> filtro.folioInsumos === req.body.folioInsumos);
+                const cantidad= 0;
+                const area= "TECNOLOGÍAS DE LA INFORMACIÓN";
+                const estatus = "ASIGNACIÓN";
+                console.log(nuevoInsumo.monto);
+                insertarInsumoasig (req.body.folioInsumos, fecha, req.body.responsable, area, cantidad, nuevoInsumo.monto,estatus, function (error, respuesta) {
+                    if (error) {
+                        console.log(error)
+                        res.status(404).json({
+                            mensaje: respuesta.mensaje
+                        })
+                    }
+                    else {
+                        res.status(200).json({
+                            mensaje: respuesta.mensaje
+                        })
+                    }
+                    //console.log(respuesta);
+                })
+            }
+            //console.log(respuesta);
+        })
+    }
+    else {
+        console.log("Existen datos vacíos");
+        res.status(400).json({
+            mensaje: "Existen datos vacíos"
+        });
+    }
+})
+app.post('/insertarprestamo', (req, res) => {
+    /* folioInsumos, fecha, responsable, area, cantidad, costo, */
+    //console.log(req.body);
+    mostConsumible(function (error, respuesta) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            if (req.body.idconsumibles && req.body.folioActivo && req.body.responsable && req.body.costo && req.body.codigobarras) {
+                //console.log(respuesta)
+                const datos = respuesta.respuesta.find((filtro) => filtro.folioActivo === req.body.folioActivo);
+                //console.log(datos);
+                const ultimacantidad = datos.cantidad;
+                console.log("Ultima cantidad = ", ultimacantidad);
+                const cantidad = parseFloat(req.body.cantidad);
+                if (Number.isInteger(cantidad) && cantidad >= 1 && cantidad <= ultimacantidad) {
+                    const area = "TECNOLOGÍAS DE LA INFORMACIÓN";
+                    const estatus = "PRESTAMO";
+                    const cantidadactual = parseInt(ultimacantidad) - cantidad;
+                    insertarPrestamo(req.body.folioInsumos, fecha, req.body.responsable, area, cantidad, req.body.costo,estatus, function (error, respuesta) {
+                        if (error) {
+                            console.log(error)
+                            res.status(404).json({
+                                mensaje: respuesta.mensaje
+                            })
+                        }
+                        else {
+                            editConsu(req.body.idconsumibles, cantidadactual, req.body.costo, req.body.codigobarras, function (error, respuesta) {
+                                if (error) {
+                                    console.log(error)
+                                    res.status(404).json({
+                                        mensaje: respuesta.mensaje
+                                    })
+                                }
+                                else {
+                                    res.status(200).json({
+                                        mensaje: respuesta.mensaje
+                                    })
+                                }
+                                //console.log(respuesta);
+                            })
+                        }
+                        //console.log(respuesta);
+                    })
+                }
+                else {
+                    res.status(400).json({
+                        mensaje: "CANTIDAD INSUFICIENTE"
+                    });
+                }
+
+            }
+            else {
+                console.log("Existen datos vacíos");
+                res.status(400).json({
+                    mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
+                });
+            }
+        }
+        //console.log(respuesta);
+    })
 })
 /* Fin de insertar */
 
@@ -1555,7 +1754,7 @@ app.put('/actualizarPreg', (req, res) => {
     else {
         console.log("Existen datos vacíos");
         res.status(400).json({
-            mensaje: "Existen datos vacíos"
+            mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
         });
     }
 })
@@ -1580,7 +1779,7 @@ app.put('/actualizarDesinsum', (req, res) => {
     else {
         console.log("Existen datos vacíos");
         res.status(400).json({
-            mensaje: "Existen datos vacíos"
+            mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
         });
     }
 })
@@ -1605,7 +1804,7 @@ app.put('/actualizarmantt', (req, res) => {
     else {
         console.log("Existen datos vacíos");
         res.status(400).json({
-            mensaje: "Existen datos vacíos"
+            mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
         });
     }
 })
@@ -1703,7 +1902,7 @@ app.put('/actualizarconsu', (req, res) => {
     } else {
         //console.log("Existen datos vacíos");
         res.status(400).json({
-            mensaje: "Existen datos vacíos"
+            mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
         });
     }
 
@@ -1730,7 +1929,7 @@ app.put('/actualizarInsumos', (req, res) => {
     else {
         console.log("Existen datos vacíos");
         res.status(400).json({
-            mensaje: "Existen datos vacíos"
+            mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
         });
     }
 })
@@ -1760,7 +1959,7 @@ app.put('/actualizarProv', (req, res) => {
     } else {
         //console.log("Existen datos vacíos");
         res.status(400).json({
-            mensaje: "Existen datos vacíos"
+            mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
         });
     }
 })
@@ -1785,7 +1984,7 @@ app.put('/actualizarPreg', (req, res) => {
     else {
         console.log("Existen datos vacíos");
         res.status(400).json({
-            mensaje: "Existen datos vacíos"
+            mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
         });
     }
 })
@@ -1793,7 +1992,7 @@ app.put('/actualizarAsig', (req, res) => {
     /* idasigactivi, fechainicio, empresa,idactividad,status */
     const status = "INACTIVO";
     if (req.body.motivo) {
-        editAsignacion(req.body.idasigactivi, req.body.fechainicio, req.body.empresa, req.body.idactividad, status, req.body.motivo, function (error, respuesta) {
+        editAsignacion(req.body.idasigactivi, status, req.body.motivo, function (error, respuesta) {
 
             if (error) {
                 console.log(error)
@@ -1811,7 +2010,123 @@ app.put('/actualizarAsig', (req, res) => {
 
     }
     else {
-        editAsignacion(req.body.idasigactivi, req.body.fechainicio, req.body.empresa, req.body.idactividad, req.body.status, req.body.motivo, function (error, respuesta) {
+        console.log("Existen datos vacíos")
+        res.status(400).json({
+            mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
+        })
+    }
+})
+app.put('/actualizarPrestamo', (req, res) => {
+    /* id, cantidad, estatus, */
+    if(req.body.folioActivo && req.body.idprestamo && req.body.cantidad && req.body.responsable){
+        mostConsumible(function (error, respuesta) {
+            if (error) {
+                console.log(error)
+                res.status(404).json({
+                    mensaje: respuesta.mensaje
+                })
+            }
+            else {
+                //console.log(respuesta.respuesta);
+                const datos = respuesta.respuesta.find((filtro) => filtro.folioActivo === req.body.folioActivo);
+                const ultimacantidad = parseInt(datos.cantidad);
+                console.log("Ultima cantidad = ", ultimacantidad);
+                mostPrestamo(req.body.responsable, function (error, resPrestamo) {
+                    if (error) {
+                        console.log(error)
+                        res.status(404).json({
+                            mensaje: respuesta.mensaje
+                        })
+                    }
+                    else {
+                        //console.log(resPrestamo.respuesta[0].cantidad);
+                        const cantidadprestamo = parseInt(resPrestamo.respuesta[0].cantidad)
+                        const cantidad = parseFloat(req.body.cantidad);
+                        if (Number.isInteger(cantidad) && cantidad >= 1 && cantidad <= cantidadprestamo){
+                            const cantidadactual = ultimacantidad + cantidad;
+                            const nuevacantidad = cantidadprestamo - cantidad;
+                            console.log(cantidadactual," ", nuevacantidad);
+
+                            if(nuevacantidad===0){
+                                const estatus = "ENTREGADO";
+                                editPrestamo(req.body.idprestamo, nuevacantidad,estatus, function (error, respuesta) {
+                                    if (error) {
+                                        console.log(error)
+                                        res.status(404).json({
+                                            mensaje: respuesta.mensaje
+                                        })
+                                    }
+                                    else {
+                                        editCanconsumo(req.body.folioActivo, cantidadactual, function (error, respuesta) {
+                                            if (error) {
+                                                console.log(error)
+                                                res.status(404).json({
+                                                    mensaje: respuesta.mensaje
+                                                })
+                                            }
+                                            else {
+                                                res.status(200).json({
+                                                    mensaje: respuesta.mensaje
+                                                })
+                                            }
+                                            //console.log(respuesta);
+                                        })
+                                    }
+                                    console.log(respuesta);
+                                }) 
+                            }
+                            else{
+                                const estatus = "PRESTAMO";
+                                editPrestamo(req.body.idprestamo, nuevacantidad,estatus, function (error, respuesta) {
+                                    if (error) {
+                                        console.log(error)
+                                        res.status(404).json({
+                                            mensaje: respuesta.mensaje
+                                        })
+                                    }
+                                    else {
+                                        editCanconsumo(req.body.folioActivo, cantidadactual, function (error, respuesta) {
+                                            if (error) {
+                                                console.log(error)
+                                                res.status(404).json({
+                                                    mensaje: respuesta.mensaje
+                                                })
+                                            }
+                                            else {
+                                                res.status(200).json({
+                                                    mensaje: respuesta.mensaje
+                                                })
+                                            }
+                                            //console.log(respuesta);
+                                        })
+                                    }
+                                    console.log(respuesta);
+                                }) 
+                            }
+                        }
+                        else {
+                            res.status(400).json({
+                                mensaje: "CANTIDAD INSUFICIENTE"
+                            });
+                        } 
+                        /* */
+                    }
+                    //console.log(respuesta);
+                })
+            }
+        })
+    }
+    else{
+        console.log("Existen datos vacíos")
+        res.status(400).json({
+            mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
+        })
+    }
+})
+app.put('/actualizarControlstatus', (req, res) => {
+    /* id, estatus, */
+    if (req.body.idcontrolactivi && req.body.status ) {
+        editControlstatus(req.body.idcontrolactivi, req.body.status, function (error, respuesta) {
 
             if (error) {
                 console.log(error)
@@ -1825,6 +2140,13 @@ app.put('/actualizarAsig', (req, res) => {
                 })
             }
             console.log(respuesta);
+        })
+
+    }
+    else {
+        console.log("Existen datos vacíos")
+        res.status(400).json({
+            mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
         })
     }
 })

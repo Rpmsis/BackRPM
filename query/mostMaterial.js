@@ -1,7 +1,7 @@
 const mysql = require('../database/index');
 
 function mostrar (callback){
-    mysql.query(`Select * from material`, function(error,respuesta){
+    mysql.query(`Select * from material_actividades`, function(error,respuesta){
         
         if(error){
             callback(null,{

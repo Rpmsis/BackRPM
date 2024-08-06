@@ -5,9 +5,8 @@ const mysql = require('../database/index');
         idactividad: "",
         status:"", */
 
-function actualizar (idasigactivi, fechainicio, empresa,idactividad,status, motivo, callback){
-
-    mysql.query(`Update asigactivi  set  fechainicio = '${fechainicio}', empresa = '${empresa}', idactividad = '${idactividad}',status = '${status}', motivo = '${motivo}' WHERE idasigactivi = '${idasigactivi}' `, function(error,respuesta){
+function actualizar (idasigactivi,status, motivo, callback){
+    mysql.query(`Update asigactivi  set  status = '${status}', motivo = '${motivo}' WHERE idasigactivi = '${idasigactivi}' `, function(error,respuesta){
         
         if(error){
             callback(null,{

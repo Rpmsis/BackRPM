@@ -1,9 +1,8 @@
 const mysql = require('../database/index');
 
-function insertar (fecha, horainicio, status, motivo, idcontrolactivi, callback){
-
-    mysql.query(`Insert into tiempos (fecha, horainicio, status, motivo, idcontrolactivi) 
-        values ("${fecha}", "${horainicio}", "${status}", "${motivo}", "${idcontrolactivi}")`, function(error,respuesta){
+function insertar (fecha, horainicio,horafin, timestandar, status, motivo, idcontrolactivi, callback){
+    mysql.query(`Insert into tiempo_actividades (fecha, horainicio,horafin, timestandar, status, motivo, idcontrolactivi) 
+        values ("${fecha}", "${horainicio}","${horafin}", "${timestandar}", "${status}", "${motivo}", "${idcontrolactivi}")`, function(error,respuesta){
         
         if(error){
             callback(null,{

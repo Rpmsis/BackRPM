@@ -2,7 +2,7 @@ const mysql = require('../database/index');
 
 function insertar (fecha,familia,producto, callback){
 
-    mysql.query(`Insert into material (fecha,familia,producto) values ("${fecha}","${familia}", "${producto}")`, function(error,respuesta){
+    mysql.query(`Insert into material_actividades (fecha,familia,producto) values ("${fecha}","${familia}", "${producto}")`, function(error,respuesta){
         
         if(error){
             callback(null,{

@@ -1,7 +1,7 @@
 const mysql = require('../database/index');
 
-function mostrar (folioActivo, callback){
-    mysql.query(` SELECT * FROM movimientos_consumible WHERE folioActivo = "${folioActivo}" `, function(error,respuesta){
+function mostrar (callback){
+    mysql.query(`Select * from asignacion`, function(error,respuesta){
         
         if(error){
             callback(null,{
@@ -13,8 +13,9 @@ function mostrar (folioActivo, callback){
                 respuesta
             })
         }
-        //console.log("Qué sucede? " fecha, respuesta);
+        //console.log(respuesta);
     });
 
 }
 module.exports = mostrar
+
