@@ -375,7 +375,7 @@ app.get('/asignacion', verificar_Token, (req, res) => {
     //console.log(usuario)
     const responsable = usuario.nombre;
     //console.log(responsable)
-    mostAsignacion(responsable, function (error, respuesta) {
+    mostAsignacion(responsable, fecha, function (error, respuesta) {
 
         if (error) {
             console.log(error)
@@ -2040,11 +2040,13 @@ app.put('/actualizarPrestamo', (req, res) => {
                     }
                     else {
                         //console.log(resPrestamo.respuesta[0].cantidad);
-                        const cantidadprestamo = parseInt(resPrestamo.respuesta[0].cantidad)
+                        const canprestamo = resPrestamo.respuesta.find((filtro)=> filtro.idprestamo === req.body.idprestamo);
+                        const canprestamototal = parseInt(canprestamo.cantidad);
+                        //console.log(cantidadprestamo.cantidad);
                         const cantidad = parseFloat(req.body.cantidad);
-                        if (Number.isInteger(cantidad) && cantidad >= 1 && cantidad <= cantidadprestamo){
+                        if (Number.isInteger(cantidad) && cantidad >= 1 && cantidad <= canprestamototal){
                             const cantidadactual = ultimacantidad + cantidad;
-                            const nuevacantidad = cantidadprestamo - cantidad;
+                            const nuevacantidad = canprestamototal - cantidad;
                             console.log(cantidadactual," ", nuevacantidad);
 
                             if(nuevacantidad===0){

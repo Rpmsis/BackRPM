@@ -1,7 +1,7 @@
 const mysql = require('../database/index');
 
-function mostrar (responsable, callback){
-    mysql.query(`SELECT * FROM asigactivi inner join actividades on asigactivi.idactividad = actividades.idactividades WHERE asigactivi.responsable = "${responsable}" && asigactivi.status != "INACTIVO"`, function(error,respuesta){
+function mostrar (responsable, fecha, callback){
+    mysql.query(`SELECT * FROM asigactivi inner join actividades on asigactivi.idactividad = actividades.idactividades WHERE asigactivi.responsable = "${responsable}" && asigactivi.status != "INACTIVO" && asigactivi.fechainicio >= "${fecha}"`, function(error,respuesta){
         
         if(error){
             callback(null,{
