@@ -1,7 +1,7 @@
 const mysql = require('../database/index');
 
-function insertar (folioActivo, fecha, responsable, area, cantidad, costo, callback){
-    mysql.query(`Insert into prestamo (folioActivo, fecha, responsable, area, cantidad, costo) values ("${folioActivo}", "${fecha}", "${responsable}", "${area}", "${cantidad}", "${costo}")`, function(error,respuesta){
+function insertar (folioActivo, fecha, responsable, area, cantidad, costo,estatus, callback){
+    mysql.query(`Insert into prestamo (folioActivo, fecha, responsable, area, cantidad, costo, estatus) values ("${folioActivo}", "${fecha}", "${responsable}", "${area}", "${cantidad}", "${costo}", "${estatus}")`, function(error,respuesta){
         
         if(error){
             callback(null,{
