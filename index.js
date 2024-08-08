@@ -1665,9 +1665,10 @@ app.post('/insertarInsumoasig', (req, res) => {
     }
 })
 app.post('/insertarprestamo', (req, res) => {
-    /* folioInsumos, fecha, responsable, area, cantidad, costo, */
+    /* folioInsumos, fecha, responsable, area, cantidad, costo */
     //console.log(req.body);
-    mostConsumible(function (error, respuesta) {
+    console.log(req.body);
+        mostConsumible(function (error, respuesta) {
         if (error) {
             console.log(error)
             res.status(404).json({
@@ -1675,7 +1676,7 @@ app.post('/insertarprestamo', (req, res) => {
             })
         }
         else {
-            if (req.body.idconsumibles && req.body.folioActivo && req.body.responsable && req.body.costo && req.body.codigobarras) {
+            if (req.body.idconsumibles && req.body.folioActivo && req.body.responsable  && req.body.costo && req.body.codigobarras) {
                 //console.log(respuesta)
                 const datos = respuesta.respuesta.find((filtro) => filtro.folioActivo === req.body.folioActivo);
                 //console.log(datos);
@@ -1683,10 +1684,9 @@ app.post('/insertarprestamo', (req, res) => {
                 console.log("Ultima cantidad = ", ultimacantidad);
                 const cantidad = parseFloat(req.body.cantidad);
                 if (Number.isInteger(cantidad) && cantidad >= 1 && cantidad <= ultimacantidad) {
-                    const area = "TECNOLOGÍAS DE LA INFORMACIÓN";
                     const estatus = "PRESTAMO";
                     const cantidadactual = parseInt(ultimacantidad) - cantidad;
-                    insertarPrestamo(req.body.folioInsumos, fecha, req.body.responsable, area, cantidad, req.body.costo,estatus, function (error, respuesta) {
+                    insertarPrestamo(req.body.folioInsumos, fecha, req.body.responsable, req.body.area, cantidad, req.body.costo,estatus, function (error, respuesta) {
                         if (error) {
                             console.log(error)
                             res.status(404).json({
@@ -1694,7 +1694,7 @@ app.post('/insertarprestamo', (req, res) => {
                             })
                         }
                         else {
-                            editConsu(req.body.idconsumibles, cantidadactual, req.body.costo, req.body.codigobarras, function (error, respuesta) {
+                            editCanconsumo(req.body.folioActivo, cantidadactual, function (error, respuesta) {
                                 if (error) {
                                     console.log(error)
                                     res.status(404).json({
@@ -1727,7 +1727,7 @@ app.post('/insertarprestamo', (req, res) => {
             }
         }
         //console.log(respuesta);
-    })
+    }) 
 })
 /* Fin de insertar */
 
