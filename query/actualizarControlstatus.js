@@ -11,7 +11,7 @@ function actualizar (id, estatus, callback){
         }
         else{
             callback(null,{
-                mensaje: 'Actividad en '+ estatus //'Pregunta actualizado con el id => ' + id
+                mensaje: 'Actividad '+ estatus //'Pregunta actualizado con el id => ' + id
             })
         }
         console.log(respuesta);

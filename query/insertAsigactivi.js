@@ -1,8 +1,8 @@
 const mysql = require('../database/index');
+const motivo = "NA";
 
-function insertar (fechacreacion, responsable, fechainicio, empresa, idactividad, status, motivo, callback){
-
-    mysql.query(`Insert into asigactivi (fechacreacion, responsable, fechainicio, empresa, idactividad, status, motivo) values ("${fechacreacion}", "${responsable}", "${fechainicio}","${empresa}","${idactividad}","${status}","${motivo}")`, function(error,respuesta){
+function insertar (fechacreacion, responsable, fechainicio, empresa, idactividad, status, timeControl, kg, callback){
+    mysql.query(`Insert into asigactivi (fechacreacion, responsable, fechainicio, empresa, idactividad, status, timeControl, kgControl, motivo) values ("${fechacreacion}", "${responsable}", "${fechainicio}","${empresa}","${idactividad}","${status}","${timeControl}", "${kg}", "${motivo}")`, function(error,respuesta){
         
         if(error){
             callback(null,{

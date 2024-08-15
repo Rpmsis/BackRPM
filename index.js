@@ -26,6 +26,10 @@ const mostAsigdiario = require('./query/mostAsigdiario');
 const mostHistorialcb = require('./query/mostHistorialcb');
 const mostInsumoasig = require('./query/mostAsignacion');
 const mostPrestamo = require('./query/mostPrestamo');
+const mostTiempoactivi = require('./query/mostTiempoactivi');
+const mostStatusresponsable = require('./query/mostStatusresponsable');
+const mostTiempocontrol = require('./query/mostTiempocontrol');
+const mostEficienciakg = require('./query/mostEficienciakg');
 const Folio = require('./query/folio')
 const Folioconsumible = require('./query/folioconsumible')
 const inserPre = require('./query/insertPregunta');
@@ -59,6 +63,11 @@ const editAsignacion = require('./query/actualizarAsigactivi');
 const editPrestamo = require('./query/actualizarPrestamo');
 const editCanconsumo = require('./query/actualizarCanconsumo');
 const editControlstatus = require('./query/actualizarControlstatus');
+const editStatustiempo = require('./query/actualizarStatustiempo');
+const editStatuscontrol = require('./query/actualizarStatuscontrol');
+const editStatusasignacion = require('./query/actualizarStatusasignacion');
+const editStatusactividadesT = require('./query/actualizarStatusactividades');
+const editStatusactividadesKg = require('./query/actualizarStatusactividadeskg');
 const elim = require('./query/eliminar');
 const elimUsuarioprov = require('./query/eliminarUsuarioprov');
 const verificar_Token = require('./middleware/Valida_Token');
@@ -376,7 +385,6 @@ app.get('/asignacion', verificar_Token, (req, res) => {
     const responsable = usuario.nombre;
     //console.log(responsable)
     mostAsignacion(responsable, fecha, function (error, respuesta) {
-
         if (error) {
             console.log(error)
             res.status(404).json({
@@ -384,8 +392,10 @@ app.get('/asignacion', verificar_Token, (req, res) => {
             })
         }
         else {
+            const nuevarespuesta= respuesta.respuesta.filter(filtro => filtro.status!="TERMINADO");
+            //console.log(nuevarespuesta);
             res.status(200).json({
-                respuesta
+                nuevarespuesta
             })
         }
         //console.log(respuesta);
@@ -446,10 +456,13 @@ app.get('/cbconsumibles', (req, res) => {
     })
 }
 )
-app.get('/Controlactividades', (req, res) => {
+app.get('/Controlactividades', verificar_Token, (req, res) => {
     //console.log(usuario)
     const empresa = "FISHER";
-    console.log(empresa, fecha)
+    //console.log(empresa, fecha)
+    const usuario = req.usuario;
+    //console.log(usuario)
+    const responsable = usuario.nombre;
     mostControlactivi(empresa, fecha, function (error, respuesta) {
         if (error) {
             console.log(error)
@@ -474,16 +487,30 @@ app.get('/Controlasignados', (req, res) => {
             })
         }
         else {
+            //console.log(respuesta);
+            const uniqueControls = {};
+            // Iterar sobre la respuesta
+            respuesta.respuesta.forEach(item => {
+                // Verificar si ya existe un registro con el mismo idcontrolactivi
+                if (!uniqueControls[item.idcontrolactivi] || uniqueControls[item.idcontrolactivi].idtiempos < item.idtiempos) {
+                    uniqueControls[item.idcontrolactivi] = item; // Guardar el registro con el idtiempos más alto
+                }
+            })
+            // Convertir el objeto a un array
+            const result = Object.values(uniqueControls);
+            //console.log(result);
             res.status(200).json({
-                respuesta
+                result
             })
         }
         //console.log(respuesta);
     })
 })
-app.get('/actividiarias', (req, res) => {
-    mostAsigdiario(fecha, function (error, respuesta) {
-
+app.get('/actividiarias', verificar_Token, (req, res) => {
+    const usuario = req.usuario;
+    const responsable= usuario.nombre;
+    console.log(responsable);
+    mostAsigdiario(fecha,responsable, function (error, respuesta) {
         if (error) {
             console.log(error)
             res.status(404).json({
@@ -528,6 +555,80 @@ app.get('/Prestamo', (req, res) => {
             })
         }
         else {
+            res.status(200).json({
+                respuesta
+            })
+        }
+        //console.log(respuesta);
+    })
+}
+)
+app.get('/Tiempoactivi', (req, res) => {
+    mostTiempoactivi(function (error, respuesta) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            res.status(200).json({
+                respuesta
+            })
+        }
+        //console.log(respuesta);
+    })
+}
+)
+app.get('/Statusresponsables', (req, res) => {
+    const idactividad = req.query.idactividad;
+    const idasigactivi = req.query.idasigactivi;
+    console.log("Datos obtenidos: ", idactividad, idasigactivi);
+    mostStatusresponsable(idactividad, fecha, idasigactivi, function (error, respuesta) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            res.status(200).json({
+                respuesta
+            })
+        }
+        console.log(respuesta);
+    })
+}
+)
+app.get('/Tiempocontrol', (req, res) => {
+    const idactividades = req.query.idactividad;
+    console.log(req.body)
+    mostTiempocontrol(idactividades, fecha, function (error, respuesta) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            res.status(200).json({
+                respuesta
+            })
+        }
+        //console.log(respuesta);
+    })
+}
+)
+app.get('/EficienciaKg', (req, res) => {
+    mostEficienciakg(fecha, function (error, respuesta) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            //console.log(respuesta.respuesta);
             res.status(200).json({
                 respuesta
             })
@@ -955,7 +1056,7 @@ app.post('/insertarActif', (req, res) => {
     if (req.body.unidad && req.body.actividad && fecha && req.body.ubicacion && req.body.minutos) {
         if (req.body.unidad === "SI") {
             if (req.body.kg && req.body.familias && req.body.productos) {
-                const minutos= parseFloat(req.body.minutos);
+                const minutos = parseFloat(req.body.minutos);
                 if (req.body.hora) {
                     const hora = parseFloat(req.body.hora);
                     if (Number.isInteger(hora) && hora <= 24 && hora >= 1 && Number.isInteger(minutos) && minutos <= 55 && minutos >= 0) {
@@ -964,7 +1065,7 @@ app.post('/insertarActif', (req, res) => {
                         const kilos = req.body.kg;
                         const horaN = parseInt(req.body.hora) * 60;
                         tiempoest = horaN + parseInt(req.body.minutos);
-                        const eficiencia1= (60*kilos)/tiempoest;
+                        const eficiencia1 = (60 * kilos) / tiempoest;
                         const eficiencia = Math.round((eficiencia1 + Number.EPSILON) * 100) / 100;
                         console.log(tiempoest);
                         inserActif(req.body.actividad, fecha, req.body.kg, req.body.familias, req.body.productos, req.body.ubicacion, tiempoest, hora, minutos, eficiencia, function (error, respuesta) {
@@ -995,11 +1096,11 @@ app.post('/insertarActif', (req, res) => {
                 }
                 else {
                     if (Number.isInteger(minutos) && minutos <= 55 && minutos >= 1) {
-                        const kilos= req.body.kg;
+                        const kilos = req.body.kg;
                         const hora = 0;
-                        const eficiencia1 = (60*kilos)/minutos;
+                        const eficiencia1 = (60 * kilos) / minutos;
                         const eficiencia = Math.round((eficiencia1 + Number.EPSILON) * 100) / 100;
-                        inserActif(req.body.actividad, fecha, req.body.kg, req.body.familias, req.body.productos, req.body.ubicacion, req.body.minutos, hora, req.body.minutos, eficiencia,  function (error, respuesta) {
+                        inserActif(req.body.actividad, fecha, req.body.kg, req.body.familias, req.body.productos, req.body.ubicacion, req.body.minutos, hora, req.body.minutos, eficiencia, function (error, respuesta) {
 
                             if (error) {
                                 console.log(error)
@@ -1028,7 +1129,7 @@ app.post('/insertarActif', (req, res) => {
         }
         else {
             if (req.body.unidad === "NO") {
-                const minutos= parseFloat(req.body.minutos);
+                const minutos = parseFloat(req.body.minutos);
                 if (req.body.hora) {
                     const hora = parseFloat(req.body.hora);
                     if (Number.isInteger(hora) && req.body.hora <= 24 && req.body.hora >= 1 && Number.isInteger(minutos) && req.body.minutos <= 55 && req.body.minutos >= 0) {
@@ -1037,7 +1138,7 @@ app.post('/insertarActif', (req, res) => {
                         const kilos = 0;
                         const horaN = parseInt(req.body.hora) * 60;
                         tiempoest = horaN + parseInt(req.body.minutos);
-                        const eficiencia1= 60/tiempoest;
+                        const eficiencia1 = 60 / tiempoest;
                         const eficiencia = Math.round((eficiencia1 + Number.EPSILON) * 100) / 100;
                         console.log(tiempoest);
                         inserActif(req.body.actividad, fecha, kilos, fam, proc, req.body.ubicacion, tiempoest, req.body.hora, req.body.minutos, eficiencia, function (error, respuesta) {
@@ -1070,7 +1171,7 @@ app.post('/insertarActif', (req, res) => {
                     if (req.body.minutos <= 55 && req.body.minutos >= 1) {
                         const hora = 0;
                         const kilos = 0;
-                        const eficiencia1 = 60/parseInt(req.body.minutos);
+                        const eficiencia1 = 60 / parseInt(req.body.minutos);
                         const eficiencia = Math.round((eficiencia1 + Number.EPSILON) * 100) / 100;
                         inserActif(req.body.actividad, fecha, kilos, fam, proc, req.body.ubicacion, req.body.minutos, hora, req.body.minutos, eficiencia, function (error, respuesta) {
 
@@ -1121,9 +1222,9 @@ app.post('/insertarConsumibles', (req, res) => {
             const folio = respuesta.folio;
             console.log("Folio obtenido: ", folio)
             if (folio && fecha && req.body.unidadmedida && req.body.tipo && req.body.descripcion) {
-                const cantidad= 0;
-                const codigobarras= "";
-                const costo= 0;
+                const cantidad = 0;
+                const codigobarras = "";
+                const costo = 0;
 
                 /* folioActivo,fecha,unidadmedida,cantidad,tipo,descripcion,codigobarras */
                 inserConsumible(folio, fecha, req.body.unidadmedida, cantidad, costo, req.body.tipo, req.body.descripcion, codigobarras, function (error, respuesta) {
@@ -1236,15 +1337,15 @@ app.post('/insertarMaterial', (req, res) => {
                 })
             }
             else {
-                const materiales = respuesta.respuesta;
+                //const materiales = respuesta.respuesta;
                 //console.log(materiales);
-                const nuevomaterial = respuesta.respuesta.find((filtro) => filtro.familia=== req.body.fam && filtro.producto === req.body.produc);
-                if(nuevomaterial){
+                const nuevomaterial = respuesta.respuesta.find((filtro) => filtro.familia === req.body.fam && filtro.producto === req.body.produc);
+                if (nuevomaterial) {
                     console.log("El material ya existe");
                     res.status(400).json({
                         mensaje: "El material ya existe"
                     });
-                }else{
+                } else {
                     insertarMaterial(fecha, req.body.fam, req.body.produc, function (error, respuesta) {
 
                         if (error) {
@@ -1277,8 +1378,9 @@ app.post('/insertarAsigactividad', verificar_Token, (req, res) => {
     const usuario = req.usuario;
     //console.log(usuario)  
     const responsable = usuario.nombre;
+    const kg = 0;
     //console.log(responsable)
-    mostAsignacion(responsable, function (error, respuesta) {
+    mostAsignacion(responsable, fecha, function (error, respuesta) {
         if (error) {
             console.log(error)
             res.status(404).json({
@@ -1300,8 +1402,8 @@ app.post('/insertarAsigactividad', verificar_Token, (req, res) => {
                 else {
                     console.log("No existe esta actividad");
                     const status = "ACTIVO"
-                    const motivo = ""
-                    insertarAsigactivi(fecha, usuario.nombre, req.body.fechainicio, req.body.empresa, req.body.idactividad, status, motivo, function (error, respuesta) {
+                    const timecontrol = 0;
+                    insertarAsigactivi(fecha, usuario.nombre, req.body.fechainicio, req.body.empresa, req.body.idactividad, status, timecontrol, kg, function (error, respuesta) {
                         if (error) {
                             console.log(error)
                             res.status(404).json({
@@ -1413,15 +1515,15 @@ app.post('/insertarCompra', (req, res) => {
                                     }
                                     //console.log(respuesta);
                                 })
-                            } 
-        
+                            }
+
                         }
                         else {
                             console.log("Existen datos vacíos");
                             res.status(400).json({
                                 mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
                             });
-                        } 
+                        }
                     }
                     //console.log(respuesta);
                 })
@@ -1554,67 +1656,36 @@ app.post('/insertarControl', (req, res) => {
 })
 app.post('/insertarTiempo', (req, res) => {
     const horainicio = moment().format('HH:mm');
-    const horafin= "NA";
-    const timestandar= 0;
-    if (fecha && horainicio && req.body.status && req.body.idcontrolactivi) {
-        if (req.body.motivo) {
-            insertarTiempos(fecha, horainicio, horafin, timestandar, req.body.status, req.body.motivo, req.body.idcontrolactivi, function (error, respuesta) {
-                if (error) {
-                    console.log(error)
-                    res.status(404).json({
-                        mensaje: respuesta.mensaje
-                    })
-                }
-                else {
-                    editControlstatus(req.body.idcontrolactivi, req.body.status, function (error, respuesta) {
-                        if (error) {
-                            console.log(error)
-                            res.status(404).json({
-                                mensaje: respuesta.mensaje
-                            })
-                        }
-                        else {
-                            res.status(200).json({
-                                mensaje: respuesta.mensaje
-                            })
-                        }
-                        console.log(respuesta);
-                    })
-                }
-                //console.log(respuesta);
-            })
-        }
-        else {
-            const motivo = "INICIO";
-            insertarTiempos(fecha, horainicio, horafin, timestandar, req.body.status, motivo, req.body.idcontrolactivi, function (error, respuesta) {
-
-                if (error) {
-                    console.log(error)
-                    res.status(404).json({
-                        mensaje: respuesta.mensaje
-                    })
-                }
-                else {
-                    editControlstatus(req.body.idcontrolactivi, req.body.status, function (error, respuesta) {
-                        if (error) {
-                            console.log(error)
-                            res.status(404).json({
-                                mensaje: respuesta.mensaje
-                            })
-                        }
-                        else {
-                            res.status(200).json({
-                                mensaje: respuesta.mensaje
-                            })
-                        }
-                        console.log(respuesta);
-                    })
-                }
-                //console.log(respuesta);
-            })
-
-        }
-
+    const horafin = "NA";
+    const timestandar = 0;
+    const status = "EN PROCESO";
+    const motivo = "NA"
+    if (fecha && horainicio && req.body.idcontrolactivi) {
+        insertarTiempos(fecha, horainicio, horafin, timestandar, status, motivo, req.body.idcontrolactivi, function (error, respuesta) {
+            if (error) {
+                console.log(error)
+                res.status(404).json({
+                    mensaje: respuesta.mensaje
+                })
+            }
+            else {
+                editControlstatus(req.body.idcontrolactivi, status, function (error, respuesta) {
+                    if (error) {
+                        console.log(error)
+                        res.status(404).json({
+                            mensaje: respuesta.mensaje
+                        })
+                    }
+                    else {
+                        res.status(200).json({
+                            mensaje: respuesta.mensaje
+                        })
+                    }
+                    console.log(respuesta);
+                })
+            }
+            //console.log(respuesta);
+        })
     }
     else {
         console.log("Existen datos vacíos");
@@ -1634,12 +1705,12 @@ app.post('/insertarInsumoasig', (req, res) => {
                 })
             }
             else {
-                const nuevoInsumo = respuesta.respuesta.find((filtro)=> filtro.folioInsumos === req.body.folioInsumos);
-                const cantidad= 0;
-                const area= "TECNOLOGÍAS DE LA INFORMACIÓN";
+                const nuevoInsumo = respuesta.respuesta.find((filtro) => filtro.folioInsumos === req.body.folioInsumos);
+                const cantidad = 0;
+                const area = "TECNOLOGÍAS DE LA INFORMACIÓN";
                 const estatus = "ASIGNACIÓN";
                 console.log(nuevoInsumo.monto);
-                insertarInsumoasig (req.body.folioInsumos, fecha, req.body.responsable, area, cantidad, nuevoInsumo.monto,estatus, function (error, respuesta) {
+                insertarInsumoasig(req.body.folioInsumos, fecha, req.body.responsable, area, cantidad, nuevoInsumo.monto, estatus, function (error, respuesta) {
                     if (error) {
                         console.log(error)
                         res.status(404).json({
@@ -1668,7 +1739,7 @@ app.post('/insertarprestamo', (req, res) => {
     /* folioInsumos, fecha, responsable, area, cantidad, costo */
     //console.log(req.body);
     console.log(req.body);
-        mostConsumible(function (error, respuesta) {
+    mostConsumible(function (error, respuesta) {
         if (error) {
             console.log(error)
             res.status(404).json({
@@ -1676,7 +1747,7 @@ app.post('/insertarprestamo', (req, res) => {
             })
         }
         else {
-            if (req.body.idconsumibles && req.body.folioActivo && req.body.responsable  && req.body.costo && req.body.codigobarras) {
+            if (req.body.idconsumibles && req.body.folioActivo && req.body.responsable && req.body.costo && req.body.codigobarras) {
                 //console.log(respuesta)
                 const datos = respuesta.respuesta.find((filtro) => filtro.folioActivo === req.body.folioActivo);
                 //console.log(datos);
@@ -1686,7 +1757,7 @@ app.post('/insertarprestamo', (req, res) => {
                 if (Number.isInteger(cantidad) && cantidad >= 1 && cantidad <= ultimacantidad) {
                     const estatus = "PRESTAMO";
                     const cantidadactual = parseInt(ultimacantidad) - cantidad;
-                    insertarPrestamo(req.body.folioInsumos, fecha, req.body.responsable, req.body.area, cantidad, req.body.costo,estatus, function (error, respuesta) {
+                    insertarPrestamo(req.body.folioInsumos, fecha, req.body.responsable, req.body.area, cantidad, req.body.costo, estatus, function (error, respuesta) {
                         if (error) {
                             console.log(error)
                             res.status(404).json({
@@ -1727,7 +1798,7 @@ app.post('/insertarprestamo', (req, res) => {
             }
         }
         //console.log(respuesta);
-    }) 
+    })
 })
 /* Fin de insertar */
 
@@ -1905,8 +1976,6 @@ app.put('/actualizarconsu', (req, res) => {
             mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
         });
     }
-
-
 })
 app.put('/actualizarInsumos', (req, res) => {
     if (req.body.IdInsumos && req.body.proveedor && req.body.monto && req.body.Numserie && req.body.folioOC) {
@@ -2018,7 +2087,7 @@ app.put('/actualizarAsig', (req, res) => {
 })
 app.put('/actualizarPrestamo', (req, res) => {
     /* id, cantidad, estatus, */
-    if(req.body.folioActivo && req.body.idprestamo && req.body.cantidad && req.body.responsable){
+    if (req.body.folioActivo && req.body.idprestamo && req.body.cantidad && req.body.responsable) {
         mostConsumible(function (error, respuesta) {
             if (error) {
                 console.log(error)
@@ -2040,18 +2109,18 @@ app.put('/actualizarPrestamo', (req, res) => {
                     }
                     else {
                         //console.log(resPrestamo.respuesta[0].cantidad);
-                        const canprestamo = resPrestamo.respuesta.find((filtro)=> filtro.idprestamo === req.body.idprestamo);
+                        const canprestamo = resPrestamo.respuesta.find((filtro) => filtro.idprestamo === req.body.idprestamo);
                         const canprestamototal = parseInt(canprestamo.cantidad);
                         //console.log(cantidadprestamo.cantidad);
                         const cantidad = parseFloat(req.body.cantidad);
-                        if (Number.isInteger(cantidad) && cantidad >= 1 && cantidad <= canprestamototal){
+                        if (Number.isInteger(cantidad) && cantidad >= 1 && cantidad <= canprestamototal) {
                             const cantidadactual = ultimacantidad + cantidad;
                             const nuevacantidad = canprestamototal - cantidad;
-                            console.log(cantidadactual," ", nuevacantidad);
+                            console.log(cantidadactual, " ", nuevacantidad);
 
-                            if(nuevacantidad===0){
+                            if (nuevacantidad === 0) {
                                 const estatus = "ENTREGADO";
-                                editPrestamo(req.body.idprestamo, nuevacantidad,estatus, function (error, respuesta) {
+                                editPrestamo(req.body.idprestamo, nuevacantidad, estatus, function (error, respuesta) {
                                     if (error) {
                                         console.log(error)
                                         res.status(404).json({
@@ -2075,11 +2144,11 @@ app.put('/actualizarPrestamo', (req, res) => {
                                         })
                                     }
                                     console.log(respuesta);
-                                }) 
+                                })
                             }
-                            else{
+                            else {
                                 const estatus = "PRESTAMO";
-                                editPrestamo(req.body.idprestamo, nuevacantidad,estatus, function (error, respuesta) {
+                                editPrestamo(req.body.idprestamo, nuevacantidad, estatus, function (error, respuesta) {
                                     if (error) {
                                         console.log(error)
                                         res.status(404).json({
@@ -2103,14 +2172,14 @@ app.put('/actualizarPrestamo', (req, res) => {
                                         })
                                     }
                                     console.log(respuesta);
-                                }) 
+                                })
                             }
                         }
                         else {
                             res.status(400).json({
                                 mensaje: "CANTIDAD INSUFICIENTE"
                             });
-                        } 
+                        }
                         /* */
                     }
                     //console.log(respuesta);
@@ -2118,7 +2187,7 @@ app.put('/actualizarPrestamo', (req, res) => {
             }
         })
     }
-    else{
+    else {
         console.log("Existen datos vacíos")
         res.status(400).json({
             mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
@@ -2127,7 +2196,7 @@ app.put('/actualizarPrestamo', (req, res) => {
 })
 app.put('/actualizarControlstatus', (req, res) => {
     /* id, estatus, */
-    if (req.body.idcontrolactivi && req.body.status ) {
+    if (req.body.idcontrolactivi && req.body.status) {
         editControlstatus(req.body.idcontrolactivi, req.body.status, function (error, respuesta) {
 
             if (error) {
@@ -2150,6 +2219,368 @@ app.put('/actualizarControlstatus', (req, res) => {
         res.status(400).json({
             mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
         })
+    }
+})
+app.put('/actualizarTimefin', (req, res) => {
+    /* id, estatus, */
+    const horafin = moment().format('HH:mm');
+    const status = "TERMINADO";
+    const motivo = "NA";
+    var timestandar = 0;
+    //console.log(req.body);
+    if (req.body.idcontrolactivi) {
+        console.log(req.body.idcontrolactivi);
+        mostTiempoactivi(function (error, respuestaTiempo) {
+            if (error) {
+                console.log(error)
+                res.status(404).json({
+                    mensaje: respuestaTiempo.mensaje
+                })
+            }
+            else {
+                const idcontrol = parseInt(req.body.idcontrolactivi);
+                const tiemponuevo = respuestaTiempo.respuesta.filter(filtro => filtro.idcontrolactivi === idcontrol);
+                const datosOrdenados = tiemponuevo.sort((a, b) => b.idtiempos - a.idtiempos);
+                // Obtén el último dato (el que tiene el mayor idtiempos)
+                const ultimoDato = datosOrdenados[0];
+                const idTiempos = ultimoDato.idtiempos;
+                const hinicio = ultimoDato.horainicio;
+                var desde = hinicio.split(":");
+                var hasta = horafin.split(":");
+                var minutosDesde = parseInt(desde[0]) * 60 + parseInt(desde[1]);
+                //console.log("Minutos hora inicio ", minutosDesde)
+                var minutosHasta = parseInt(hasta[0]) * 60 + parseInt(hasta[1]);
+                if (minutosHasta < minutosDesde) {
+                    minutosHasta += 24 * 60;  // Sumamos 24 horas en minutos
+                }
+                //console.log("Mintos de hora final ", minutosHasta)
+                var diferenciaMinutos = minutosHasta - minutosDesde;
+                timestandar = diferenciaMinutos;
+                console.log("Timestandar ", timestandar);
+
+                editStatustiempo(idTiempos, horafin, timestandar, status, motivo, function (error, respuestaStatustiempo) {
+                    if (error) {
+                        console.log(error)
+                        res.status(404).json({
+                            mensaje: respuestaStatustiempo.mensaje
+                        })
+                    }
+                    else {
+                        const totalTiempo = tiemponuevo.reduce((acumulador, filtro) => {
+                            return acumulador + filtro.timestandar;
+                        }, 0);
+                        console.log("Tiempor guardados= ", totalTiempo)
+                        const timecontrol = timestandar + totalTiempo;
+                        console.log("Tiempo total estandar= ", timecontrol)
+                        editStatuscontrol(idcontrol, timecontrol, status, function (error, respuestaStatuscontrol) {
+                            if (error) {
+                                console.log(error)
+                                res.status(404).json({
+                                    mensaje: respuestaStatuscontrol.mensaje
+                                })
+                            }
+                            else {
+                                mostTiempocontrol(req.body.idactividades, fecha, function (error, respuestaTiempocontrol) {
+                                    if (error) {
+                                        console.log(error)
+                                        res.status(404).json({
+                                            mensaje: respuestaTiempocontrol.mensaje
+                                        })
+                                    }
+                                    else {
+                                        //console.log(respuestaTiempocontrol.respuesta);
+                                        const timeasignacion = respuestaTiempocontrol.respuesta.reduce((acumulador, filtro) => {
+                                            return acumulador + filtro.timestandar;
+                                        }, 0);
+
+                                        console.log("Tiempo asignacion: ", timeasignacion);
+                                        const status = "TERMINADO"
+                                        const kg = 0;
+                                        editStatusasignacion(req.body.idasigactivi, status, timeasignacion, kg, function (error, respuesta) {
+                                            if (error) {
+                                                console.log(error)
+                                                res.status(404).json({
+                                                    mensaje: respuesta.mensaje
+                                                })
+                                            }
+                                            else {
+                                                mostTiempocontrol(req.body.idactividades, fecha, function (error, respuestaTiempocontrol) {
+                                                    if (error) {
+                                                        console.log(error)
+                                                        res.status(404).json({
+                                                            mensaje: respuestaTiempocontrol.mensaje
+                                                        })
+                                                    }
+                                                    else {
+                                                        const todosTerminado = respuestaTiempocontrol.respuesta.every(item => item.status === "TERMINADO");
+                                                        // Generar la respuesta
+                                                        const resultado = todosTerminado ? respuesta : "sinrespuesta";
+                                                        if (resultado === "sinrespuesta") {
+                                                            console.log("No todos estan terminados ", resultado);
+                                                            res.status(200).json({
+                                                                mensaje: "El responsable finalizó su actividad"
+                                                            })
+
+                                                        }
+                                                        else {
+                                                            /* res.status(200).json({
+                                                                mensaje: respuesta.mensaje
+                                                            }) */
+                                                            mostActif(function (error, respuesta) {
+                                                                if (error) {
+                                                                    console.log(error)
+                                                                    res.status(404).json({
+                                                                        mensaje: respuesta.mensaje
+                                                                    })
+                                                                }
+                                                                else {
+                                                                    console.log(req.body);
+                                                                    const actividadRealizada = respuesta.respuesta.find((filtro) => filtro.idactividades === req.body.idactividades);
+                                                                    console.log(actividadRealizada);
+                                                                    console.log(actividadRealizada.kg);
+                                                                    if (actividadRealizada.kg === 0) {
+                                                                        if (actividadRealizada.timestandar > timeasignacion) {
+                                                                            console.log(timeasignacion);
+                                                                            if (timeasignacion <= 59) {
+                                                                                const horafinal = 0;
+                                                                                const eficienciafinal1 = 60 / timeasignacion;
+                                                                                const eficienciafinal = Math.round((eficienciafinal1 + Number.EPSILON) * 100) / 100;
+                                                                                editStatusactividadesT(req.body.idactividades, horafinal, timeasignacion, timeasignacion, eficienciafinal, function (error, respuesta) {
+                                                                                    if (error) {
+                                                                                        console.log(error)
+                                                                                        res.status(404).json({
+                                                                                            mensaje: respuesta.mensaje
+                                                                                        })
+                                                                                    }
+                                                                                    else {
+                                                                                        res.status(200).json({
+                                                                                            mensaje: respuesta.mensaje
+                                                                                        })
+                                                                                    }
+                                                                                    console.log(respuesta);
+                                                                                })
+                                                                            }
+                                                                            else {
+                                                                                console.log("convertir el tiempo asignacion en horas y minutos");
+                                                                                const eficienciafinal1 = 60 / timeasignacion;
+                                                                                const eficienciafinal = Math.round((eficienciafinal1 + Number.EPSILON) * 100) / 100;
+
+                                                                                const horas = Math.floor(timeasignacion / 60);
+                                                                                const minutos = timeasignacion % 60;
+                                                                                editStatusactividadesT(req.body.idactividades, horas, minutos, timeasignacion, eficienciafinal, function (error, respuesta) {
+                                                                                    if (error) {
+                                                                                        console.log(error)
+                                                                                        res.status(404).json({
+                                                                                            mensaje: respuesta.mensaje
+                                                                                        })
+                                                                                    }
+                                                                                    else {
+                                                                                        res.status(200).json({
+                                                                                            mensaje: respuesta.mensaje
+                                                                                        })
+                                                                                    }
+                                                                                    console.log(respuesta);
+                                                                                })
+                                                                            }
+
+                                                                        } else {
+                                                                            res.status(200).json({
+                                                                                mensaje: "Excedieron el tiempo de la actividad.."
+                                                                            })
+                                                                        }
+                                                                    }
+                                                                    else {
+                                                                        res.status(200).json({
+                                                                            mensaje: "No olvides! validar los kilogramos"
+                                                                        })
+                                                                    }
+                                                                }
+                                                                //console.log(respuesta);
+                                                            })
+                                                        }
+                                                    }
+                                                })
+                                            }
+                                            //console.log(respuesta);
+                                        })
+                                        /*  */
+                                    }
+                                    //console.log(respuesta);
+                                })
+                            }
+                        })
+                    }
+                })
+            }
+        })
+    }
+    else {
+        console.log("Existen datos vacíos")
+        res.status(400).json({
+            mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
+        })
+    }
+})
+app.put('/actualizarTimepausa', (req, res) => {
+    /* id, estatus, */
+    console.log(req.body);
+    const horafin = moment().format('HH:mm');
+    const status = "EN PAUSA";
+    var timestandar = 0;
+    if (req.body.idcontrolactivi && req.body.motivoselec && req.body.motivodes) {
+        console.log(req.body.idcontrolactivi);
+        const motivo = "Motivo: " + req.body.motivoselec + ", Descripción: " + req.body.motivodes;
+        mostTiempoactivi(function (error, respuestaTiempo) {
+            if (error) {
+                console.log(error)
+                res.status(404).json({
+                    mensaje: respuesta.mensaje
+                })
+            }
+            else {
+                const idcontrol = parseInt(req.body.idcontrolactivi);
+                const tiemponuevo = respuestaTiempo.respuesta.filter(filtro => filtro.idcontrolactivi === idcontrol);
+                const datosOrdenados = tiemponuevo.sort((a, b) => b.idtiempos - a.idtiempos);
+                // Obtén el último dato (el que tiene el mayor idtiempos)
+                const ultimoDato = datosOrdenados[0];
+                const idTiempos = ultimoDato.idtiempos;
+                const hinicio = ultimoDato.horainicio;
+                var desde = hinicio.split(":");
+                var hasta = horafin.split(":");
+                var minutosDesde = parseInt(desde[0]) * 60 + parseInt(desde[1]);
+                console.log("Minutos hora inicio ", minutosDesde)
+                var minutosHasta = parseInt(hasta[0]) * 60 + parseInt(hasta[1]);
+                if (minutosHasta < minutosDesde) {
+                    minutosHasta += 24 * 60;  // Sumamos 24 horas en minutos
+                }
+                console.log("Mintos de hora final ", minutosHasta)
+                var diferenciaMinutos = minutosHasta - minutosDesde;
+                timestandar = diferenciaMinutos;
+                console.log("Timestandar ", timestandar);
+
+                editStatustiempo(idTiempos, horafin, timestandar, status, motivo, function (error, respuesta) {
+                    if (error) {
+                        console.log(error)
+                        res.status(404).json({
+                            mensaje: respuesta.mensaje
+                        })
+                    }
+                    else {
+                        editStatuscontrol(idcontrol, timestandar, status, function (error, respuesta) {
+                            if (error) {
+                                console.log(error)
+                                res.status(404).json({
+                                    mensaje: respuesta.mensaje
+                                })
+                            }
+                            else {
+                                res.status(200).json({
+                                    mensaje: respuesta.mensaje
+                                })
+                            }
+                            console.log(respuesta);
+                        })
+                    }
+                    console.log(respuesta);
+                })
+            }
+            //console.log(respuesta);
+        })
+
+
+        /*  */
+    }
+    else {
+        console.log("Existen datos vacíos")
+        res.status(400).json({
+            mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
+        })
+    }
+})
+app.put('/actualizarAsignacionkg', (req, res) => {
+    /* idasigactivi, status, timestandar, kg */
+    const status = "TERMINADO";
+    if (req.body.idasigactivi && req.body.kg) {
+        mostEficienciakg(fecha, function (error, respuesta) {
+            if (error) {
+                console.log(error)
+                res.status(404).json({
+                    mensaje: respuesta.mensaje
+                })
+            }
+            else {
+                console.log(req.body);
+                const idasigactivi = parseInt(req.body.idasigactivi);
+                const asignacion = respuesta.respuesta.find(filtro => filtro.idasigactivi === idasigactivi);
+                //console.log(asignacion);
+                const idactividades = asignacion.idactividades;
+                const kilos = parseInt(req.body.kg);
+                const ultimoskg= parseInt(asignacion.kg);
+                const timestandar = parseInt(asignacion.timeControl);
+                editStatusasignacion(req.body.idasigactivi, status, timestandar, kilos, function (error, respuesta) {
+                    if (error) {
+                        console.log(error)
+                        res.status(404).json({
+                            mensaje: respuesta.mensaje
+                        })
+                    }
+                    else {
+                        if (timestandar <= asignacion.timestandar && kilos > asignacion.kg) {
+                            const eficiencia1 = (60 * kilos) / timestandar;
+                            const nuevaeficiencia = Math.round((eficiencia1 + Number.EPSILON) * 100) / 100;
+                            console.log(nuevaeficiencia);
+                            if (timestandar <= 59) {
+                                const horas = 0;
+                                editStatusactividadesKg(idactividades, kilos, horas, timestandar, timestandar, nuevaeficiencia, function (error, respuesta) {
+                                    if (error) {
+                                        console.log(error)
+                                        res.status(404).json({
+                                            mensaje: respuesta.mensaje
+                                        })
+                                    }
+                                    else {
+                                        res.status(200).json({
+                                            mensaje: respuesta.mensaje
+                                        })
+                                    }
+                                    console.log(respuesta);
+                                })
+                            }
+                            else {
+                                const horas = Math.floor(timestandar / 60);
+                                const minutos = timestandar % 60;
+                                editStatusactividadesKg(idactividades,  ultimoskg, horas, minutos, timestandar, nuevaeficiencia, function (error, respuesta) {
+                                    if (error) {
+                                        console.log(error)
+                                        res.status(404).json({
+                                            mensaje: respuesta.mensaje
+                                        })
+                                    }
+                                    else {
+                                        res.status(200).json({
+                                            mensaje: respuesta.mensaje
+                                        })
+                                    }
+                                    console.log(respuesta);
+                                })
+                            }
+                        }
+                        else{
+                            res.status(400).json({
+                                mensaje: "....."
+                            });
+                        }
+                    }
+                    //console.log(respuesta);
+                })
+            }
+            //console.log(respuesta);
+        })
+    } else {
+        //console.log("Existen datos vacíos");
+        res.status(400).json({
+            mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
+        });
     }
 })
 /* Fin de actualizar */

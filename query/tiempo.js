@@ -22,8 +22,27 @@ function minutosTranscurridos(desdeHora, hastaHora) {
     var diferenciaMinutos = minutosHasta - minutosDesde;
 
     return diferenciaMinutos;
+
 }
 
 // Ejemplo de uso:
-var minutos = minutosTranscurridos("10:55", "14:02");
+var minutos = minutosTranscurridos("10:00", "12:02");
 console.log("Minutos transcurridos:", minutos);
+
+
+function convertirMinutos(minutosTotales) {
+    // Calcula las horas y los minutos restantes
+    const horas = Math.floor(minutosTotales / 60);
+    const minutos = minutosTotales % 60;
+    
+    return {
+        horas: horas,
+        minutos: minutos
+    };
+}
+
+// Ejemplo de uso
+const minutosTotales = 122; // Puedes cambiar este valor
+const resultado = convertirMinutos(minutosTotales);
+
+console.log(`${resultado.horas} horas y ${resultado.minutos} minutos`);

@@ -11,7 +11,7 @@ function insertar (fecha, horainicio,horafin, timestandar, status, motivo, idcon
         }
         else{
             callback(null,{
-                mensaje:  "Inicia la actividad"//'Datos guardados con el id => ' + respuesta.insertId
+                mensaje:  'Actividad '+ status//'Datos guardados con el id => ' + respuesta.insertId
             })
 
         }
