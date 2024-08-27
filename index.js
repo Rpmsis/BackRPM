@@ -2,7 +2,10 @@ const express = require('express')
 const cors = require('cors');
 const axios = require('axios');
 const moment = require('moment');
+const fs = require('fs');
+const path = require('path');
 const jwt = require('jsonwebtoken');
+const cargar_archivo = require('./query/archivos_file')
 const most = require('./query/mostrar');
 const mostPreg = require('./query/mostPreg');
 const mostUnidad = require('./query/mostUnidad');
@@ -30,6 +33,9 @@ const mostTiempoactivi = require('./query/mostTiempoactivi');
 const mostStatusresponsable = require('./query/mostStatusresponsable');
 const mostTiempocontrol = require('./query/mostTiempocontrol');
 const mostEficienciakg = require('./query/mostEficienciakg');
+const mostMenusemana = require('./query/mostMenusemana');
+const mostMenudeldia = require('./query/mostMenudia');
+const mostSemanamenu = require('./query/mostSemanamenu');
 const Folio = require('./query/folio')
 const Folioconsumible = require('./query/folioconsumible')
 const inserPre = require('./query/insertPregunta');
@@ -51,6 +57,8 @@ const insertarControlactivi = require('./query/insertControlactivi');
 const insertarTiempos = require('./query/insertTiempos');
 const insertarInsumoasig = require('./query/insertAsignacion');
 const insertarPrestamo = require('./query/insertPrestamo');
+const insertarComida = require('./query/insertComida');
+const insertarMenusemana = require('./query/insertMenusemana');
 const editPreg = require('./query/actualizarPreg');
 const editDesinsum = require('./query/actualizarDesinsum');
 const editMantt = require('./query/actualizarmantt');
@@ -68,6 +76,7 @@ const editStatuscontrol = require('./query/actualizarStatuscontrol');
 const editStatusasignacion = require('./query/actualizarStatusasignacion');
 const editStatusactividadesT = require('./query/actualizarStatusactividades');
 const editStatusactividadesKg = require('./query/actualizarStatusactividadeskg');
+const editMenusemana = require('./query/actualizarMenusemana');
 const elim = require('./query/eliminar');
 const elimUsuarioprov = require('./query/eliminarUsuarioprov');
 const verificar_Token = require('./middleware/Valida_Token');
@@ -392,7 +401,7 @@ app.get('/asignacion', verificar_Token, (req, res) => {
             })
         }
         else {
-            const nuevarespuesta= respuesta.respuesta.filter(filtro => filtro.status!="TERMINADO");
+            const nuevarespuesta = respuesta.respuesta.filter(filtro => filtro.status != "TERMINADO");
             //console.log(nuevarespuesta);
             res.status(200).json({
                 nuevarespuesta
@@ -508,9 +517,9 @@ app.get('/Controlasignados', (req, res) => {
 })
 app.get('/actividiarias', verificar_Token, (req, res) => {
     const usuario = req.usuario;
-    const responsable= usuario.nombre;
+    const responsable = usuario.nombre;
     console.log(responsable);
-    mostAsigdiario(fecha,responsable, function (error, respuesta) {
+    mostAsigdiario(fecha, responsable, function (error, respuesta) {
         if (error) {
             console.log(error)
             res.status(404).json({
@@ -637,6 +646,100 @@ app.get('/EficienciaKg', (req, res) => {
     })
 }
 )
+app.get('/Menusemana', (req, res) => {
+    mostMenusemana(function (error, respuesta) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            //console.log(respuesta.respuesta);
+            res.status(200).json({
+                respuesta
+            })
+        }
+        //console.log(respuesta);
+    })
+}
+)
+app.get('/Menudeldia', (req, res) => {
+    mostMenudeldia(fecha, function (error, respuesta) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            //console.log(respuesta.respuesta);
+            res.status(200).json({
+                respuesta
+            })
+        }
+        //console.log(respuesta);
+    })
+}
+)
+app.get('/Semanamenu', (req, res) => {
+    var fechainicio = "";
+    var fechafinal = "";
+    const diasemanamoment = moment(fecha).format('dddd');
+    /* Guardar en español */
+    switch (diasemanamoment) {
+        case "Monday": fechainicio = fecha
+            fechafinal = moment(fecha).add(4, 'days').format('YYYY-MM-DD');
+            //console.log(fechainicio, fechafinal);
+            break;
+        case "Tuesday":
+            fechainicio = moment(fecha).subtract(1, 'days').format('YYYY-MM-DD');
+            fechafinal = moment(fecha).add(3, 'days').format('YYYY-MM-DD');
+            //console.log(fechainicio, fechafinal);
+            break;
+        case "Wednesday":
+            fechainicio = moment(fecha).subtract(2, 'days').format('YYYY-MM-DD');
+            fechafinal = moment(fecha).add(3, 'days').format('YYYY-MM-DD');
+            //console.log(fechainicio, fechafinal);
+            break;
+        case "Thursday":
+            fechainicio = moment(fecha).subtract(3, 'days').format('YYYY-MM-DD');
+            fechafinal = moment(fecha).add(1, 'days').format('YYYY-MM-DD');
+            //console.log(fechainicio, fechafinal);
+            break;
+        case "Friday":
+            fechainicio = moment(fecha).subtract(4, 'days').format('YYYY-MM-DD');
+            fechafinal = fecha;
+            console.log(fechainicio, fechafinal);
+            break;
+        case "Saturday":
+            fechainicio = moment(fecha).subtract(5, 'days').format('YYYY-MM-DD');
+            fechafinal = moment(fecha).subtract(1, 'days').format('YYYY-MM-DD');
+            //console.log(fechainicio, fechafinal);
+            break;
+        case "Friday":
+            fechainicio = moment(fecha).subtract(6, 'days').format('YYYY-MM-DD');
+            fechafinal = moment(fecha).subtract(2, 'days').format('YYYY-MM-DD');
+            //console.log(fechainicio, fechafinal);
+            break;
+    }
+    mostSemanamenu(fechainicio, fechafinal, function (error, respuesta) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            //console.log(respuesta.respuesta);
+            res.status(200).json({
+                respuesta
+            })
+        }
+        //console.log(respuesta);
+    })
+}
+)
 /* Fin de mostrar */
 
 /* Insertar */
@@ -738,6 +841,7 @@ app.post('/insertarRes', (req, res) => {
         });
     }
 })
+
 
 //Enviar los datos de un solo id para mostrar, actualizar o eliminar
 /* app.put('/personas/:id', (req, res) => {
@@ -1800,6 +1904,116 @@ app.post('/insertarprestamo', (req, res) => {
         //console.log(respuesta);
     })
 })
+app.post('/insertarComida', (req, res) => {
+    console.log(req.body.nombre);
+    const imagen = req.body.archivoBase64;
+    const nombre = req.body.nombre;
+    /* cargar_archivo(req, res, (err, archivo) => {
+        if (err) {
+            console.log(err);
+            return res.status(500).send('Error al cargar el archivo');
+        } else {
+            console.log(archivo);
+        }
+    })  */
+    if (imagen) {
+        //Eliminar el prefijo de base64
+        const base64Data = imagen.replace(/^data:image\/\w+;base64,/, '');
+        const buffer = Buffer.from(base64Data, 'base64');
+        //Guardar la img en la carpeta +uploads+ 
+        const filePath = path.join(__dirname, 'uploads', nombre);
+
+        fs.mkdirSync(path.dirname(filePath), { recursive: true });
+
+        fs.writeFile(filePath, buffer, (err) => {
+            if (err) {
+                console.error('Error al guardar la imagen:', err);
+                res.status(500).send('Error al guardar la imagen');
+                return;
+            }
+            console.log('Imagen guardada correctamente');
+            res.status(200).json({
+                mensaje: 'Datos recibidos y procesados'
+            })
+            //res.send('Datos recibidos y procesados');
+        });
+    } else {
+        res.send('Datos recibidos pero sin imagen');
+    }
+})
+app.post('/insertarMenu', (req, res) => {
+    //console.log(req.body)
+    var diasemana = "";
+    /* fecha, fechainicio, diasemana, platoentrada, platofuerteA, platofuerteB, bebida, */
+
+    if (fecha && req.body.fechainicio && req.body.platoentrada && req.body.platofuerteA || req.body.platofuerteB && req.body.bebida) {
+        const diasemanamoment = moment(req.body.fechainicio).format('dddd');
+        /* Guardar en español */
+        switch (diasemanamoment) {
+            case "Monday": diasemana = "Lunes"; //console.log(diasemana);
+                break;
+            case "Tuesday": diasemana = "Martes"; //console.log(diasemana);
+                break;
+            case "Wednesday": diasemana = "Miercoles"; //console.log(diasemana);
+                break;
+            case "Thursday": diasemana = "Jueves"; //console.log(diasemana);
+                break;
+            case "Friday": diasemana = "Viernes"; //console.log(diasemana);
+                break;
+        }
+        mostMenusemana(function (error, respuesta) {
+            if (error) {
+                console.log(error)
+                res.status(404).json({
+                    mensaje: respuesta.mensaje
+                })
+            }
+            else {
+                const existe = respuesta.respuesta.find((filtro) => filtro.fechainicio === req.body.fechainicio);
+                //console.log(datosFil);
+                if (existe) {
+                    console.log("Ya existe menú para esta fecha");
+                    res.status(400).json({
+                        mensaje: "Ya existe menú para esta fecha"
+                    });
+                }
+                else {
+                    if (diasemana) {
+                        console.log(diasemanamoment);
+                        insertarMenusemana(fecha, req.body.fechainicio, diasemana, req.body.platoentrada, req.body.platofuerteA, req.body.platofuerteB, req.body.bebida, function (error, respuesta) {
+                            if (error) {
+                                console.log(error)
+                                res.status(404).json({
+                                    mensaje: respuesta.mensaje
+                                })
+                            }
+                            else {
+                                res.status(200).json({
+                                    mensaje: respuesta.mensaje
+                                })
+                            }
+                            //console.log(respuesta);
+                        })
+                    }
+                    else {
+                        console.log("No existe menú para el fin de semana.");
+                        res.status(400).json({
+                            mensaje: "No existe menú para el fin de semana"
+                        });
+                    }
+                }
+            }
+            //console.log(respuesta);
+        })
+    } else {
+        //console.log("Existen datos vacíos");
+        res.status(400).json({
+            mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
+        });
+    }
+})
+
+
 /* Fin de insertar */
 
 
@@ -2515,7 +2729,7 @@ app.put('/actualizarAsignacionkg', (req, res) => {
                 //console.log(asignacion);
                 const idactividades = asignacion.idactividades;
                 const kilos = parseInt(req.body.kg);
-                const ultimoskg= parseInt(asignacion.kg);
+                const ultimoskg = parseInt(asignacion.kg);
                 const timestandar = parseInt(asignacion.timeControl);
                 editStatusasignacion(req.body.idasigactivi, status, timestandar, kilos, function (error, respuesta) {
                     if (error) {
@@ -2549,7 +2763,7 @@ app.put('/actualizarAsignacionkg', (req, res) => {
                             else {
                                 const horas = Math.floor(timestandar / 60);
                                 const minutos = timestandar % 60;
-                                editStatusactividadesKg(idactividades,  ultimoskg, horas, minutos, timestandar, nuevaeficiencia, function (error, respuesta) {
+                                editStatusactividadesKg(idactividades, ultimoskg, horas, minutos, timestandar, nuevaeficiencia, function (error, respuesta) {
                                     if (error) {
                                         console.log(error)
                                         res.status(404).json({
@@ -2565,13 +2779,53 @@ app.put('/actualizarAsignacionkg', (req, res) => {
                                 })
                             }
                         }
-                        else{
+                        else {
                             res.status(400).json({
                                 mensaje: "....."
                             });
                         }
                     }
                     //console.log(respuesta);
+                })
+            }
+            //console.log(respuesta);
+        })
+    } else {
+        //console.log("Existen datos vacíos");
+        res.status(400).json({
+            mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
+        });
+    }
+})
+app.put('/actualizarMenusemana', (req, res) => {
+    /* idmenusemana,fechainicio,diasemana,platoentrada,platofuerteA,platofuerteB,bebida, */
+    var diasemana = "";
+
+    if (req.body.idmenusemana && req.body.fechainicio && req.body.platoentrada && req.body.platofuerteA || req.body.platofuerteB && req.body.bebida) {
+        const diasemanamoment = moment(req.body.fechainicio).format('dddd');
+        /* Guardar en español */
+        switch (diasemanamoment) {
+            case "Monday": diasemana = "Lunes"; //console.log(diasemana);
+                break;
+            case "Tuesday": diasemana = "Martes"; //console.log(diasemana);
+                break;
+            case "Wednesday": diasemana = "Miercoles"; //console.log(diasemana);
+                break;
+            case "Thursday": diasemana = "Jueves"; //console.log(diasemana);
+                break;
+            case "Friday": diasemana = "Viernes"; //console.log(diasemana);
+                break;
+        }
+        editMenusemana(req.body.idmenusemana, req.body.fechainicio, diasemana, req.body.platoentrada, req.body.platofuerteA, req.body.platofuerteB, req.body.bebida, function (error, respuesta) {
+            if (error) {
+                console.log(error)
+                res.status(404).json({
+                    mensaje: respuesta.mensaje
+                })
+            }
+            else {
+                res.status(200).json({
+                    mensaje: respuesta.mensaje
                 })
             }
             //console.log(respuesta);
