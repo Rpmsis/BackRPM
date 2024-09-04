@@ -1,7 +1,7 @@
 const mysql = require('../database/index');
 
-function insertar (idactividades,fecha, responsables, timestandar, kg, lon,  lat, status, idasigactivi, callback){
-    mysql.query(`Insert into controlactivi (idactividades,fecha, responsables, timestandar, kg, lon,  lat, status, idasigactivi) values ("${idactividades}","${fecha}", "${responsables}", "${timestandar}", "${kg}", "${lon}", "${lat}", "${status}", "${idasigactivi}")`, function(error,respuesta){
+function insertar (idactividades,fecha, responsables, timestandar, kg, lon,  lat, status, idasigactivi,idcheck, callback){
+    mysql.query(`Insert into controlactivi (idactividades,fecha, responsables, timestandar, kg, lon,  lat, status, idasigactivi,idcheck) values ("${idactividades}","${fecha}", "${responsables}", "${timestandar}", "${kg}", "${lon}", "${lat}", "${status}", "${idasigactivi}", "${idcheck}")`, function(error,respuesta){
         
         if(error){
             callback(null,{

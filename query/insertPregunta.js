@@ -1,7 +1,7 @@
 const mysql = require('../database/index');
 
-function insertar (responsable, preguntas,  periodo,  fecha,  inconformidad,  estatus, callback){
-    mysql.query(`Insert into forms (responsable, preguntas, periodo, folioActivo, Fcreacion, fechaInicio, inconformidad, estatus) values ("${responsable}", "${preguntas}", "${periodo}","${periodo}","${fecha}","${fecha}", "${inconformidad}", "${estatus}")`, function(error,respuesta){
+function insertar (responsable, preguntas,  periodo, folioActivo,  fecha,  inconformidad,  estatus, callback){
+    mysql.query(`Insert into forms (responsable, preguntas, periodo, folioActivo, Fcreacion, fechaInicio, inconformidad, estatus) values ("${responsable}", "${preguntas}", "${periodo}","${folioActivo}","${fecha}","${fecha}", "${inconformidad}", "${estatus}")`, function(error,respuesta){
         
         if(error){
             callback(null,{
@@ -10,7 +10,7 @@ function insertar (responsable, preguntas,  periodo,  fecha,  inconformidad,  es
         }
         else{
             callback(null,{
-                mensaje:  'Pregunta guardada con el id => ' + respuesta.insertId
+                mensaje: 'Datos guardados'  //'Pregunta guardada con el id => ' + respuesta.insertId
             })
 
         }

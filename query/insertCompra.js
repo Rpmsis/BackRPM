@@ -1,8 +1,9 @@
 const mysql = require('../database/index');
 
-function insertar(folioActivo, fecha, proveedor, cantidad, costo, costototal, oc,codigobarras,descrip, callback) {
+function insertar(folioActivo, fecha, proveedor, cantidad, preciounitario, costototal, valorinventario, oc,codigobarras,descrip, callback) {
 
-    mysql.query(`INSERT INTO compras(folioActivo, fecha, proveedor, cantidad, costo, costototal,  oc, codigobarras,descrip) VALUES ("${folioActivo}","${fecha}","${proveedor}","${cantidad}","${costo}","${costototal}","${oc}","${codigobarras}","${descrip}")`, function (error, respuesta) {
+    mysql.query(`INSERT INTO compras(folioActivo, fecha, proveedor, cantidad, preciounitario, costototal, valorinventario,  oc, codigobarras,descrip) 
+        VALUES ("${folioActivo}","${fecha}","${proveedor}","${cantidad}","${preciounitario}","${costototal}","${valorinventario}","${oc}","${codigobarras}","${descrip}")`, function (error, respuesta) {
 
         if (error) {
             callback(null, {

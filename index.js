@@ -2,10 +2,12 @@ const express = require('express')
 const cors = require('cors');
 const axios = require('axios');
 const moment = require('moment');
+const fileUpload = require('express-fileupload');
 const fs = require('fs');
 const path = require('path');
 const jwt = require('jsonwebtoken');
-const cargar_archivo = require('./query/archivos_file')
+const cargar_archivo = require('./query/archivos_file');
+const actualizar_archivo = require('./query/actualizar_archivos');
 const most = require('./query/mostrar');
 const mostPreg = require('./query/mostPreg');
 const mostUnidad = require('./query/mostUnidad');
@@ -27,7 +29,6 @@ const mostControlactivi = require('./query/mostControlactivi');
 const mostControlasignados = require('./query/mostControlasig');
 const mostAsigdiario = require('./query/mostAsigdiario');
 const mostHistorialcb = require('./query/mostHistorialcb');
-const mostInsumoasig = require('./query/mostAsignacion');
 const mostPrestamo = require('./query/mostPrestamo');
 const mostTiempoactivi = require('./query/mostTiempoactivi');
 const mostStatusresponsable = require('./query/mostStatusresponsable');
@@ -36,6 +37,9 @@ const mostEficienciakg = require('./query/mostEficienciakg');
 const mostMenusemana = require('./query/mostMenusemana');
 const mostMenudeldia = require('./query/mostMenudia');
 const mostSemanamenu = require('./query/mostSemanamenu');
+const mostIdusuario = require('./query/mostIdusuario');
+const mostIdcheck = require('./query/mostIdcheck');
+const mostControlresponsable = require('./query/mostControlresponsable');
 const Folio = require('./query/folio')
 const Folioconsumible = require('./query/folioconsumible')
 const inserPre = require('./query/insertPregunta');
@@ -57,7 +61,6 @@ const insertarControlactivi = require('./query/insertControlactivi');
 const insertarTiempos = require('./query/insertTiempos');
 const insertarInsumoasig = require('./query/insertAsignacion');
 const insertarPrestamo = require('./query/insertPrestamo');
-const insertarComida = require('./query/insertComida');
 const insertarMenusemana = require('./query/insertMenusemana');
 const editPreg = require('./query/actualizarPreg');
 const editDesinsum = require('./query/actualizarDesinsum');
@@ -81,11 +84,14 @@ const elim = require('./query/eliminar');
 const elimUsuarioprov = require('./query/eliminarUsuarioprov');
 const verificar_Token = require('./middleware/Valida_Token');
 const { rawListeners } = require('./database');
+const { Console } = require('console');
 const app = express()
 const port = 3001
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use(cors());
+app.use(fileUpload());
 const fecha = moment().format("YYYY-MM-DD");
 
 /* Mostrar */
@@ -673,7 +679,6 @@ app.get('/Menudeldia', (req, res) => {
             })
         }
         else {
-            //console.log(respuesta.respuesta);
             res.status(200).json({
                 respuesta
             })
@@ -740,14 +745,80 @@ app.get('/Semanamenu', (req, res) => {
     })
 }
 )
+app.get('/Idusuario', (req, res) => {
+    mostIdusuario(function (error, respuesta) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            //console.log(respuesta.respuesta);
+            res.status(200).json({
+                respuesta
+            })
+        }
+        //console.log(respuesta);
+    })
+}
+)
+app.get('/Idcheck', (req, res) => {
+    mostIdcheck(req.body.respponsable, function (error, respuesta) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            //console.log(respuesta.respuesta);
+            res.status(200).json({
+                respuesta
+            })
+        }
+        //console.log(respuesta);
+    })
+}
+)
+app.get('/Controlresponsable', (req, res) => {
+    //console.log(req.query.responsable);
+    mostControlresponsable(fecha, req.query.responsable, function (error, respuesta) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            //console.log(respuesta);
+            const uniqueControls = {};
+            // Iterar sobre la respuesta
+            respuesta.respuesta.forEach(item => {
+                // Verificar si ya existe un registro con el mismo idcontrolactivi
+                if (!uniqueControls[item.idcontrolactivi] || uniqueControls[item.idcontrolactivi].idtiempos < item.idtiempos) {
+                    uniqueControls[item.idcontrolactivi] = item; // Guardar el registro con el idtiempos más alto
+                }
+            })
+            // Convertir el objeto a un array
+            const result = Object.values(uniqueControls);
+            console.log(result);
+            res.status(200).json({
+                result
+            })
+        }
+        //console.log(respuesta);
+    })
+})
 /* Fin de mostrar */
 
 /* Insertar */
 app.post('/insertarForms', verificar_Token, (req, res) => {
     const usuario = req.usuario;
     console.log(usuario)
-    if (usuario.nombre && req.body.pregunta && req.body.periodo && fecha && req.body.inconformidad && req.body.estatus) {
-        inserPre(usuario.nombre, req.body.pregunta, req.body.periodo, fecha, req.body.inconformidad, req.body.estatus, function (error, respuesta) {
+    if (usuario.nombre && req.body.pregunta && req.body.periodo && req.body.activo && fecha && req.body.inconformidad && req.body.estatus) {
+        console.log(req.body);
+        inserPre(usuario.nombre, req.body.pregunta, req.body.periodo, req.body.activo, fecha, req.body.inconformidad, req.body.estatus, function (error, respuesta) {
 
             if (error) {
                 console.log(error)
@@ -1543,58 +1614,41 @@ app.post('/insertarCompra', (req, res) => {
             })
         }
         else {
-            console.log(respuesta.respuesta);
+            //console.log(respuesta.respuesta);
             const datos = respuesta.respuesta.find((filtro) => filtro.folioActivo === req.body.folioActivo);
             const ultimacantidad = datos.cantidad;
+            const ultimovalorinventario = datos.costo;
             console.log("Ultima cantidad = ", ultimacantidad);
-            if (ultimacantidad >= 0) {
-                mostCompra(req.body.folioActivo, function (error, respuestacompra) {
-                    if (error) {
-                        console.log(error)
-                        res.status(404).json({
-                            mensaje: respuesta.mensaje
-                        })
-                    }
-                    else {
-                        if (req.body.idconsumibles && req.body.folioActivo && fecha && req.body.proveedor && req.body.cantidad && req.body.costo && req.body.oc && req.body.descrip) {
-                            const totalCosto = respuestacompra.respuesta.reduce((acumulador, filtro) => {
-                                return acumulador + filtro.costototal;
-                            }, 0);
-                            const sumacostos = totalCosto + parseFloat(req.body.costo);
-                            console.log(sumacostos);
-                            const cantidadactual = parseInt(ultimacantidad) + parseInt(req.body.cantidad);
-                            const costoTotal = sumacostos / cantidadactual;
-                            const costounitario = Math.round((costoTotal + Number.EPSILON) * 100) / 100;
-                            console.log(costounitario);
-                            if (req.body.codigobarras) {
-                                insertarCompra(req.body.folioActivo, fecha, req.body.proveedor, req.body.cantidad, costounitario, req.body.costo, req.body.oc, req.body.codigobarras, req.body.descrip, function (error, respuesta) {
-                                    if (error) {
-                                        console.log(error)
-                                        res.status(404).json({
-                                            mensaje: respuesta.mensaje
-                                        })
-                                    }
-                                    else {
-                                        editConsu(req.body.idconsumibles, cantidadactual, costounitario, req.body.codigobarras, function (error, respuesta) {
-                                            if (error) {
-                                                console.log(error)
-                                                res.status(404).json({
-                                                    mensaje: respuesta.mensaje
-                                                })
-                                            }
-                                            else {
-                                                res.status(200).json({
-                                                    mensaje: respuesta.mensaje
-                                                })
-                                            }
-                                            //console.log(respuesta);
-                                        })
-                                    }
-                                    //console.log(respuesta);
+            console.log("Ultima valor inventario = ", ultimovalorinventario);
+            if (ultimacantidad >= 0 && ultimovalorinventario >= 0) {
+                if (req.body.idconsumibles && req.body.folioActivo && fecha && req.body.proveedor && req.body.cantidad && req.body.costo && req.body.oc && req.body.descrip) {
+                    /* cantidad, preciounitario, costototal, valorinventario, oc */
+                    const preciounitario1 = parseFloat(req.body.costo) / parseInt(req.body.cantidad);
+                    //console.log("Precio unitario con todos los decimales: ",preciounitario1);
+                    const preciounitario = Math.round((preciounitario1 + Number.EPSILON) * 100) / 100;
+                    console.log("Precio unitario con dos decimales: ", preciounitario);
+
+                    const existencias = ultimacantidad + parseInt(req.body.cantidad);
+                    console.log("Existencias totales: ", existencias);
+                    console.log("Costo total de la compra actual: ", parseFloat(req.body.costo));
+                    const valorinventario1 = (ultimacantidad * ultimovalorinventario + parseFloat(req.body.costo)) / existencias;
+                    const valorinventario = Math.round((valorinventario1 + Number.EPSILON) * 100) / 100;
+                    console.log("Valor inventario con todos los decimales: ", valorinventario);
+
+                    /*  const totalCosto = respuestacompra.respuesta.reduce((acumulador, filtro) => {
+                         return acumulador + filtro.costototal;
+                     }, 0);
+                     const sumacostos = totalCosto + parseFloat(req.body.costo); */
+                    if (req.body.codigobarras) {
+                        insertarCompra(req.body.folioActivo, fecha, req.body.proveedor, req.body.cantidad, preciounitario, req.body.costo, valorinventario, req.body.oc, req.body.codigobarras, req.body.descrip, function (error, respuesta) {
+                            if (error) {
+                                console.log(error)
+                                res.status(404).json({
+                                    mensaje: respuesta.mensaje
                                 })
                             }
                             else {
-                                insertarCompra(req.body.folioActivo, fecha, req.body.proveedor, req.body.cantidad, costounitario, req.body.costo, req.body.oc, req.body.folioActivo, req.body.descrip, function (error, respuesta) {
+                                editConsu(req.body.idconsumibles, existencias, valorinventario, req.body.codigobarras, function (error, respuesta) {
                                     if (error) {
                                         console.log(error)
                                         res.status(404).json({
@@ -1602,44 +1656,60 @@ app.post('/insertarCompra', (req, res) => {
                                         })
                                     }
                                     else {
-                                        editConsu(req.body.idconsumibles, cantidadactual, costounitario, req.body.folioActivo, function (error, respuesta) {
-                                            if (error) {
-                                                console.log(error)
-                                                res.status(404).json({
-                                                    mensaje: respuesta.mensaje
-                                                })
-                                            }
-                                            else {
-                                                res.status(200).json({
-                                                    mensaje: respuesta.mensaje
-                                                })
-                                            }
-                                            //console.log(respuesta);
+                                        res.status(200).json({
+                                            mensaje: respuesta.mensaje
                                         })
                                     }
                                     //console.log(respuesta);
                                 })
                             }
-
-                        }
-                        else {
-                            console.log("Existen datos vacíos");
-                            res.status(400).json({
-                                mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
-                            });
-                        }
+                            //console.log(respuesta);
+                        })
                     }
-                    //console.log(respuesta);
-                })
+                    else {
+                        insertarCompra(req.body.folioActivo, fecha, req.body.proveedor, req.body.cantidad, preciounitario, req.body.costo, valorinventario, req.body.oc, req.body.folioActivo, req.body.descrip, function (error, respuesta) {
+                            if (error) {
+                                console.log(error)
+                                res.status(404).json({
+                                    mensaje: respuesta.mensaje
+                                })
+                            }
+                            else {
+                                editConsu(req.body.idconsumibles, existencias, valorinventario, req.body.folioActivo, function (error, respuesta) {
+                                    if (error) {
+                                        console.log(error)
+                                        res.status(404).json({
+                                            mensaje: respuesta.mensaje
+                                        })
+                                    }
+                                    else {
+                                        res.status(200).json({
+                                            mensaje: respuesta.mensaje
+                                        })
+                                    }
+                                    //console.log(respuesta);
+                                })
+                            }
+                            //console.log(respuesta);
+                        })
+                    }
+
+                }
+                else {
+                    console.log("Existen datos vacíos");
+                    res.status(400).json({
+                        mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
+                    });
+                }
             }
             else {
-                console.log("No existe cantidad en consumibles");
+                console.log("No existe cantidad en consumibles y valor de inventario");
                 res.status(400).json({
-                    mensaje: "No existe cantidad en consumibles"
+                    mensaje: "No existe cantidad en consumibles y valor de inventario"
                 });
             }
         }
-        //console.log(respuesta);
+
     })
 })
 app.post('/insertarMovimiento', (req, res) => {
@@ -1660,9 +1730,9 @@ app.post('/insertarMovimiento', (req, res) => {
                 console.log("Ultima cantidad = ", ultimacantidad);
                 const cantidad = parseFloat(req.body.cantidad);
                 if (Number.isInteger(cantidad) && cantidad >= 1 && cantidad <= ultimacantidad) {
-                    const area = "TECNOLOGÍAS DE LA INFORMACIÓN"
                     const cantidadactual = parseInt(ultimacantidad) - cantidad;
-                    insertarMovimiento(req.body.folioActivo, fecha, req.body.costo, req.body.cantidad, req.body.responsable, area, req.body.tipo, function (error, respuesta) {
+
+                    mostIdcheck(req.body.responsable, function (error, respuesta) {
                         if (error) {
                             console.log(error)
                             res.status(404).json({
@@ -1670,7 +1740,11 @@ app.post('/insertarMovimiento', (req, res) => {
                             })
                         }
                         else {
-                            editConsu(req.body.idconsumibles, cantidadactual, req.body.costo, req.body.codigobarras, function (error, respuesta) {
+                            console.log("Datos el responsable: ", respuesta.respuesta[0].NombreCompleto);
+                            const responsable = respuesta.respuesta[0].NombreCompleto;
+                            const area = respuesta.respuesta[0].Area;
+                            const idcheck = respuesta.respuesta[0].idCheck;
+                            insertarMovimiento(req.body.folioActivo, fecha, req.body.costo, req.body.cantidad, responsable, area, req.body.tipo, idcheck, function (error, respuesta) {
                                 if (error) {
                                     console.log(error)
                                     res.status(404).json({
@@ -1678,8 +1752,19 @@ app.post('/insertarMovimiento', (req, res) => {
                                     })
                                 }
                                 else {
-                                    res.status(200).json({
-                                        mensaje: respuesta.mensaje
+                                    editConsu(req.body.idconsumibles, cantidadactual, req.body.costo, req.body.codigobarras, function (error, respuesta) {
+                                        if (error) {
+                                            console.log(error)
+                                            res.status(404).json({
+                                                mensaje: respuesta.mensaje
+                                            })
+                                        }
+                                        else {
+                                            res.status(200).json({
+                                                mensaje: respuesta.mensaje
+                                            })
+                                        }
+                                        //console.log(respuesta);
                                     })
                                 }
                                 //console.log(respuesta);
@@ -1687,6 +1772,7 @@ app.post('/insertarMovimiento', (req, res) => {
                         }
                         //console.log(respuesta);
                     })
+
                 }
                 else {
                     res.status(400).json({
@@ -1711,12 +1797,13 @@ app.post('/insertarControl', (req, res) => {
         const kg = 0;
         const lon = 0;
         const lat = 0;
-        const status = "INICIAR"
+        const status = "INICIAR";
         mostControlasignados(fecha, function (error, respuesta) {
             if (error) {
                 console.log(error)
                 res.status(404).json({
                     mensaje: respuesta.mensaje
+
                 })
             }
             else {
@@ -1731,7 +1818,7 @@ app.post('/insertarControl', (req, res) => {
                     });
 
                 } else {
-                    insertarControlactivi(req.body.idactividades, fecha, req.body.responsables, timestandar, kg, lon, lat, status, req.body.idasigactivi, function (error, respuesta) {
+                    mostIdusuario(function (error, respuesta) {
                         if (error) {
                             console.log(error)
                             res.status(404).json({
@@ -1739,9 +1826,27 @@ app.post('/insertarControl', (req, res) => {
                             })
                         }
                         else {
-                            res.status(200).json({
-                                mensaje: respuesta.mensaje
-                            })
+                            //console.log(respuesta.respuesta);
+                            const searchidcheck = respuesta.respuesta.find(filtro => filtro.idCheck === req.body.responsables);
+                            console.log(searchidcheck);
+                            const nombrecompleto = searchidcheck.NombreCompleto;
+                            console.log(nombrecompleto);
+
+                            insertarControlactivi(req.body.idactividades, fecha, nombrecompleto, timestandar, kg, lon, lat, status, req.body.idasigactivi, req.body.responsables, function (error, respuesta) {
+                                if (error) {
+                                    console.log(error)
+                                    res.status(404).json({
+                                        mensaje: respuesta.mensaje
+                                    })
+                                }
+                                else {
+                                    res.status(200).json({
+                                        mensaje: respuesta.mensaje
+                                    })
+                                }
+                                //console.log(respuesta);
+                            }) 
+
                         }
                         //console.log(respuesta);
                     })
@@ -1905,41 +2010,25 @@ app.post('/insertarprestamo', (req, res) => {
     })
 })
 app.post('/insertarComida', (req, res) => {
-    console.log(req.body.nombre);
-    const imagen = req.body.archivoBase64;
-    const nombre = req.body.nombre;
-    /* cargar_archivo(req, res, (err, archivo) => {
+    cargar_archivo(req, res, (err, archivo) => {
         if (err) {
             console.log(err);
             return res.status(500).send('Error al cargar el archivo');
         } else {
-            console.log(archivo);
+            //console.log("Respuesta img guardadas ", archivo);
+            const ordenado = archivo.sort((a, b) => {
+                // Extraer el número al principio de cada cadena
+                const numeroA = parseInt(a.split('-')[0]);
+                const numeroB = parseInt(b.split('-')[0]);
+
+                // Comparar los números
+                return numeroA - numeroB;
+            });
+
+            console.log(req.body);
+            console.log("Ordenados: ", ordenado);
         }
-    })  */
-    if (imagen) {
-        //Eliminar el prefijo de base64
-        const base64Data = imagen.replace(/^data:image\/\w+;base64,/, '');
-        const buffer = Buffer.from(base64Data, 'base64');
-        //Guardar la img en la carpeta +uploads+ 
-        const filePath = path.join(__dirname, 'uploads', nombre);
-
-        fs.mkdirSync(path.dirname(filePath), { recursive: true });
-
-        fs.writeFile(filePath, buffer, (err) => {
-            if (err) {
-                console.error('Error al guardar la imagen:', err);
-                res.status(500).send('Error al guardar la imagen');
-                return;
-            }
-            console.log('Imagen guardada correctamente');
-            res.status(200).json({
-                mensaje: 'Datos recibidos y procesados'
-            })
-            //res.send('Datos recibidos y procesados');
-        });
-    } else {
-        res.send('Datos recibidos pero sin imagen');
-    }
+    })
 })
 app.post('/insertarMenu', (req, res) => {
     //console.log(req.body)
@@ -1979,20 +2068,76 @@ app.post('/insertarMenu', (req, res) => {
                 }
                 else {
                     if (diasemana) {
-                        console.log(diasemanamoment);
-                        insertarMenusemana(fecha, req.body.fechainicio, diasemana, req.body.platoentrada, req.body.platofuerteA, req.body.platofuerteB, req.body.bebida, function (error, respuesta) {
-                            if (error) {
-                                console.log(error)
-                                res.status(404).json({
-                                    mensaje: respuesta.mensaje
-                                })
+                        cargar_archivo(req, res, (err, archivo) => {
+                            if (err) {
+                                console.log(err);
+                                return res.status(500).send('Error al cargar el archivo');
+                            } else {
+                                //console.log("Respuesta img guardadas ", archivo);
+                                if (archivo === "Faltanarchivos") {
+                                    console.log("Agrega al menos una imagen.");
+                                    res.status(400).json({
+                                        mensaje: "Agrega al menos una imagen"
+                                    });
+                                } else {
+                                    const ordenado = archivo.sort((a, b) => {
+                                        // Extraer el número al principio de cada cadena
+                                        const numeroA = parseInt(a.split('-')[0]);
+                                        const numeroB = parseInt(b.split('-')[0]);
+
+                                        // Comparar los números
+                                        return numeroA - numeroB;
+                                    });
+                                    console.log("Ordenados: ", ordenado);
+                                    let a = '', b = '', c = '', d = '';
+                                    // Iterar sobre los datos y asignar los valores a las variables
+                                    ordenado.forEach((item, index) => {
+                                        // Determinar el texto a guardar
+                                        const text = item.includes('productosinimagen.png') ? 'productosinimagen.png' : item;
+
+                                        // Asignar a las variables
+                                        if (index === 0) {
+                                            a = text;
+                                        } else if (index === 1) {
+                                            b = text;
+                                        } else if (index === 2) {
+                                            c = text;
+                                        } else if (index === 3) {
+                                            d = text;
+                                        }
+                                    });
+
+                                    // Mostrar resultados
+                                    /* console.log('a:', a);
+                                    console.log('b:', b);
+                                    console.log('c:', c);
+                                    console.log('d:', d); */
+                                    //console.log(req.body);
+                                    //console.log(diasemanamoment);
+                                    if (fecha && req.body.fechainicio && req.body.platoentrada && req.body.platofuerteA || req.body.platofuerteB && req.body.bebida) {
+                                        insertarMenusemana(fecha, req.body.fechainicio, diasemana, req.body.platoentrada, req.body.platofuerteA, req.body.platofuerteB, req.body.bebida, a, b, c, d, function (error, respuesta) {
+                                            if (error) {
+                                                console.log(error)
+                                                res.status(404).json({
+                                                    mensaje: respuesta.mensaje
+                                                })
+                                            }
+                                            else {
+                                                res.status(200).json({
+                                                    mensaje: respuesta.mensaje
+                                                })
+                                            }
+                                            //console.log(respuesta);
+                                        })
+                                    }
+                                    else {
+                                        res.status(400).json({
+                                            mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
+                                        });
+                                    }
+
+                                }
                             }
-                            else {
-                                res.status(200).json({
-                                    mensaje: respuesta.mensaje
-                                })
-                            }
-                            //console.log(respuesta);
                         })
                     }
                     else {
@@ -2798,7 +2943,8 @@ app.put('/actualizarAsignacionkg', (req, res) => {
     }
 })
 app.put('/actualizarMenusemana', (req, res) => {
-    /* idmenusemana,fechainicio,diasemana,platoentrada,platofuerteA,platofuerteB,bebida, */
+
+    console.log(req.body)
     var diasemana = "";
 
     if (req.body.idmenusemana && req.body.fechainicio && req.body.platoentrada && req.body.platofuerteA || req.body.platofuerteB && req.body.bebida) {
@@ -2816,7 +2962,7 @@ app.put('/actualizarMenusemana', (req, res) => {
             case "Friday": diasemana = "Viernes"; //console.log(diasemana);
                 break;
         }
-        editMenusemana(req.body.idmenusemana, req.body.fechainicio, diasemana, req.body.platoentrada, req.body.platofuerteA, req.body.platofuerteB, req.body.bebida, function (error, respuesta) {
+        mostMenusemana(function (error, respuesta) {
             if (error) {
                 console.log(error)
                 res.status(404).json({
@@ -2824,9 +2970,108 @@ app.put('/actualizarMenusemana', (req, res) => {
                 })
             }
             else {
-                res.status(200).json({
-                    mensaje: respuesta.mensaje
-                })
+                //console.log(req.body.idmenusemana);
+                const id = parseInt(req.body.idmenusemana)
+                const nuevosdatos = respuesta.respuesta.filter((filtro) => filtro.idmenusemana === id);
+                //console.log(nuevosdatos);
+
+                const archivos = [
+                    nuevosdatos[0].imagen1,
+                    nuevosdatos[0].imagen2,
+                    nuevosdatos[0].imagen3,
+                    nuevosdatos[0].imagen4
+                ];
+                //console.log("ARCHIVOS GUARDADOS: ", archivos);
+                //let a = '', b = '', c = '', d = '';
+
+                if (!req.files || Object.keys(req.files).length === 0) {
+                    editMenusemana(req.body.idmenusemana, req.body.fechainicio, diasemana, req.body.platoentrada, req.body.platofuerteA, req.body.platofuerteB, req.body.bebida,
+                        nuevosdatos[0].imagen1, nuevosdatos[0].imagen2, nuevosdatos[0].imagen3, nuevosdatos[0].imagen4, function (error, respuesta) {
+                            if (error) {
+                                console.log(error)
+                                res.status(404).json({
+                                    mensaje: respuesta.mensaje
+                                })
+                            }
+                            else {
+                                res.status(200).json({
+                                    mensaje: respuesta.mensaje
+                                })
+                            }
+                            //console.log(respuesta);
+                        })
+                } else {
+                    actualizar_archivo(req, res, (err, archivo) => {
+                        if (err) {
+                            console.log(err);
+                            return res.status(500).send('Error al cargar el archivo');
+                        } else {
+                            console.log("Respuesta img guardadas ", archivo);
+                            const ordenado = archivo.sort((a, b) => {
+                                // Extraer el número al principio de cada cadena
+                                const numeroA = parseInt(a.split('-')[0]);
+                                const numeroB = parseInt(b.split('-')[0]);
+
+                                // Comparar los números
+                                return numeroA - numeroB;
+                            });
+                            //console.log("ordenado: ", ordenado);
+                            let a = '', b = '', c = '', d = '';
+                            ordenado.forEach((item, index) => {
+                                // Determinar el texto a guardar
+                                const text = item.includes('productosinimagen.png') ? 'productosinimagen.png' : item;
+
+                                // Asignar a las variables
+                                if (index === 0) {
+                                    a = text;
+                                } else if (index === 1) {
+                                    b = text;
+                                } else if (index === 2) {
+                                    c = text;
+                                } else if (index === 3) {
+                                    d = text;
+                                }
+                            });
+                            //console.log("archivos: ", archivos);
+
+                            // Crear una copia de archivos para modificación
+                            const nuevoArchivos = [...archivos];
+                            // Iterar sobre el arreglo ordenado
+                            ordenado.forEach((item, index) => {
+                                // Verificar si el item en ordenado no termina en 'productosinimagen.png'
+                                if (!item.endsWith('productosinimagen.png')) {
+                                    // Asegurarse de que el índice esté dentro del rango de nuevoArchivos
+                                    if (index < nuevoArchivos.length) {
+                                        nuevoArchivos[index] = item;
+                                    }
+                                }
+                            });
+
+                            // Mostrar el resultado final
+                            /* console.log("entrada 1",nuevoArchivos[0]);
+                            console.log("bebida 2",nuevoArchivos[1]);
+                            console.log("platoA 3",nuevoArchivos[2]);
+                            console.log("platoB 4",nuevoArchivos[3]); */
+                            editMenusemana(req.body.idmenusemana, req.body.fechainicio, diasemana, req.body.platoentrada, req.body.platofuerteA, req.body.platofuerteB, req.body.bebida,
+                                nuevoArchivos[0], nuevoArchivos[1], nuevoArchivos[2], nuevoArchivos[3], function (error, respuesta) {
+                                    if (error) {
+                                        console.log(error)
+                                        res.status(404).json({
+                                            mensaje: respuesta.mensaje
+                                        })
+                                    }
+                                    else {
+                                        res.status(200).json({
+                                            mensaje: respuesta.mensaje
+                                        })
+                                    }
+                                    //console.log(respuesta);
+                                })
+                        }
+                    })
+                }
+
+
             }
             //console.log(respuesta);
         })

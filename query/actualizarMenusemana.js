@@ -1,8 +1,10 @@
 const mysql = require('../database/index');
 
-function actualizar (idmenusemana,fechainicio,diasemana,platoentrada,platofuerteA,platofuerteB,bebida, callback){
+function actualizar (idmenusemana,fechainicio,diasemana,platoentrada,platofuerteA,platofuerteB,bebida,imagen1,imagen2,imagen3,imagen4, callback){
 
-    mysql.query(`Update menusemana  set fechainicio = '${fechainicio}', diasemana = '${diasemana}', platoentrada = '${platoentrada}', platofuerteA = '${platofuerteA}', platofuerteB = '${platofuerteB}', bebida = '${bebida}' WHERE idmenusemana = '${idmenusemana}' `, function(error,respuesta){
+    mysql.query(`Update menusemana  set fechainicio = '${fechainicio}', diasemana = '${diasemana}', platoentrada = '${platoentrada}', platofuerteA = '${platofuerteA}', 
+                platofuerteB = '${platofuerteB}', bebida = '${bebida}', imagen1 = '${imagen1}', imagen2 = '${imagen2}', imagen3 = '${imagen3}', imagen4 = '${imagen4}' 
+                WHERE idmenusemana = '${idmenusemana}' `, function(error,respuesta){
         
         if(error){
             callback(null,{
