@@ -912,14 +912,6 @@ app.post('/insertarRes', (req, res) => {
         });
     }
 })
-
-
-//Enviar los datos de un solo id para mostrar, actualizar o eliminar
-/* app.put('/personas/:id', (req, res) => {
-   console.log(req.params)
-   }
-)  */
-
 app.post('/insertarInsumos', (req, res) => {
     Folio(function (error, respuesta) {
         if (error) {
@@ -931,22 +923,42 @@ app.post('/insertarInsumos', (req, res) => {
             // Una vez que tenemos el folio, procedemos con la inserción
             const folio = respuesta.folio;
             console.log("Folio obtenido: ", folio)
-            if (folio && fecha && req.body.tipoAct && req.body.falta && req.body.descrip && req.body.proveedor && req.body.folioOC && req.body.monto && req.body.fadqui && req.body.numserie) {
-                inserInsumos(folio, fecha, req.body.tipoAct, req.body.falta, req.body.descrip, req.body.proveedor, req.body.folioOC, req.body.monto, req.body.fadqui, req.body.numserie, function (error, respuesta) {
+            if (folio && fecha && req.body.tipoAct && req.body.falta && req.body.descrip && req.body.proveedor && req.body.folioOC && req.body.monto && req.body.fadqui) {
+                if(req.body.numserie){
+                    inserInsumos(folio, fecha, req.body.tipoAct, req.body.falta, req.body.descrip, req.body.proveedor, req.body.folioOC, req.body.monto, req.body.fadqui, req.body.numserie, function (error, respuesta) {
 
-                    if (error) {
-                        console.log(error)
-                        res.status(404).json({
-                            mensaje: respuesta.mensaje
-                        })
-                    }
-                    else {
-                        res.status(200).json({
-                            mensaje: respuesta.mensaje
-                        })
-                    }
-                    //console.log(respuesta);
-                })
+                        if (error) {
+                            console.log(error)
+                            res.status(404).json({
+                                mensaje: respuesta.mensaje
+                            })
+                        }
+                        else {
+                            res.status(200).json({
+                                mensaje: respuesta.mensaje
+                            })
+                        }
+                        //console.log(respuesta);
+                    })
+                }
+                else{
+                    const NAnumserie= "NA";
+                    inserInsumos(folio, fecha, req.body.tipoAct, req.body.falta, req.body.descrip, req.body.proveedor, req.body.folioOC, req.body.monto, req.body.fadqui, NAnumserie, function (error, respuesta) {
+
+                        if (error) {
+                            console.log(error)
+                            res.status(404).json({
+                                mensaje: respuesta.mensaje
+                            })
+                        }
+                        else {
+                            res.status(200).json({
+                                mensaje: respuesta.mensaje
+                            })
+                        }
+                        //console.log(respuesta);
+                    })
+                }
             } else {
                 //console.log("Existen datos vacíos");
                 res.status(400).json({
@@ -976,8 +988,9 @@ app.post('/insertarMante', (req, res) => {
             if (tipo) {
                 if (tipo === "MONTACARGAS" || tipo === "MAQUINARIA" || tipo === "VEHÍCULOS" || tipo === "HERRAMIENTA") {
                     if (tipo === "MONTACARGAS") {
+                        /* folioMant, falta, fabricacion, tipoAct,  modelo, capacidad, clasificacion, nmotor, tipocontmate, especificacion, marca, descripadi,descripgen,idubicacion, */
                         if (req.body.folioActivo && fecha && noaplica && req.body.tipoAct && req.body.modelo && req.body.capacidad && req.body.clasificacion && noaplica && noaplica && noaplica && noaplica && noaplica && noaplica) {
-                            inserMante(req.body.folioActivo, fecha, noaplica, req.body.tipoAct, req.body.modelo, req.body.capacidad, req.body.clasificacion, noaplica, noaplica, noaplica, noaplica, noaplica, noaplica, req.body.idubicacion, function (errorMante, respuestaMante) {
+                            inserMante(req.body.folioActivo, fecha, noaplica, req.body.tipoAct, req.body.modelo, req.body.capacidad, req.body.clasificacion, noaplica, noaplica, noaplica, noaplica, noaplica, req.body.descripgen, req.body.idubicacion, function (errorMante, respuestaMante) {
                                 if (errorMante) {
                                     console.error(errorMante);
                                     return res.status(404).json({ mensaje: respuestaMante.mensaje });
@@ -1002,7 +1015,7 @@ app.post('/insertarMante', (req, res) => {
                         if (tipo === "MAQUINARIA") {
                             if (req.body.folioActivo) {
                                 if (fecha && noaplica && req.body.tipoAct && req.body.modelo && req.body.capacidad && req.body.clasificacion && noaplica && noaplica && noaplica && noaplica && noaplica && noaplica && noaplica) {
-                                    inserMante(req.body.folioActivo, fecha, noaplica, req.body.tipoAct, req.body.modelo, req.body.capacidad, req.body.clasificacion, noaplica, noaplica, noaplica, noaplica, noaplica, noaplica, req.body.idubicacion, function (errorMante, respuestaMante) {
+                                    inserMante(req.body.folioActivo, fecha, noaplica, req.body.tipoAct, req.body.modelo, req.body.capacidad, req.body.clasificacion, noaplica, noaplica, noaplica, noaplica, noaplica, req.body.descripgen, req.body.idubicacion, function (errorMante, respuestaMante) {
                                         if (errorMante) {
                                             console.error(errorMante);
                                             return res.status(404).json({ mensaje: respuestaMante.mensaje });
@@ -1064,7 +1077,7 @@ app.post('/insertarMante', (req, res) => {
                         else {
                             if (tipo === "VEHÍCULOS") {
                                 if (req.body.folioActivo && fecha && noaplica && req.body.tipoAct && req.body.modelo && noaplica && req.body.clasificacion && req.body.nmotor && noaplica && noaplica && noaplica && noaplica && noaplica) {
-                                    inserMante(req.body.folioActivo, fecha, noaplica, req.body.tipoAct, req.body.modelo, noaplica, req.body.clasificacion, req.body.nmotor, noaplica, noaplica, noaplica, noaplica, noaplica, req.body.idubicacion, function (errorMante, respuestaMante) {
+                                    inserMante(req.body.folioActivo, fecha, noaplica, req.body.tipoAct, req.body.modelo, noaplica, req.body.clasificacion, req.body.nmotor, noaplica, noaplica, noaplica, noaplica, req.body.descripgen, req.body.idubicacion, function (errorMante, respuestaMante) {
                                         if (errorMante) {
                                             console.error(errorMante);
                                             return res.status(404).json({ mensaje: respuestaMante.mensaje });
@@ -1086,7 +1099,7 @@ app.post('/insertarMante', (req, res) => {
                             } else {
                                 if (tipo === "HERRAMIENTA") {
                                     if (req.body.folioActivo && fecha && noaplica && req.body.tipoAct && req.body.modelo && noaplica && noaplica && noaplica && noaplica && noaplica && req.body.marca && noaplica && noaplica && noaplica) {
-                                        inserMante(req.body.folioActivo, fecha, noaplica, req.body.tipoAct, req.body.modelo, noaplica, noaplica, noaplica, noaplica, noaplica, req.body.marca, noaplica, noaplica, req.body.idubicacion, function (errorMante, respuestaMante) {
+                                        inserMante(req.body.folioActivo, fecha, noaplica, req.body.tipoAct, req.body.modelo, noaplica, noaplica, noaplica, noaplica, noaplica, req.body.marca, noaplica, req.body.descripgen, req.body.idubicacion, function (errorMante, respuestaMante) {
                                             if (errorMante) {
                                                 console.error(errorMante);
                                                 return res.status(404).json({ mensaje: respuestaMante.mensaje });
@@ -2160,6 +2173,13 @@ app.post('/insertarMenu', (req, res) => {
 
 
 /* Fin de insertar */
+
+
+//Enviar los datos de un solo id para mostrar, actualizar o eliminar
+/* app.put('/personas/:id', (req, res) => {
+   console.log(req.params)
+   }
+)  */
 
 
 /* Actualizar */
