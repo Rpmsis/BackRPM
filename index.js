@@ -2357,7 +2357,7 @@ app.put('/actualizarconsu', (req, res) => {
     }
 })
 app.put('/actualizarInsumos', (req, res) => {
-    if (req.body.IdInsumos && req.body.proveedor && req.body.monto && req.body.Numserie && req.body.folioOC) {
+    if (req.body.IdInsumos && req.body.proveedor && req.body.monto && req.body.folioOC) {
         editInsumos(req.body.IdInsumos, req.body.proveedor, req.body.monto, req.body.Numserie, req.body.folioOC, function (error, respuesta) {
 
             if (error) {
