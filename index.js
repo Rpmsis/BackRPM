@@ -2475,94 +2475,104 @@ app.put('/actualizarPrestamo', (req, res) => {
                 })
             }
             else {
-                //console.log(respuesta.respuesta);
+                console.log(req.body);
                 const datos = respuesta.respuesta.find((filtro) => filtro.folioActivo === req.body.folioActivo);
-                const ultimacantidad = parseInt(datos.cantidad);
-                console.log("Ultima cantidad = ", ultimacantidad);
-                mostPrestamo(req.body.responsable, function (error, resPrestamo) {
-                    if (error) {
-                        console.log(error)
-                        res.status(404).json({
-                            mensaje: respuesta.mensaje
-                        })
-                    }
-                    else {
-                        //console.log(resPrestamo.respuesta[0].cantidad);
-                        const canprestamo = resPrestamo.respuesta.find((filtro) => filtro.idprestamo === req.body.idprestamo);
-                        const canprestamototal = parseInt(canprestamo.cantidad);
-                        //console.log(cantidadprestamo.cantidad);
-                        const cantidad = parseFloat(req.body.cantidad);
-                        if (Number.isInteger(cantidad) && cantidad >= 1 && cantidad <= canprestamototal) {
-                            const cantidadactual = ultimacantidad + cantidad;
-                            const nuevacantidad = canprestamototal - cantidad;
-                            console.log(cantidadactual, " ", nuevacantidad);
-
-                            if (nuevacantidad === 0) {
-                                const estatus = "ENTREGADO";
-                                editPrestamo(req.body.idprestamo, nuevacantidad, estatus, function (error, respuesta) {
-                                    if (error) {
-                                        console.log(error)
-                                        res.status(404).json({
-                                            mensaje: respuesta.mensaje
-                                        })
-                                    }
-                                    else {
-                                        editCanconsumo(req.body.folioActivo, cantidadactual, function (error, respuesta) {
-                                            if (error) {
-                                                console.log(error)
-                                                res.status(404).json({
-                                                    mensaje: respuesta.mensaje
-                                                })
-                                            }
-                                            else {
-                                                res.status(200).json({
-                                                    mensaje: respuesta.mensaje
-                                                })
-                                            }
-                                            //console.log(respuesta);
-                                        })
-                                    }
-                                    console.log(respuesta);
-                                })
-                            }
-                            else {
-                                const estatus = "PRESTAMO";
-                                editPrestamo(req.body.idprestamo, nuevacantidad, estatus, function (error, respuesta) {
-                                    if (error) {
-                                        console.log(error)
-                                        res.status(404).json({
-                                            mensaje: respuesta.mensaje
-                                        })
-                                    }
-                                    else {
-                                        editCanconsumo(req.body.folioActivo, cantidadactual, function (error, respuesta) {
-                                            if (error) {
-                                                console.log(error)
-                                                res.status(404).json({
-                                                    mensaje: respuesta.mensaje
-                                                })
-                                            }
-                                            else {
-                                                res.status(200).json({
-                                                    mensaje: respuesta.mensaje
-                                                })
-                                            }
-                                            //console.log(respuesta);
-                                        })
-                                    }
-                                    console.log(respuesta);
-                                })
-                            }
+                //const ultimacantidad = parseInt(datos.cantidad);
+                console.log("Ultima cantidad = ", datos);
+                if (datos && datos.length >= 1) {
+                    console.log("Existen datos");
+                    mostPrestamo(req.body.responsable, function (error, resPrestamo) {
+                        if (error) {
+                            console.log(error)
+                            res.status(404).json({
+                                mensaje: respuesta.mensaje
+                            })
                         }
                         else {
-                            res.status(400).json({
-                                mensaje: "CANTIDAD INSUFICIENTE"
-                            });
+                            //console.log(resPrestamo.respuesta[0].cantidad);
+                            const canprestamo = resPrestamo.respuesta.find((filtro) => filtro.idprestamo === req.body.idprestamo);
+                            const canprestamototal = parseInt(canprestamo.cantidad);
+                            //console.log(cantidadprestamo.cantidad);
+                            const cantidad = parseFloat(req.body.cantidad);
+                            if (Number.isInteger(cantidad) && cantidad >= 1 && cantidad <= canprestamototal) {
+                                const cantidadactual = ultimacantidad + cantidad;
+                                const nuevacantidad = canprestamototal - cantidad;
+                                console.log(cantidadactual, " ", nuevacantidad);
+
+                                if (nuevacantidad === 0) {
+                                    const estatus = "ENTREGADO";
+                                    editPrestamo(req.body.idprestamo, nuevacantidad, estatus, function (error, respuesta) {
+                                        if (error) {
+                                            console.log(error)
+                                            res.status(404).json({
+                                                mensaje: respuesta.mensaje
+                                            })
+                                        }
+                                        else {
+                                            editCanconsumo(req.body.folioActivo, cantidadactual, function (error, respuesta) {
+                                                if (error) {
+                                                    console.log(error)
+                                                    res.status(404).json({
+                                                        mensaje: respuesta.mensaje
+                                                    })
+                                                }
+                                                else {
+                                                    res.status(200).json({
+                                                        mensaje: respuesta.mensaje
+                                                    })
+                                                }
+                                                //console.log(respuesta);
+                                            })
+                                        }
+                                        console.log(respuesta);
+                                    })
+                                }
+                                else {
+                                    const estatus = "PRESTAMO";
+                                    editPrestamo(req.body.idprestamo, nuevacantidad, estatus, function (error, respuesta) {
+                                        if (error) {
+                                            console.log(error)
+                                            res.status(404).json({
+                                                mensaje: respuesta.mensaje
+                                            })
+                                        }
+                                        else {
+                                            editCanconsumo(req.body.folioActivo, cantidadactual, function (error, respuesta) {
+                                                if (error) {
+                                                    console.log(error)
+                                                    res.status(404).json({
+                                                        mensaje: respuesta.mensaje
+                                                    })
+                                                }
+                                                else {
+                                                    res.status(200).json({
+                                                        mensaje: respuesta.mensaje
+                                                    })
+                                                }
+                                                //console.log(respuesta);
+                                            })
+                                        }
+                                        console.log(respuesta);
+                                    })
+                                }
+                            }
+                            else {
+                                res.status(400).json({
+                                    mensaje: "CANTIDAD INSUFICIENTE"
+                                });
+                            }
+
                         }
-                        /* */
-                    }
-                    //console.log(respuesta);
-                })
+                        //console.log(respuesta);
+                    })
+                }
+                else {
+                    console.log("El activo no existe");
+                    console.log("Existen datos vacíos")
+                    res.status(400).json({
+                        mensaje: "El activo no existe"
+                    })
+                }
             }
         })
     }
