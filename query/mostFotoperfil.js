@@ -1,8 +1,8 @@
 const mysql = require('../database/index');
 
-function mostrar (responsable,callback){
-    mysql.query(`SELECT * FROM prestamo WHERE idcheck="${responsable}" && estatus="PRESTAMO" && cantidad>=1`, function(error,respuesta){
-        
+function mostrar (id, callback){
+    /* "${empresa}"  */
+    mysql.query(`SELECT foto FROM Alta_Rh where idCheck="${id}"`, function(error,respuesta){
         if(error){
             callback(null,{
                 mensaje:  error
@@ -13,7 +13,7 @@ function mostrar (responsable,callback){
                 respuesta
             })
         }
-        //console.log(respuesta);
+        //console.log("Qué sucede? ",empresa, fecha, respuesta);
     });
 
 }

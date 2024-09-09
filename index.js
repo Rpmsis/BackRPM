@@ -8,6 +8,7 @@ const path = require('path');
 const jwt = require('jsonwebtoken');
 const cargar_archivo = require('./query/archivos_file');
 const actualizar_archivo = require('./query/actualizar_archivos');
+const actualizar_fotoperfil = require('./query/archivo_fotoperfil');
 const most = require('./query/mostrar');
 const mostPreg = require('./query/mostPreg');
 const mostUnidad = require('./query/mostUnidad');
@@ -37,9 +38,11 @@ const mostEficienciakg = require('./query/mostEficienciakg');
 const mostMenusemana = require('./query/mostMenusemana');
 const mostMenudeldia = require('./query/mostMenudia');
 const mostSemanamenu = require('./query/mostSemanamenu');
-const mostIdusuario = require('./query/mostIdusuario');
+const mostIdusuarioPMateriales = require('./query/mostIdusuarioPMateriales');
+const mostIdusuarioSRecoleccion = require('./query/mostIdusuarioSRecoleccion');
 const mostIdcheck = require('./query/mostIdcheck');
 const mostControlresponsable = require('./query/mostControlresponsable');
+const mostFotoperfil = require('./query/mostFotoperfil');
 const Folio = require('./query/folio')
 const Folioconsumible = require('./query/folioconsumible')
 const inserPre = require('./query/insertPregunta');
@@ -80,6 +83,7 @@ const editStatusasignacion = require('./query/actualizarStatusasignacion');
 const editStatusactividadesT = require('./query/actualizarStatusactividades');
 const editStatusactividadesKg = require('./query/actualizarStatusactividadeskg');
 const editMenusemana = require('./query/actualizarMenusemana');
+const editFotoperfil = require('./query/actualizarFotoperfil');
 const elim = require('./query/eliminar');
 const elimUsuarioprov = require('./query/eliminarUsuarioprov');
 const verificar_Token = require('./middleware/Valida_Token');
@@ -90,6 +94,7 @@ const port = 3001
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/fotoperfil', express.static(path.join(__dirname, 'fotoperfil')));
 app.use(cors());
 app.use(fileUpload());
 const fecha = moment().format("YYYY-MM-DD");
@@ -746,7 +751,7 @@ app.get('/Semanamenu', (req, res) => {
 }
 )
 app.get('/Idusuario', (req, res) => {
-    mostIdusuario(function (error, respuesta) {
+    mostIdusuarioPMateriales(function (error, respuesta) {
         if (error) {
             console.log(error)
             res.status(404).json({
@@ -810,6 +815,27 @@ app.get('/Controlresponsable', (req, res) => {
         //console.log(respuesta);
     })
 })
+app.get('/foto', verificar_Token, (req, res) => {
+    const usuario = req.usuario;
+    const responsable = usuario.id;
+    //console.log(responsable);
+    mostFotoperfil(responsable, function (error, respuesta) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            //console.log(respuesta.respuesta);
+            res.status(200).json({
+                respuesta
+            })
+        }
+        //console.log(respuesta);
+    })
+}
+)
 /* Fin de mostrar */
 
 /* Insertar */
@@ -924,7 +950,7 @@ app.post('/insertarInsumos', (req, res) => {
             const folio = respuesta.folio;
             console.log("Folio obtenido: ", folio)
             if (folio && fecha && req.body.tipoAct && req.body.falta && req.body.descrip && req.body.proveedor && req.body.folioOC && req.body.monto && req.body.fadqui) {
-                if(req.body.numserie){
+                if (req.body.numserie) {
                     inserInsumos(folio, fecha, req.body.tipoAct, req.body.falta, req.body.descrip, req.body.proveedor, req.body.folioOC, req.body.monto, req.body.fadqui, req.body.numserie, function (error, respuesta) {
 
                         if (error) {
@@ -941,8 +967,8 @@ app.post('/insertarInsumos', (req, res) => {
                         //console.log(respuesta);
                     })
                 }
-                else{
-                    const NAnumserie= "NA";
+                else {
+                    const NAnumserie = "NA";
                     inserInsumos(folio, fecha, req.body.tipoAct, req.body.falta, req.body.descrip, req.body.proveedor, req.body.folioOC, req.body.monto, req.body.fadqui, NAnumserie, function (error, respuesta) {
 
                         if (error) {
@@ -1644,7 +1670,7 @@ app.post('/insertarCompra', (req, res) => {
                     const existencias = ultimacantidad + parseInt(req.body.cantidad);
                     console.log("Existencias totales: ", existencias);
                     console.log("Costo total de la compra actual: ", parseFloat(req.body.costo));
-                    const valorinventario1 = (ultimacantidad * ultimovalorinventario + parseFloat(req.body.costo)) / existencias;
+                    const valorinventario1 = ((ultimacantidad * ultimovalorinventario) + parseFloat(req.body.costo)) / existencias;
                     const valorinventario = Math.round((valorinventario1 + Number.EPSILON) * 100) / 100;
                     console.log("Valor inventario con todos los decimales: ", valorinventario);
 
@@ -1821,9 +1847,9 @@ app.post('/insertarControl', (req, res) => {
             }
             else {
                 //console.log(req.body)
-                //console.log(respuesta.respuesta)
-                const datosFil = respuesta.respuesta.find((filtro) => filtro.responsables === req.body.responsables);
-                //console.log(datosFil);
+                console.log(respuesta.respuesta)
+                const datosFil = respuesta.respuesta.find((filtro) => filtro.idcheck === req.body.responsables);
+                console.log(datosFil);
                 if (datosFil) {
                     console.log("El responsable esta asignado en otra actividad");
                     res.status(400).json({
@@ -1858,7 +1884,7 @@ app.post('/insertarControl', (req, res) => {
                                     })
                                 }
                                 //console.log(respuesta);
-                            }) 
+                            })
 
                         }
                         //console.log(respuesta);
@@ -1979,7 +2005,7 @@ app.post('/insertarprestamo', (req, res) => {
                 if (Number.isInteger(cantidad) && cantidad >= 1 && cantidad <= ultimacantidad) {
                     const estatus = "PRESTAMO";
                     const cantidadactual = parseInt(ultimacantidad) - cantidad;
-                    insertarPrestamo(req.body.folioInsumos, fecha, req.body.responsable, req.body.area, cantidad, req.body.costo, estatus, function (error, respuesta) {
+                    insertarPrestamo(req.body.folioInsumos, fecha, req.body.responsable, req.body.area, cantidad, req.body.costo, estatus, req.body.idcheck, function (error, respuesta) {
                         if (error) {
                             console.log(error)
                             res.status(404).json({
@@ -2475,94 +2501,104 @@ app.put('/actualizarPrestamo', (req, res) => {
                 })
             }
             else {
-                //console.log(respuesta.respuesta);
+                //console.log(req.body);
                 const datos = respuesta.respuesta.find((filtro) => filtro.folioActivo === req.body.folioActivo);
                 const ultimacantidad = parseInt(datos.cantidad);
                 console.log("Ultima cantidad = ", ultimacantidad);
-                mostPrestamo(req.body.responsable, function (error, resPrestamo) {
-                    if (error) {
-                        console.log(error)
-                        res.status(404).json({
-                            mensaje: respuesta.mensaje
-                        })
-                    }
-                    else {
-                        //console.log(resPrestamo.respuesta[0].cantidad);
-                        const canprestamo = resPrestamo.respuesta.find((filtro) => filtro.idprestamo === req.body.idprestamo);
-                        const canprestamototal = parseInt(canprestamo.cantidad);
-                        //console.log(cantidadprestamo.cantidad);
-                        const cantidad = parseFloat(req.body.cantidad);
-                        if (Number.isInteger(cantidad) && cantidad >= 1 && cantidad <= canprestamototal) {
-                            const cantidadactual = ultimacantidad + cantidad;
-                            const nuevacantidad = canprestamototal - cantidad;
-                            console.log(cantidadactual, " ", nuevacantidad);
-
-                            if (nuevacantidad === 0) {
-                                const estatus = "ENTREGADO";
-                                editPrestamo(req.body.idprestamo, nuevacantidad, estatus, function (error, respuesta) {
-                                    if (error) {
-                                        console.log(error)
-                                        res.status(404).json({
-                                            mensaje: respuesta.mensaje
-                                        })
-                                    }
-                                    else {
-                                        editCanconsumo(req.body.folioActivo, cantidadactual, function (error, respuesta) {
-                                            if (error) {
-                                                console.log(error)
-                                                res.status(404).json({
-                                                    mensaje: respuesta.mensaje
-                                                })
-                                            }
-                                            else {
-                                                res.status(200).json({
-                                                    mensaje: respuesta.mensaje
-                                                })
-                                            }
-                                            //console.log(respuesta);
-                                        })
-                                    }
-                                    console.log(respuesta);
-                                })
-                            }
-                            else {
-                                const estatus = "PRESTAMO";
-                                editPrestamo(req.body.idprestamo, nuevacantidad, estatus, function (error, respuesta) {
-                                    if (error) {
-                                        console.log(error)
-                                        res.status(404).json({
-                                            mensaje: respuesta.mensaje
-                                        })
-                                    }
-                                    else {
-                                        editCanconsumo(req.body.folioActivo, cantidadactual, function (error, respuesta) {
-                                            if (error) {
-                                                console.log(error)
-                                                res.status(404).json({
-                                                    mensaje: respuesta.mensaje
-                                                })
-                                            }
-                                            else {
-                                                res.status(200).json({
-                                                    mensaje: respuesta.mensaje
-                                                })
-                                            }
-                                            //console.log(respuesta);
-                                        })
-                                    }
-                                    console.log(respuesta);
-                                })
-                            }
+                if (ultimacantidad) {
+                    console.log("Existen datos");
+                    mostPrestamo(req.body.responsable, function (error, resPrestamo) {
+                        if (error) {
+                            console.log(error)
+                            res.status(404).json({
+                                mensaje: respuesta.mensaje
+                            })
                         }
                         else {
-                            res.status(400).json({
-                                mensaje: "CANTIDAD INSUFICIENTE"
-                            });
+                            //console.log(resPrestamo.respuesta[0].cantidad);
+                            const canprestamo = resPrestamo.respuesta.find((filtro) => filtro.idprestamo === req.body.idprestamo);
+                            const canprestamototal = parseInt(canprestamo.cantidad);
+                            //console.log(req.body.responsable);
+                            const cantidad = parseFloat(req.body.cantidad);
+                            if (Number.isInteger(cantidad) && cantidad >= 1 && cantidad <= canprestamototal) {
+                                const cantidadactual = ultimacantidad + cantidad;
+                                const nuevacantidad = canprestamototal - cantidad;
+                                console.log(cantidadactual, " ", nuevacantidad);
+
+                                if (nuevacantidad === 0) {
+                                    const estatus = "ENTREGADO";
+                                    editPrestamo(req.body.idprestamo, nuevacantidad, estatus, function (error, respuesta) {
+                                        if (error) {
+                                            console.log(error)
+                                            res.status(404).json({
+                                                mensaje: respuesta.mensaje
+                                            })
+                                        }
+                                        else {
+                                            editCanconsumo(req.body.folioActivo, cantidadactual, function (error, respuesta) {
+                                                if (error) {
+                                                    console.log(error)
+                                                    res.status(404).json({
+                                                        mensaje: respuesta.mensaje
+                                                    })
+                                                }
+                                                else {
+                                                    res.status(200).json({
+                                                        mensaje: respuesta.mensaje
+                                                    })
+                                                }
+                                                //console.log(respuesta);
+                                            })
+                                        }
+                                        console.log(respuesta);
+                                    })
+                                }
+                                else {
+                                    const estatus = "PRESTAMO";
+                                    editPrestamo(req.body.idprestamo, nuevacantidad, estatus, function (error, respuesta) {
+                                        if (error) {
+                                            console.log(error)
+                                            res.status(404).json({
+                                                mensaje: respuesta.mensaje
+                                            })
+                                        }
+                                        else {
+                                            editCanconsumo(req.body.folioActivo, cantidadactual, function (error, respuesta) {
+                                                if (error) {
+                                                    console.log(error)
+                                                    res.status(404).json({
+                                                        mensaje: respuesta.mensaje
+                                                    })
+                                                }
+                                                else {
+                                                    res.status(200).json({
+                                                        mensaje: respuesta.mensaje
+                                                    })
+                                                }
+                                                //console.log(respuesta);
+                                            })
+                                        }
+                                        console.log(respuesta);
+                                    })
+                                }
+                            }
+                            else {
+                                res.status(400).json({
+                                    mensaje: "CANTIDAD INSUFICIENTE"
+                                });
+                            }
+
                         }
-                        /* */
-                    }
-                    //console.log(respuesta);
-                })
+                        //console.log(respuesta);
+                    })
+                }
+                else {
+                    console.log("El activo no existe");
+                    console.log("Existen datos vacíos")
+                    res.status(400).json({
+                        mensaje: "El activo no existe"
+                    })
+                }
             }
         })
     }
@@ -3100,6 +3136,43 @@ app.put('/actualizarMenusemana', (req, res) => {
         res.status(400).json({
             mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
         });
+    }
+})
+app.put('/actualizarFotoperfil', verificar_Token, (req, res) => {
+    const usuario = req.usuario;
+    //console.log(usuario)
+    const responsable = usuario.id;
+    //console.log(responsable)
+
+    if (!req.files || Object.keys(req.files).length === 0) {
+        // No se proporcionaron archivos
+        res.status(400).json({
+            mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
+        });
+    }
+    else {
+        actualizar_fotoperfil(req, res, (err, archivo) => {
+            if (err) {
+                console.log(err);
+                return res.status(500).send('Error al cargar el archivo');
+            } else {
+                console.log("Respuesta img guardadas ", archivo);
+                editFotoperfil(responsable, archivo, function (error, respuesta) {
+                    if (error) {
+                        console.log(error)
+                        res.status(404).json({
+                            mensaje: respuesta.mensaje
+                        })
+                    }
+                    else {
+                        res.status(200).json({
+                            mensaje: respuesta.mensaje
+                        })
+                    }
+                    //console.log(respuesta);
+                })
+            }
+        })
     }
 })
 /* Fin de actualizar */
