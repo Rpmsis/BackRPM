@@ -1,7 +1,7 @@
 const mysql = require('../database/index');
 
 function mostrar (responsable,callback){
-    mysql.query(`SELECT * FROM prestamo WHERE responsable="${responsable}" && estatus="PRESTAMO" && cantidad>=1`, function(error,respuesta){
+    mysql.query(`SELECT * FROM prestamo WHERE idcheck="${responsable}" && estatus="PRESTAMO" && cantidad>=1`, function(error,respuesta){
         
         if(error){
             callback(null,{
