@@ -1979,7 +1979,7 @@ app.post('/insertarprestamo', (req, res) => {
                 if (Number.isInteger(cantidad) && cantidad >= 1 && cantidad <= ultimacantidad) {
                     const estatus = "PRESTAMO";
                     const cantidadactual = parseInt(ultimacantidad) - cantidad;
-                    insertarPrestamo(req.body.folioInsumos, fecha, req.body.responsable, req.body.area, cantidad, req.body.costo, estatus,req.body.idcheck, function (error, respuesta) {
+                    insertarPrestamo(req.body.folioActivo, fecha, req.body.responsable, req.body.area, cantidad, req.body.costo, estatus,req.body.idcheck, function (error, respuesta) {
                         if (error) {
                             console.log(error)
                             res.status(404).json({
