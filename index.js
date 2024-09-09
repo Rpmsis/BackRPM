@@ -2005,7 +2005,7 @@ app.post('/insertarprestamo', (req, res) => {
                 if (Number.isInteger(cantidad) && cantidad >= 1 && cantidad <= ultimacantidad) {
                     const estatus = "PRESTAMO";
                     const cantidadactual = parseInt(ultimacantidad) - cantidad;
-                    insertarPrestamo(req.body.folioInsumos, fecha, req.body.responsable, req.body.area, cantidad, req.body.costo, estatus, req.body.idcheck, function (error, respuesta) {
+                    insertarPrestamo(req.body.folioInsumos, fecha, req.body.responsable, req.body.area, cantidad, req.body.costo, estatus, function (error, respuesta) {
                         if (error) {
                             console.log(error)
                             res.status(404).json({
@@ -2501,29 +2501,27 @@ app.put('/actualizarPrestamo', (req, res) => {
                 })
             }
             else {
-                //console.log(req.body);
+                //console.log(respuesta.respuesta);
                 const datos = respuesta.respuesta.find((filtro) => filtro.folioActivo === req.body.folioActivo);
                 const ultimacantidad = parseInt(datos.cantidad);
                 console.log("Ultima cantidad = ", ultimacantidad);
-                if (ultimacantidad) {
-                    console.log("Existen datos");
-                    mostPrestamo(req.body.responsable, function (error, resPrestamo) {
-                        if (error) {
-                            console.log(error)
-                            res.status(404).json({
-                                mensaje: respuesta.mensaje
-                            })
-                        }
-                        else {
-                            //console.log(resPrestamo.respuesta[0].cantidad);
-                            const canprestamo = resPrestamo.respuesta.find((filtro) => filtro.idprestamo === req.body.idprestamo);
-                            const canprestamototal = parseInt(canprestamo.cantidad);
-                            //console.log(req.body.responsable);
-                            const cantidad = parseFloat(req.body.cantidad);
-                            if (Number.isInteger(cantidad) && cantidad >= 1 && cantidad <= canprestamototal) {
-                                const cantidadactual = ultimacantidad + cantidad;
-                                const nuevacantidad = canprestamototal - cantidad;
-                                console.log(cantidadactual, " ", nuevacantidad);
+                mostPrestamo(req.body.responsable, function (error, resPrestamo) {
+                    if (error) {
+                        console.log(error)
+                        res.status(404).json({
+                            mensaje: respuesta.mensaje
+                        })
+                    }
+                    else {
+                        //console.log(resPrestamo.respuesta[0].cantidad);
+                        const canprestamo = resPrestamo.respuesta.find((filtro) => filtro.idprestamo === req.body.idprestamo);
+                        const canprestamototal = parseInt(canprestamo.cantidad);
+                        //console.log(cantidadprestamo.cantidad);
+                        const cantidad = parseFloat(req.body.cantidad);
+                        if (Number.isInteger(cantidad) && cantidad >= 1 && cantidad <= canprestamototal) {
+                            const cantidadactual = ultimacantidad + cantidad;
+                            const nuevacantidad = canprestamototal - cantidad;
+                            console.log(cantidadactual, " ", nuevacantidad);
 
                                 if (nuevacantidad === 0) {
                                     const estatus = "ENTREGADO";
