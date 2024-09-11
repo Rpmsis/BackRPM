@@ -529,7 +529,7 @@ app.get('/Controlasignados', (req, res) => {
 app.get('/actividiarias', verificar_Token, (req, res) => {
     const usuario = req.usuario;
     const responsable = usuario.nombre;
-    console.log(responsable);
+    //console.log(responsable);
     mostAsigdiario(fecha, responsable, function (error, respuesta) {
         if (error) {
             console.log(error)
@@ -538,6 +538,24 @@ app.get('/actividiarias', verificar_Token, (req, res) => {
             })
         }
         else {
+            //console.log(respuesta);
+            const newrespuesta = respuesta.respuesta.map((filtro) => ({ idactividad: filtro.idactividades, fecha: filtro.fechainicio, idasigactivi: filtro.idasigactivi }));
+            console.log(newrespuesta);
+            /* mostStatusresponsable(idactividad, fecha, idasigactivi, function (error, respuesta) {
+                if (error) {
+                    console.log(error)
+                    res.status(404).json({
+                        mensaje: respuesta.mensaje
+                    })
+                }
+                else {
+                    const todosTerminados = respuestaTiempocontrol.respuesta.every(item => item.status === "TERMINADO");
+                    res.status(200).json({
+                        respuesta
+                    })
+                }
+                console.log(respuesta);
+            }) */
             res.status(200).json({
                 respuesta
             })
@@ -616,7 +634,7 @@ app.get('/Statusresponsables', (req, res) => {
                 respuesta
             })
         }
-        console.log(respuesta);
+        //console.log(respuesta);
     })
 }
 )
@@ -796,13 +814,13 @@ app.get('/Controlresponsable', (req, res) => {
             })
         }
         else {
-            //console.log(respuesta);
+            console.log(respuesta);
             const uniqueControls = {};
             // Iterar sobre la respuesta
             respuesta.respuesta.forEach(item => {
                 // Verificar si ya existe un registro con el mismo idcontrolactivi
                 if (!uniqueControls[item.idcontrolactivi] || uniqueControls[item.idcontrolactivi].idtiempos < item.idtiempos) {
-                    uniqueControls[item.idcontrolactivi] = item; // Guardar el registro con el idtiempos más alto
+                    uniqueControls[item.idcontrolactivi] = item; // Guardar el registro con el idtiempos más alto para cerrarlo 
                 }
             })
             // Convertir el objeto a un array
@@ -1615,7 +1633,7 @@ app.post('/insertarAsigactividad', verificar_Token, (req, res) => {
                 }
                 else {
                     console.log("No existe esta actividad");
-                    const status = "ACTIVO"
+                    const status = "INICIAR"
                     const timecontrol = 0;
                     insertarAsigactivi(fecha, usuario.nombre, req.body.fechainicio, req.body.empresa, req.body.idactividad, status, timecontrol, kg, function (error, respuesta) {
                         if (error) {
@@ -1857,7 +1875,7 @@ app.post('/insertarControl', (req, res) => {
                     });
 
                 } else {
-                    mostIdusuario(function (error, respuesta) {
+                    mostIdusuarioPMateriales(function (error, respuesta) {
                         if (error) {
                             console.log(error)
                             res.status(404).json({
@@ -1909,7 +1927,7 @@ app.post('/insertarTiempo', (req, res) => {
     const status = "EN PROCESO";
     const motivo = "NA"
     if (fecha && horainicio && req.body.idcontrolactivi) {
-        insertarTiempos(fecha, horainicio, horafin, timestandar, status, motivo, req.body.idcontrolactivi, function (error, respuesta) {
+        insertarTiempos(fecha, horainicio, horafin, timestandar, status, motivo, req.body.idcontrolactivi, function (error, respuestaTiempo) {
             if (error) {
                 console.log(error)
                 res.status(404).json({
@@ -1925,9 +1943,38 @@ app.post('/insertarTiempo', (req, res) => {
                         })
                     }
                     else {
-                        res.status(200).json({
-                            mensaje: respuesta.mensaje
+                        mostTiempocontrol(req.body.idactividades, fecha, function (error, respuestaTiempocontrol) {
+                            if (error) {
+                                console.log(error)
+                                res.status(404).json({
+                                    mensaje: respuestaTiempocontrol.mensaje
+                                })
+                            }
+                            else {
+                                const timeasignacion = respuestaTiempocontrol.respuesta.reduce((acumulador, filtro) => {
+                                    return acumulador + filtro.timestandar;
+                                }, 0);
+
+                                console.log("Tiempo asignacion: ", timeasignacion);
+                                const kg = 0;
+                                editStatusasignacion(req.body.idasigactivi, req.body.status, timeasignacion, kg, function (error, respuesta) {
+                                    if (error) {
+                                        console.log(error)
+                                        res.status(404).json({
+                                            mensaje: respuesta.mensaje
+                                        })
+                                    }
+                                    else {
+                                        res.status(200).json({
+                                            mensaje: respuestaTiempo.mensaje
+                                        })
+                                    }
+                                })
+                            }
                         })
+                        /* res.status(200).json({
+                            mensaje: respuestaTiempo.mensaje
+                        }) */
                     }
                     console.log(respuesta);
                 })
@@ -2523,80 +2570,72 @@ app.put('/actualizarPrestamo', (req, res) => {
                             const nuevacantidad = canprestamototal - cantidad;
                             console.log(cantidadactual, " ", nuevacantidad);
 
-                                if (nuevacantidad === 0) {
-                                    const estatus = "ENTREGADO";
-                                    editPrestamo(req.body.idprestamo, nuevacantidad, estatus, function (error, respuesta) {
-                                        if (error) {
-                                            console.log(error)
-                                            res.status(404).json({
-                                                mensaje: respuesta.mensaje
-                                            })
-                                        }
-                                        else {
-                                            editCanconsumo(req.body.folioActivo, cantidadactual, function (error, respuesta) {
-                                                if (error) {
-                                                    console.log(error)
-                                                    res.status(404).json({
-                                                        mensaje: respuesta.mensaje
-                                                    })
-                                                }
-                                                else {
-                                                    res.status(200).json({
-                                                        mensaje: respuesta.mensaje
-                                                    })
-                                                }
-                                                //console.log(respuesta);
-                                            })
-                                        }
-                                        console.log(respuesta);
-                                    })
-                                }
-                                else {
-                                    const estatus = "PRESTAMO";
-                                    editPrestamo(req.body.idprestamo, nuevacantidad, estatus, function (error, respuesta) {
-                                        if (error) {
-                                            console.log(error)
-                                            res.status(404).json({
-                                                mensaje: respuesta.mensaje
-                                            })
-                                        }
-                                        else {
-                                            editCanconsumo(req.body.folioActivo, cantidadactual, function (error, respuesta) {
-                                                if (error) {
-                                                    console.log(error)
-                                                    res.status(404).json({
-                                                        mensaje: respuesta.mensaje
-                                                    })
-                                                }
-                                                else {
-                                                    res.status(200).json({
-                                                        mensaje: respuesta.mensaje
-                                                    })
-                                                }
-                                                //console.log(respuesta);
-                                            })
-                                        }
-                                        console.log(respuesta);
-                                    })
-                                }
+                            if (nuevacantidad === 0) {
+                                const estatus = "ENTREGADO";
+                                editPrestamo(req.body.idprestamo, nuevacantidad, estatus, function (error, respuesta) {
+                                    if (error) {
+                                        console.log(error)
+                                        res.status(404).json({
+                                            mensaje: respuesta.mensaje
+                                        })
+                                    }
+                                    else {
+                                        editCanconsumo(req.body.folioActivo, cantidadactual, function (error, respuesta) {
+                                            if (error) {
+                                                console.log(error)
+                                                res.status(404).json({
+                                                    mensaje: respuesta.mensaje
+                                                })
+                                            }
+                                            else {
+                                                res.status(200).json({
+                                                    mensaje: respuesta.mensaje
+                                                })
+                                            }
+                                            //console.log(respuesta);
+                                        })
+                                    }
+                                    console.log(respuesta);
+                                })
                             }
                             else {
-                                res.status(400).json({
-                                    mensaje: "CANTIDAD INSUFICIENTE"
-                                });
+                                const estatus = "PRESTAMO";
+                                editPrestamo(req.body.idprestamo, nuevacantidad, estatus, function (error, respuesta) {
+                                    if (error) {
+                                        console.log(error)
+                                        res.status(404).json({
+                                            mensaje: respuesta.mensaje
+                                        })
+                                    }
+                                    else {
+                                        editCanconsumo(req.body.folioActivo, cantidadactual, function (error, respuesta) {
+                                            if (error) {
+                                                console.log(error)
+                                                res.status(404).json({
+                                                    mensaje: respuesta.mensaje
+                                                })
+                                            }
+                                            else {
+                                                res.status(200).json({
+                                                    mensaje: respuesta.mensaje
+                                                })
+                                            }
+                                            //console.log(respuesta);
+                                        })
+                                    }
+                                    console.log(respuesta);
+                                })
                             }
-
                         }
-                        //console.log(respuesta);
-                    })
-                }
-                else {
-                    console.log("El activo no existe");
-                    console.log("Existen datos vacíos")
-                    res.status(400).json({
-                        mensaje: "El activo no existe"
-                    })
-                }
+                        else {
+                            res.status(400).json({
+                                mensaje: "CANTIDAD INSUFICIENTE"
+                            });
+                        }
+
+                    }
+                    //console.log(respuesta);
+                })
             }
         })
     }
@@ -2682,7 +2721,7 @@ app.put('/actualizarTimefin', (req, res) => {
                         const totalTiempo = tiemponuevo.reduce((acumulador, filtro) => {
                             return acumulador + filtro.timestandar;
                         }, 0);
-                        console.log("Tiempor guardados= ", totalTiempo)
+                        console.log("Tiempos guardados= ", totalTiempo)
                         const timecontrol = timestandar + totalTiempo;
                         console.log("Tiempo total estandar= ", timecontrol)
                         editStatuscontrol(idcontrol, timecontrol, status, function (error, respuestaStatuscontrol) {
@@ -2701,125 +2740,133 @@ app.put('/actualizarTimefin', (req, res) => {
                                         })
                                     }
                                     else {
-                                        //console.log(respuestaTiempocontrol.respuesta);
-                                        const timeasignacion = respuestaTiempocontrol.respuesta.reduce((acumulador, filtro) => {
-                                            return acumulador + filtro.timestandar;
-                                        }, 0);
+                                        const todosTerminado = respuestaTiempocontrol.respuesta.every(item => item.status === "TERMINADO");
+                                        console.log(todosTerminado);
+                                        // Generar la respuesta si existen datos sin el status TERMINADO es false y se envia un "sinrespuesta", en caso de todos esten en estatus TERMINADO envia un ...
 
-                                        console.log("Tiempo asignacion: ", timeasignacion);
-                                        const status = "TERMINADO"
-                                        const kg = 0;
-                                        editStatusasignacion(req.body.idasigactivi, status, timeasignacion, kg, function (error, respuesta) {
-                                            if (error) {
-                                                console.log(error)
-                                                res.status(404).json({
-                                                    mensaje: respuesta.mensaje
-                                                })
-                                            }
-                                            else {
-                                                mostTiempocontrol(req.body.idactividades, fecha, function (error, respuestaTiempocontrol) {
-                                                    if (error) {
-                                                        console.log(error)
-                                                        res.status(404).json({
-                                                            mensaje: respuestaTiempocontrol.mensaje
-                                                        })
-                                                    }
-                                                    else {
-                                                        const todosTerminado = respuestaTiempocontrol.respuesta.every(item => item.status === "TERMINADO");
-                                                        // Generar la respuesta
-                                                        const resultado = todosTerminado ? respuesta : "sinrespuesta";
-                                                        if (resultado === "sinrespuesta") {
-                                                            console.log("No todos estan terminados ", resultado);
-                                                            res.status(200).json({
-                                                                mensaje: "El responsable finalizó su actividad"
+                                        const resultado = todosTerminado ? "todosterminados" : "sinrespuesta";
+                                        if (resultado === "sinrespuesta") {
+                                            console.log("No todos estan terminados ", resultado);
+                                            //console.log(respuestaTiempocontrol.respuesta);
+
+                                            const timeasignacion = respuestaTiempocontrol.respuesta.reduce((acumulador, filtro) => {
+                                                return acumulador + filtro.timestandar;
+                                            }, 0);
+
+                                            console.log("Tiempo asignacion: ", timeasignacion);
+                                            const kg = 0;
+                                            editStatusasignacion(req.body.idasigactivi, req.body.status, timeasignacion, kg, function (error, respuesta) {
+                                                if (error) {
+                                                    console.log(error)
+                                                    res.status(404).json({
+                                                        mensaje: respuesta.mensaje
+                                                    })
+                                                }
+                                                else {
+                                                    res.status(200).json({
+                                                        mensaje: "El responsable finalizó su actividad"
+                                                    })
+                                                }
+                                            })
+
+                                        }
+                                        else {
+                                            /* res.status(200).json({
+                                                mensaje: respuesta.mensaje
+                                            }) */
+                                            const timeasignacion = respuestaTiempocontrol.respuesta.reduce((acumulador, filtro) => {
+                                                return acumulador + filtro.timestandar;
+                                            }, 0);
+
+                                            console.log("Tiempo asignacion: ", timeasignacion);
+                                            const kg = 0;
+                                            const status = "TERMINADO"
+                                            editStatusasignacion(req.body.idasigactivi, status, timeasignacion, kg, function (error, respuesta) {
+                                                if (error) {
+                                                    console.log(error)
+                                                    res.status(404).json({
+                                                        mensaje: respuesta.mensaje
+                                                    })
+                                                }
+                                                else {
+                                                    mostActif(function (error, respuesta) {
+                                                        if (error) {
+                                                            console.log(error)
+                                                            res.status(404).json({
+                                                                mensaje: respuesta.mensaje
                                                             })
-
                                                         }
                                                         else {
-                                                            /* res.status(200).json({
-                                                                mensaje: respuesta.mensaje
-                                                            }) */
-                                                            mostActif(function (error, respuesta) {
-                                                                if (error) {
-                                                                    console.log(error)
-                                                                    res.status(404).json({
-                                                                        mensaje: respuesta.mensaje
-                                                                    })
-                                                                }
-                                                                else {
-                                                                    console.log(req.body);
-                                                                    const actividadRealizada = respuesta.respuesta.find((filtro) => filtro.idactividades === req.body.idactividades);
-                                                                    console.log(actividadRealizada);
-                                                                    console.log(actividadRealizada.kg);
-                                                                    if (actividadRealizada.kg === 0) {
-                                                                        if (actividadRealizada.timestandar > timeasignacion) {
-                                                                            console.log(timeasignacion);
-                                                                            if (timeasignacion <= 59) {
-                                                                                const horafinal = 0;
-                                                                                const eficienciafinal1 = 60 / timeasignacion;
-                                                                                const eficienciafinal = Math.round((eficienciafinal1 + Number.EPSILON) * 100) / 100;
-                                                                                editStatusactividadesT(req.body.idactividades, horafinal, timeasignacion, timeasignacion, eficienciafinal, function (error, respuesta) {
-                                                                                    if (error) {
-                                                                                        console.log(error)
-                                                                                        res.status(404).json({
-                                                                                            mensaje: respuesta.mensaje
-                                                                                        })
-                                                                                    }
-                                                                                    else {
-                                                                                        res.status(200).json({
-                                                                                            mensaje: respuesta.mensaje
-                                                                                        })
-                                                                                    }
-                                                                                    console.log(respuesta);
+                                                            console.log(req.body);
+                                                            const actividadRealizada = respuesta.respuesta.find((filtro) => filtro.idactividades === req.body.idactividades);
+                                                            console.log(actividadRealizada);
+                                                            console.log(actividadRealizada.kg);
+                                                            if (actividadRealizada.kg === 0) {
+                                                                if (actividadRealizada.timestandar > timeasignacion) {
+                                                                    console.log(timeasignacion);
+                                                                    if (timeasignacion <= 59) {
+                                                                        const horafinal = 0;
+                                                                        const eficienciafinal1 = 60 / timeasignacion;
+                                                                        const eficienciafinal = Math.round((eficienciafinal1 + Number.EPSILON) * 100) / 100;
+                                                                        editStatusactividadesT(req.body.idactividades, horafinal, timeasignacion, timeasignacion, eficienciafinal, function (error, respuesta) {
+                                                                            if (error) {
+                                                                                console.log(error)
+                                                                                res.status(404).json({
+                                                                                    mensaje: respuesta.mensaje
                                                                                 })
                                                                             }
                                                                             else {
-                                                                                console.log("convertir el tiempo asignacion en horas y minutos");
-                                                                                const eficienciafinal1 = 60 / timeasignacion;
-                                                                                const eficienciafinal = Math.round((eficienciafinal1 + Number.EPSILON) * 100) / 100;
-
-                                                                                const horas = Math.floor(timeasignacion / 60);
-                                                                                const minutos = timeasignacion % 60;
-                                                                                editStatusactividadesT(req.body.idactividades, horas, minutos, timeasignacion, eficienciafinal, function (error, respuesta) {
-                                                                                    if (error) {
-                                                                                        console.log(error)
-                                                                                        res.status(404).json({
-                                                                                            mensaje: respuesta.mensaje
-                                                                                        })
-                                                                                    }
-                                                                                    else {
-                                                                                        res.status(200).json({
-                                                                                            mensaje: respuesta.mensaje
-                                                                                        })
-                                                                                    }
-                                                                                    console.log(respuesta);
+                                                                                res.status(200).json({
+                                                                                    mensaje: respuesta.mensaje
                                                                                 })
                                                                             }
-
-                                                                        } else {
-                                                                            res.status(200).json({
-                                                                                mensaje: "Excedieron el tiempo de la actividad.."
-                                                                            })
-                                                                        }
-                                                                    }
-                                                                    else {
-                                                                        res.status(200).json({
-                                                                            mensaje: "No olvides! validar los kilogramos"
+                                                                            console.log(respuesta);
                                                                         })
                                                                     }
+                                                                    else {
+                                                                        console.log("convertir el tiempo asignacion en horas y minutos");
+                                                                        const eficienciafinal1 = 60 / timeasignacion;
+                                                                        const eficienciafinal = Math.round((eficienciafinal1 + Number.EPSILON) * 100) / 100;
+
+                                                                        const horas = Math.floor(timeasignacion / 60);
+                                                                        const minutos = timeasignacion % 60;
+                                                                        editStatusactividadesT(req.body.idactividades, horas, minutos, timeasignacion, eficienciafinal, function (error, respuesta) {
+                                                                            if (error) {
+                                                                                console.log(error)
+                                                                                res.status(404).json({
+                                                                                    mensaje: respuesta.mensaje
+                                                                                })
+                                                                            }
+                                                                            else {
+                                                                                res.status(200).json({
+                                                                                    mensaje: respuesta.mensaje
+                                                                                })
+                                                                            }
+                                                                            console.log(respuesta);
+                                                                        })
+                                                                    }
+
+                                                                } else {
+                                                                    res.status(200).json({
+                                                                        mensaje: "Excedieron el tiempo de la actividad.."
+                                                                    })
                                                                 }
-                                                                //console.log(respuesta);
-                                                            })
+                                                            }
+                                                            else {
+                                                                res.status(200).json({
+                                                                    mensaje: "No olvides! validar los kilogramos"
+                                                                })
+                                                            }
                                                         }
-                                                    }
-                                                })
-                                            }
-                                            //console.log(respuesta);
-                                        })
-                                        /*  */
+                                                        //console.log(respuesta);
+                                                    })
+                                                }
+                                            })
+
+                                        }
                                     }
-                                    //console.log(respuesta);
                                 })
+
                             }
                         })
                     }
@@ -2879,7 +2926,7 @@ app.put('/actualizarTimepausa', (req, res) => {
                         })
                     }
                     else {
-                        editStatuscontrol(idcontrol, timestandar, status, function (error, respuesta) {
+                        editStatuscontrol(idcontrol, timestandar, status, function (error, respuestaStatuscontrol) {
                             if (error) {
                                 console.log(error)
                                 res.status(404).json({
@@ -2887,11 +2934,41 @@ app.put('/actualizarTimepausa', (req, res) => {
                                 })
                             }
                             else {
-                                res.status(200).json({
-                                    mensaje: respuesta.mensaje
+                                mostTiempocontrol(req.body.idactividades, fecha, function (error, respuestaTiempocontrol) {
+                                    if (error) {
+                                        console.log(error)
+                                        res.status(404).json({
+                                            mensaje: respuestaTiempocontrol.mensaje
+                                        })
+                                    }
+                                    else {
+                                        const timeasignacion = respuestaTiempocontrol.respuesta.reduce((acumulador, filtro) => {
+                                            return acumulador + filtro.timestandar;
+                                        }, 0);
+        
+                                        console.log("Tiempo asignacion: ", timeasignacion);
+                                        const kg = 0;
+                                        editStatusasignacion(req.body.idasigactivi, status, timeasignacion, kg, function (error, respuesta) {
+                                            if (error) {
+                                                console.log(error)
+                                                res.status(404).json({
+                                                    mensaje: respuesta.mensaje
+                                                })
+                                            }
+                                            else {
+                                                res.status(200).json({
+                                                    mensaje: respuestaStatuscontrol.mensaje
+                                                })
+                                            }
+                                        })
+                                    }
                                 })
+
+                                /* res.status(200).json({
+                                    mensaje: respuestaStatuscontrol.mensaje
+                                }) */
                             }
-                            console.log(respuesta);
+                            //console.log(respuesta);
                         })
                     }
                     console.log(respuesta);
