@@ -1,3 +1,5 @@
+const mysql = require('./database/index');
+
 const express = require('express')
 const cors = require('cors');
 const axios = require('axios');
@@ -40,9 +42,11 @@ const mostMenudeldia = require('./query/mostMenudia');
 const mostSemanamenu = require('./query/mostSemanamenu');
 const mostIdusuarioPMateriales = require('./query/mostIdusuarioPMateriales');
 const mostIdusuarioSRecoleccion = require('./query/mostIdusuarioSRecoleccion');
+const mostIdusuario = require('./query/mostIdusuario');
 const mostIdcheck = require('./query/mostIdcheck');
 const mostControlresponsable = require('./query/mostControlresponsable');
 const mostFotoperfil = require('./query/mostFotoperfil');
+const mostPDM = require('./query/mostPDM');
 const Folio = require('./query/folio')
 const Folioconsumible = require('./query/folioconsumible')
 const inserPre = require('./query/insertPregunta');
@@ -98,6 +102,11 @@ app.use('/fotoperfil', express.static(path.join(__dirname, 'fotoperfil')));
 app.use(cors());
 app.use(fileUpload());
 const fecha = moment().format("YYYY-MM-DD");
+const io = require("socket.io")(3003, {
+    cors: {
+        methods: ["GET", "POST"]
+    }
+});
 
 /* Mostrar */
 app.get('/activosFijos', (req, res) => {
@@ -244,22 +253,50 @@ app.get('/insumos', (req, res) => {
     })
 }
 )
-app.get('/ubicacion', (req, res) => {
-    mostubi(function (error, respuesta) {
+app.get('/ubicacion', verificar_Token, (req, res) => {
+    const usuario = req.usuario;
+    //console.log(usuario)
+    const puesto = usuario.puesto;
+    //console.log(puesto)
+    /* Envia las ubicaciones con base al puesto */
+    if (puesto === "COORDINADOR DE PRODUCCION") {
+        mostubi(function (error, respuesta) {
+            if (error) {
+                console.log(error)
+                res.status(404).json({
+                    mensaje: respuesta.mensaje
+                })
+            }
+            else {
+                //console.log(respuesta.respuesta);
+                const ubicacionesPDM = respuesta.respuesta.filter(filtro => filtro.area === puesto);
+                console.log("PDM", ubicacionesPDM);
+                res.status(200).json({
+                    ubicacionesPDM
+                })
+            }
+            //console.log(respuesta);
+        })
+    }
+    else {
+        if (puesto === "GERENTE DE SISTEMAS DE RECOLECCION") {
+            mostubi(function (error, respuesta) {
 
-        if (error) {
-            console.log(error)
-            res.status(404).json({
-                mensaje: respuesta.mensaje
+                if (error) {
+                    console.log(error)
+                    res.status(404).json({
+                        mensaje: respuesta.mensaje
+                    })
+                }
+                else {
+                    res.status(200).json({
+                        respuesta
+                    })
+                }
+                //console.log(respuesta);
             })
         }
-        else {
-            res.status(200).json({
-                respuesta
-            })
-        }
-        //console.log(respuesta);
-    })
+    }
 }
 )
 app.get('/actividades', (req, res) => {
@@ -476,13 +513,10 @@ app.get('/cbconsumibles', (req, res) => {
     })
 }
 )
-app.get('/Controlactividades', verificar_Token, (req, res) => {
+app.get('/Controlactividades', (req, res) => {
     //console.log(usuario)
     const empresa = "FISHER";
     //console.log(empresa, fecha)
-    const usuario = req.usuario;
-    //console.log(usuario)
-    const responsable = usuario.nombre;
     mostControlactivi(empresa, fecha, function (error, respuesta) {
         if (error) {
             console.log(error)
@@ -498,8 +532,10 @@ app.get('/Controlactividades', verificar_Token, (req, res) => {
         //console.log(respuesta);
     })
 })
-app.get('/Controlasignados', (req, res) => {
-    mostControlasignados(fecha, function (error, respuesta) {
+app.get('/Controlasignados/:id', (req, res) => {
+    var idcheck = req.params.id
+    console
+    mostControlasignados(idcheck,fecha, function (error, respuesta) {
         if (error) {
             console.log(error)
             res.status(404).json({
@@ -539,23 +575,6 @@ app.get('/actividiarias', verificar_Token, (req, res) => {
         }
         else {
             //console.log(respuesta);
-            const newrespuesta = respuesta.respuesta.map((filtro) => ({ idactividad: filtro.idactividades, fecha: filtro.fechainicio, idasigactivi: filtro.idasigactivi }));
-            console.log(newrespuesta);
-            /* mostStatusresponsable(idactividad, fecha, idasigactivi, function (error, respuesta) {
-                if (error) {
-                    console.log(error)
-                    res.status(404).json({
-                        mensaje: respuesta.mensaje
-                    })
-                }
-                else {
-                    const todosTerminados = respuestaTiempocontrol.respuesta.every(item => item.status === "TERMINADO");
-                    res.status(200).json({
-                        respuesta
-                    })
-                }
-                console.log(respuesta);
-            }) */
             res.status(200).json({
                 respuesta
             })
@@ -769,7 +788,26 @@ app.get('/Semanamenu', (req, res) => {
 }
 )
 app.get('/Idusuario', (req, res) => {
-    mostIdusuarioPMateriales(function (error, respuesta) {
+    mostIdusuario(function (error, respuesta) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            //console.log(respuesta.respuesta);
+            res.status(200).json({
+                respuesta
+            })
+        }
+        //console.log(respuesta);
+    })
+}
+)
+app.get('/IdusuarioPMateriales', (req, res) => {
+    const ubicacion = req.query.ubicacion;
+    mostIdusuarioPMateriales(ubicacion, function (error, respuesta) {
         if (error) {
             console.log(error)
             res.status(404).json({
@@ -854,6 +892,108 @@ app.get('/foto', verificar_Token, (req, res) => {
     })
 }
 )
+app.get('/PDM', (req, res) => {
+    mostPDM(function (error, respuesta) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            io.emit('escuchando', respuesta);
+            //console.log(respuesta.respuesta);
+            res.status(200).json({
+                respuesta
+            })
+        }
+        //console.log(respuesta);
+    })
+}
+)
+
+app.get('/buscar_Supervisor/:id', verificar_Token, async (req, res) => {
+    var idcheck = req.params.id
+    //console.log(idcheck)
+
+    mostIdcheck(idcheck, function (error, respuestaidCheck) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            console.log(respuestaidCheck);
+            if (respuestaidCheck.respuesta && respuestaidCheck.respuesta.length > 0) {
+                const responsable = respuestaidCheck.respuesta[0].NombreCompleto;
+                console.log(responsable);
+
+                mostPDM(function (error, respuesta) {
+                    if (error) {
+                        console.log(error)
+                        res.status(404).json({
+                            mensaje: respuesta.mensaje
+                        })
+                    }
+                    else {
+
+                        const supervisor = respuesta.respuesta.find(filtro => filtro.Nombre === responsable && filtro.Puesto === "SUPERVISOR");
+                        const resultadosupervisor = supervisor ? "es supervisor" : "no es supervisor";
+                        //console.log(resultadosupervisor);
+                        if (resultadosupervisor === "no es supervisor") {
+                            res.status(400).json({
+                                mensaje: "No tienes los permisos para esta actividad"
+                            })
+                        }
+                        else {
+                            const ayudantes = respuesta.respuesta.filter(filtro => filtro.Ubicacion === supervisor.Ubicacion);
+                            //const resultado = Object.values(ayudantes);
+
+                            //console.log("Ayudantes", resultado);
+                            //console.log(respuesta.respuesta);
+                            mostControlactivi(ayudantes[0].Ubicacion, fecha, function (error, respuestaActividades) {
+                                if (error) {
+                                    console.log(error)
+                                    res.status(404).json({
+                                        mensaje: respuesta.mensaje
+                                    })
+                                }
+                                else {
+                                    console.log("Actividades asignadas: ", respuesta);
+                                    mostIdusuarioPMateriales(ayudantes[0].Ubicacion, function (error, respuestaMateriales) {
+                                        if (error) {
+                                            console.log(error)
+                                            res.status(404).json({
+                                                mensaje: respuesta.mensaje
+                                            })
+                                        }
+                                        else {
+                                            //console.log(respuesta.respuesta);
+                                            res.status(200).json({
+                                                actividades: respuestaActividades,
+                                                responsables: respuestaMateriales
+                                            })
+                                        }
+                                        //console.log(respuesta);
+                                    })
+                                }
+                                //console.log(respuesta);
+                            })
+                        }
+
+
+                    }
+                    //console.log(respuesta);
+                })
+            } else {
+                res.status(400).json({
+                    mensaje: "No existe el usuario que intenta buscar"
+                })
+            }
+        }
+    })
+})
 /* Fin de mostrar */
 
 /* Insertar */
@@ -1643,6 +1783,7 @@ app.post('/insertarAsigactividad', verificar_Token, (req, res) => {
                             })
                         }
                         else {
+                            io.emit('escuchando', respuesta.mensaje);
                             res.status(200).json({
                                 mensaje: respuesta.mensaje
                             })
@@ -1849,13 +1990,14 @@ app.post('/insertarMovimiento', (req, res) => {
     })
 })
 app.post('/insertarControl', (req, res) => {
-    if (req.body.idactividades && fecha && req.body.responsables && req.body.idasigactivi) {
+    if (req.body.idactividades && fecha && req.body.responsables && req.body.idasigactivi && req.body.idchecksupervisor) {
         const timestandar = 0;
         const kg = 0;
         const lon = 0;
         const lat = 0;
         const status = "INICIAR";
-        mostControlasignados(fecha, function (error, respuesta) {
+        console.log(req.body);
+        mostControlasignados(req.body.idchecksupervisor,fecha, function (error, respuesta) {
             if (error) {
                 console.log(error)
                 res.status(404).json({
@@ -1866,7 +2008,7 @@ app.post('/insertarControl', (req, res) => {
             else {
                 //console.log(req.body)
                 console.log(respuesta.respuesta)
-                const datosFil = respuesta.respuesta.find((filtro) => filtro.idcheck === req.body.responsables);
+                const datosFil = respuesta.respuesta.find((filtro) => filtro.responsables === req.body.responsables);
                 console.log(datosFil);
                 if (datosFil) {
                     console.log("El responsable esta asignado en otra actividad");
@@ -1875,7 +2017,7 @@ app.post('/insertarControl', (req, res) => {
                     });
 
                 } else {
-                    mostIdusuarioPMateriales(function (error, respuesta) {
+                    mostIdusuario(function (error, respuesta) {
                         if (error) {
                             console.log(error)
                             res.status(404).json({
@@ -1883,13 +2025,14 @@ app.post('/insertarControl', (req, res) => {
                             })
                         }
                         else {
-                            //console.log(respuesta.respuesta);
-                            const searchidcheck = respuesta.respuesta.find(filtro => filtro.idCheck === req.body.responsables);
+                            console.log(req.body.responsables);
+                            const searchidcheck = respuesta.respuesta.find(filtro => filtro. NombreCompleto === req.body.responsables);
                             console.log(searchidcheck);
-                            const nombrecompleto = searchidcheck.NombreCompleto;
-                            console.log(nombrecompleto);
+                            const idcheck = searchidcheck.idCheck;
+                            console.log(idcheck);
 
-                            insertarControlactivi(req.body.idactividades, fecha, nombrecompleto, timestandar, kg, lon, lat, status, req.body.idasigactivi, req.body.responsables, function (error, respuesta) {
+                        
+                            insertarControlactivi(req.body.idactividades, fecha, req.body.responsables, timestandar, kg, lon, lat, status, req.body.idasigactivi, idcheck, req.body.idchecksupervisor, function (error, respuesta) {
                                 if (error) {
                                     console.log(error)
                                     res.status(404).json({
@@ -1902,7 +2045,7 @@ app.post('/insertarControl', (req, res) => {
                                     })
                                 }
                                 //console.log(respuesta);
-                            })
+                            }) 
 
                         }
                         //console.log(respuesta);
@@ -1965,6 +2108,7 @@ app.post('/insertarTiempo', (req, res) => {
                                         })
                                     }
                                     else {
+                                        io.emit('escuchando', respuesta);
                                         res.status(200).json({
                                             mensaje: respuestaTiempo.mensaje
                                         })
@@ -2522,6 +2666,7 @@ app.put('/actualizarAsig', (req, res) => {
                 })
             }
             else {
+                io.emit('escuchando', respuesta.mensaje);
                 res.status(200).json({
                     mensaje: respuesta.mensaje
                 })
@@ -2763,6 +2908,7 @@ app.put('/actualizarTimefin', (req, res) => {
                                                     })
                                                 }
                                                 else {
+                                                    io.emit('escuchando', respuesta);
                                                     res.status(200).json({
                                                         mensaje: "El responsable finalizó su actividad"
                                                     })
@@ -2789,6 +2935,7 @@ app.put('/actualizarTimefin', (req, res) => {
                                                     })
                                                 }
                                                 else {
+                                                    io.emit('escuchando', respuesta);
                                                     mostActif(function (error, respuesta) {
                                                         if (error) {
                                                             console.log(error)
@@ -2797,10 +2944,10 @@ app.put('/actualizarTimefin', (req, res) => {
                                                             })
                                                         }
                                                         else {
-                                                            console.log(req.body);
+                                                            //console.log(req.body);
                                                             const actividadRealizada = respuesta.respuesta.find((filtro) => filtro.idactividades === req.body.idactividades);
-                                                            console.log(actividadRealizada);
-                                                            console.log(actividadRealizada.kg);
+                                                            //console.log(actividadRealizada);
+                                                            //console.log(actividadRealizada.kg);
                                                             if (actividadRealizada.kg === 0) {
                                                                 if (actividadRealizada.timestandar > timeasignacion) {
                                                                     console.log(timeasignacion);
@@ -2816,6 +2963,7 @@ app.put('/actualizarTimefin', (req, res) => {
                                                                                 })
                                                                             }
                                                                             else {
+                                                                                io.emit('escuchando', respuesta.mensaje);
                                                                                 res.status(200).json({
                                                                                     mensaje: respuesta.mensaje
                                                                                 })
@@ -2838,6 +2986,7 @@ app.put('/actualizarTimefin', (req, res) => {
                                                                                 })
                                                                             }
                                                                             else {
+                                                                                io.emit('escuchando', respuesta.mensaje);
                                                                                 res.status(200).json({
                                                                                     mensaje: respuesta.mensaje
                                                                                 })
@@ -2945,7 +3094,7 @@ app.put('/actualizarTimepausa', (req, res) => {
                                         const timeasignacion = respuestaTiempocontrol.respuesta.reduce((acumulador, filtro) => {
                                             return acumulador + filtro.timestandar;
                                         }, 0);
-        
+
                                         console.log("Tiempo asignacion: ", timeasignacion);
                                         const kg = 0;
                                         editStatusasignacion(req.body.idasigactivi, status, timeasignacion, kg, function (error, respuesta) {
@@ -2956,6 +3105,7 @@ app.put('/actualizarTimepausa', (req, res) => {
                                                 })
                                             }
                                             else {
+                                                io.emit('escuchando', respuesta);
                                                 res.status(200).json({
                                                     mensaje: respuestaStatuscontrol.mensaje
                                                 })
@@ -3015,6 +3165,7 @@ app.put('/actualizarAsignacionkg', (req, res) => {
                         })
                     }
                     else {
+                        io.emit('escuchando', respuesta);
                         if (timestandar <= asignacion.timestandar && kilos > asignacion.kg) {
                             const eficiencia1 = (60 * kilos) / timestandar;
                             const nuevaeficiencia = Math.round((eficiencia1 + Number.EPSILON) * 100) / 100;
@@ -3057,7 +3208,7 @@ app.put('/actualizarAsignacionkg', (req, res) => {
                         }
                         else {
                             res.status(400).json({
-                                mensaje: "....."
+                                mensaje: "Actividad terminada"
                             });
                         }
                     }
@@ -3280,6 +3431,31 @@ app.delete('/eliminar', (req, res) => {
     }
 })
 /* Fin de borrar */
+
+
+
+/* Explicacion de socket ---------------------------------- */
+/* Instala socket.io para manejar respuestas en tiempo real npm i socket.io  */
+/* Importa la libreria al inicio colocando el puerto de salida:
+    const io = require("socket.io")(3003, {
+        cors: {
+            methods: ["GET", "POST"]
+        }
+    });
+  */
+/* Envia la respuesta que necesites en el siguiente código:
+   io.emit('escuchando', respuesta);
+ */
+app.get("/Brisa", (req, res) => {
+    io.emit('escuchando', "HOLAA MUNDO");
+})
+
+//Que hace esta funcion?
+io.on('connection', (socket) => {
+
+})
+/* Fin de explicacion de socket -------------------------- */
+
 
 
 app.listen(port, () => {
