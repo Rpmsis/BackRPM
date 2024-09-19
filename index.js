@@ -253,6 +253,7 @@ app.get('/insumos', (req, res) => {
     })
 }
 )
+/* Mustra la lista de ubicaciones de los formularios de actividades */
 app.get('/ubicacion', verificar_Token, (req, res) => {
     const usuario = req.usuario;
     //console.log(usuario)
@@ -299,6 +300,7 @@ app.get('/ubicacion', verificar_Token, (req, res) => {
     }
 }
 )
+//muestra las actividades registradas
 app.get('/actividades', (req, res) => {
     mostActif(function (error, respuesta) {
         if (error) {
@@ -418,6 +420,7 @@ app.get('/codigo_postal', async (req, res) => {
 
     }
 })
+//Inserta los materiales de la actividad
 app.get('/material', (req, res) => {
     mostMaterial(function (error, respuesta) {
 
@@ -436,6 +439,7 @@ app.get('/material', (req, res) => {
     })
 }
 )
+//Muestra las actividades asignadas por el dueño del pproceso
 app.get('/asignacion', verificar_Token, (req, res) => {
     const usuario = req.usuario;
     //console.log(usuario)
@@ -532,6 +536,7 @@ app.get('/Controlactividades', (req, res) => {
         //console.log(respuesta);
     })
 })
+//Muestra la tabla de control de las actividades que asigna el supervisor
 app.get('/Controlasignados/:id', (req, res) => {
     var idcheck = req.params.id
     console
@@ -562,6 +567,7 @@ app.get('/Controlasignados/:id', (req, res) => {
         //console.log(respuesta);
     })
 })
+//muestra las actividades diarias del dueño del proceso
 app.get('/actividiarias', verificar_Token, (req, res) => {
     const usuario = req.usuario;
     const responsable = usuario.nombre;
@@ -676,6 +682,7 @@ app.get('/Tiempocontrol', (req, res) => {
     })
 }
 )
+//Muestra las actividades que tienen kilogramos, y deben ingresar, una vez finalizada la actividad
 app.get('/EficienciaKg', (req, res) => {
     mostEficienciakg(fecha, function (error, respuesta) {
         if (error) {
@@ -911,7 +918,7 @@ app.get('/PDM', (req, res) => {
     })
 }
 )
-
+//Muestra la asignacion de actividades el supervisor en el aparto de control de actividades.
 app.get('/buscar_Supervisor/:id', verificar_Token, async (req, res) => {
     var idcheck = req.params.id
     //console.log(idcheck)
@@ -1420,6 +1427,7 @@ app.post('/insertarUbi', (req, res) => {
         });
     }
 })
+//Inserta las actividades.
 app.post('/insertarActif', (req, res) => {
     console.log(req.body);
     // timestandar,hora,minutos
@@ -1441,7 +1449,6 @@ app.post('/insertarActif', (req, res) => {
                         const eficiencia = Math.round((eficiencia1 + Number.EPSILON) * 100) / 100;
                         console.log(tiempoest);
                         inserActif(req.body.actividad, fecha, req.body.kg, req.body.familias, req.body.productos, req.body.ubicacion, tiempoest, hora, minutos, eficiencia, function (error, respuesta) {
-
                             if (error) {
                                 console.log(error)
                                 res.status(404).json({
@@ -1449,6 +1456,7 @@ app.post('/insertarActif', (req, res) => {
                                 })
                             }
                             else {
+                                io.emit('escuchando', respuesta.mensaje);
                                 res.status(200).json({
                                     mensaje: respuesta.mensaje
                                 })
@@ -1481,6 +1489,7 @@ app.post('/insertarActif', (req, res) => {
                                 })
                             }
                             else {
+                                io.emit('escuchando', respuesta.mensaje);
                                 res.status(200).json({
                                     mensaje: respuesta.mensaje
                                 })
@@ -1522,6 +1531,7 @@ app.post('/insertarActif', (req, res) => {
                                 })
                             }
                             else {
+                                io.emit('escuchando', respuesta.mensaje);
                                 res.status(200).json({
                                     mensaje: respuesta.mensaje
                                 })
@@ -1554,6 +1564,7 @@ app.post('/insertarActif', (req, res) => {
                                 })
                             }
                             else {
+                                io.emit('escuchando', respuesta.mensaje);
                                 res.status(200).json({
                                     mensaje: respuesta.mensaje
                                 })
@@ -1698,6 +1709,7 @@ app.post('/insertarUsuariprov', (req, res) => {
         });
     }
 })
+//Inserta los materiales de las actividades. 
 app.post('/insertarMaterial', (req, res) => {
     if (fecha && req.body.fam && req.body.produc) {
         mostMaterial(function (error, respuesta) {
@@ -1746,6 +1758,7 @@ app.post('/insertarMaterial', (req, res) => {
         });
     }
 })
+//Inserta las actividades asignadas por el dueño del proceso.
 app.post('/insertarAsigactividad', verificar_Token, (req, res) => {
     const usuario = req.usuario;
     //console.log(usuario)  
@@ -1989,6 +2002,7 @@ app.post('/insertarMovimiento', (req, res) => {
         //console.log(respuesta);
     })
 })
+//Inserta las actividades asignadas por el supervisor a los trabajadores
 app.post('/insertarControl', (req, res) => {
     if (req.body.idactividades && fecha && req.body.responsables && req.body.idasigactivi && req.body.idchecksupervisor) {
         const timestandar = 0;
@@ -2063,6 +2077,7 @@ app.post('/insertarControl', (req, res) => {
         });
     }
 })
+//Inserta los movimientos de los operadores cuando inician la actividad y cuando reinician una pausa.  
 app.post('/insertarTiempo', (req, res) => {
     const horainicio = moment().format('HH:mm');
     const horafin = "NA";
@@ -2818,6 +2833,7 @@ app.put('/actualizarControlstatus', (req, res) => {
         })
     }
 })
+//Actualiza le tiempo en todas las tablas relcionadas, al momento de terminar 
 app.put('/actualizarTimefin', (req, res) => {
     /* id, estatus, */
     const horafin = moment().format('HH:mm');
