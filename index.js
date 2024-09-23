@@ -47,6 +47,7 @@ const mostIdcheck = require('./query/mostIdcheck');
 const mostControlresponsable = require('./query/mostControlresponsable');
 const mostFotoperfil = require('./query/mostFotoperfil');
 const mostPDM = require('./query/mostPDM');
+const mostEntregaafi = require('./query/mostentregaafi');
 const Folio = require('./query/folio')
 const Folioconsumible = require('./query/folioconsumible')
 const inserPre = require('./query/insertPregunta');
@@ -69,6 +70,7 @@ const insertarTiempos = require('./query/insertTiempos');
 const insertarInsumoasig = require('./query/insertAsignacion');
 const insertarPrestamo = require('./query/insertPrestamo');
 const insertarMenusemana = require('./query/insertMenusemana');
+const insertarEntregaafi = require('./query/insertEntregaafi');
 const editPreg = require('./query/actualizarPreg');
 const editDesinsum = require('./query/actualizarDesinsum');
 const editMantt = require('./query/actualizarmantt');
@@ -237,7 +239,6 @@ app.get('/mantenimiento', (req, res) => {
 )
 app.get('/insumos', (req, res) => {
     mostInsumos(function (error, respuesta) {
-
         if (error) {
             console.log(error)
             res.status(404).json({
@@ -540,7 +541,7 @@ app.get('/Controlactividades', (req, res) => {
 app.get('/Controlasignados/:id', (req, res) => {
     var idcheck = req.params.id
     console
-    mostControlasignados(idcheck,fecha, function (error, respuesta) {
+    mostControlasignados(idcheck, fecha, function (error, respuesta) {
         if (error) {
             console.log(error)
             res.status(404).json({
@@ -919,10 +920,9 @@ app.get('/PDM', (req, res) => {
 }
 )
 //Muestra la asignacion de actividades el supervisor en el aparto de control de actividades.
-app.get('/buscar_Supervisor/:id', verificar_Token, async (req, res) => {
+app.get('/buscar_Supervisor/:id', async (req, res) => {
     var idcheck = req.params.id
     //console.log(idcheck)
-
     mostIdcheck(idcheck, function (error, respuestaidCheck) {
         if (error) {
             console.log(error)
@@ -931,10 +931,10 @@ app.get('/buscar_Supervisor/:id', verificar_Token, async (req, res) => {
             })
         }
         else {
-            console.log(respuestaidCheck);
+            //console.log(respuestaidCheck);
             if (respuestaidCheck.respuesta && respuestaidCheck.respuesta.length > 0) {
                 const responsable = respuestaidCheck.respuesta[0].NombreCompleto;
-                console.log(responsable);
+                //console.log(responsable);
 
                 mostPDM(function (error, respuesta) {
                     if (error) {
@@ -944,7 +944,7 @@ app.get('/buscar_Supervisor/:id', verificar_Token, async (req, res) => {
                         })
                     }
                     else {
-
+                        console.log(respuesta.respuesta);
                         const supervisor = respuesta.respuesta.find(filtro => filtro.Nombre === responsable && filtro.Puesto === "SUPERVISOR");
                         const resultadosupervisor = supervisor ? "es supervisor" : "no es supervisor";
                         //console.log(resultadosupervisor);
@@ -967,7 +967,7 @@ app.get('/buscar_Supervisor/:id', verificar_Token, async (req, res) => {
                                     })
                                 }
                                 else {
-                                    console.log("Actividades asignadas: ", respuesta);
+                                    //console.log("Actividades asignadas: ", respuesta);
                                     mostIdusuarioPMateriales(ayudantes[0].Ubicacion, function (error, respuestaMateriales) {
                                         if (error) {
                                             console.log(error)
@@ -1001,6 +1001,46 @@ app.get('/buscar_Supervisor/:id', verificar_Token, async (req, res) => {
         }
     })
 })
+app.get('/entregaAFI', (req, res) => {
+    mostEntregaafi(function (error, respuesta) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            io.emit('escuchando', respuesta);
+            //console.log(respuesta.respuesta);
+            res.status(200).json({
+                respuesta
+            })
+        }
+        //console.log(respuesta);
+    })
+}
+)
+app.get('/idinsumos/:id', async (req, res) => {
+    var idactivo = req.params.id;
+    //console.log(idactivo);
+    mostInsumos(function (error, respuesta) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            const datosActivo= respuesta.respuesta.find(filtro => filtro.folioInsumos === idactivo);
+            console.log(datosActivo);
+            /* res.status(200).json({
+                respuesta
+            }) */
+        }
+        //console.log(respuesta);
+    })
+}
+)
 /* Fin de mostrar */
 
 /* Insertar */
@@ -2011,7 +2051,7 @@ app.post('/insertarControl', (req, res) => {
         const lat = 0;
         const status = "INICIAR";
         console.log(req.body);
-        mostControlasignados(req.body.idchecksupervisor,fecha, function (error, respuesta) {
+        mostControlasignados(req.body.idchecksupervisor, fecha, function (error, respuesta) {
             if (error) {
                 console.log(error)
                 res.status(404).json({
@@ -2040,12 +2080,12 @@ app.post('/insertarControl', (req, res) => {
                         }
                         else {
                             console.log(req.body.responsables);
-                            const searchidcheck = respuesta.respuesta.find(filtro => filtro. NombreCompleto === req.body.responsables);
+                            const searchidcheck = respuesta.respuesta.find(filtro => filtro.NombreCompleto === req.body.responsables);
                             console.log(searchidcheck);
                             const idcheck = searchidcheck.idCheck;
                             console.log(idcheck);
 
-                        
+
                             insertarControlactivi(req.body.idactividades, fecha, req.body.responsables, timestandar, kg, lon, lat, status, req.body.idasigactivi, idcheck, req.body.idchecksupervisor, function (error, respuesta) {
                                 if (error) {
                                     console.log(error)
@@ -2059,7 +2099,7 @@ app.post('/insertarControl', (req, res) => {
                                     })
                                 }
                                 //console.log(respuesta);
-                            }) 
+                            })
 
                         }
                         //console.log(respuesta);
@@ -2402,7 +2442,92 @@ app.post('/insertarMenu', (req, res) => {
         });
     }
 })
+app.post('/insertarentregaAFI', (req, res) => {
+    const estatus = "ENTREGADO";
+    if (req.body.folioActivo && fecha && req.body.idcheck) {
+        //console.log(req.body);
+        mostIdcheck(req.body.idcheck, function (error, respuesta) {
 
+            if (error) {
+                console.log(error)
+                res.status(404).json({
+                    mensaje: respuesta.mensaje
+                })
+            }
+            else {
+                //console.log(respuesta.respuesta[0].Area);
+                const area = respuesta.respuesta[0].Area;
+                mostInsumos(function (error, respuesta) {
+
+                    if (error) {
+                        console.log(error)
+                        res.status(404).json({
+                            mensaje: respuesta.mensaje
+                        })
+                    }
+                    else {
+                        const activofijo = respuesta.respuesta.find(filtro => filtro.folioInsumos === req.body.folioActivo);
+                        //console.log(activofijo);
+                        if (activofijo) {
+                            mostEntregaafi(function (error, respuesta) {
+                                if (error) {
+                                    console.log(error)
+                                    res.status(404).json({
+                                        mensaje: respuesta.mensaje
+                                    })
+                                }
+                                else {
+                                    const entregado = respuesta.respuesta.find(filtro => filtro.folioActivo === req.body.folioActivo);
+                                    //console.log(entregado);
+                                    if (entregado) {
+                                        res.status(400).json({
+                                            mensaje: "El activo ya fue entregado."
+                                        });
+                                    }
+                                    else {
+                                        insertarEntregaafi(req.body.folioActivo, fecha, area, estatus, function (error, respuesta) {
+
+                                            if (error) {
+                                                console.log(error)
+                                                res.status(404).json({
+                                                    mensaje: respuesta.mensaje
+                                                })
+                                            }
+                                            else {
+                                                res.status(200).json({
+                                                    mensaje: respuesta.mensaje
+                                                })
+                                            }
+                                            //console.log(respuesta);
+                                        })
+                                    }
+
+                                }
+                                //console.log(respuesta);
+                            })
+                        }
+                        else {
+                            res.status(400).json({
+                                mensaje: "El activo no esta registrado."
+                            });
+                        }
+
+                    }
+                    //console.log(respuesta);
+                })
+
+            }
+            //console.log(respuesta);
+        })
+
+    }
+    else {
+        console.log("Existen datos vacíos");
+        res.status(400).json({
+            mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
+        });
+    }
+})
 
 /* Fin de insertar */
 
