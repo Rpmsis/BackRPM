@@ -48,6 +48,7 @@ const mostControlresponsable = require('./query/mostControlresponsable');
 const mostFotoperfil = require('./query/mostFotoperfil');
 const mostPDM = require('./query/mostPDM');
 const mostEntregaafi = require('./query/mostentregaafi');
+const mostVigenciaprestamos = require('./query/mostVigenciaprestamo');
 const Folio = require('./query/folio')
 const Folioconsumible = require('./query/folioconsumible')
 const inserPre = require('./query/insertPregunta');
@@ -1041,6 +1042,27 @@ app.get('/idinsumos/:id', async (req, res) => {
     })
 }
 )
+app.get('/vigenciaprestamo', (req, res) => {
+    const fechavigencia= moment(fecha).subtract(7, 'days').format('YYYY-MM-DD');
+    console.log(fechavigencia);
+    mostVigenciaprestamos(fechavigencia, function (error, respuesta) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            console.log(respuesta.respuesta);
+            res.status(200).json({
+                respuesta
+            })
+        }
+        //console.log(respuesta);
+    }) 
+}
+)
+
 /* Fin de mostrar */
 
 /* Insertar */
