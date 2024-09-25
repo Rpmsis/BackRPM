@@ -1062,6 +1062,25 @@ app.get('/vigenciaprestamo', (req, res) => {
     }) 
 }
 )
+app.get('/ubicacionMantt', (req, res) => {
+
+        mostubi(function (error, respuesta) {
+            if (error) {
+                console.log(error)
+                res.status(404).json({
+                    mensaje: respuesta.mensaje
+                })
+            }
+            else {
+                //console.log(respuesta.respuesta);
+                res.status(200).json({
+                    respuesta
+                })
+            }
+            //console.log(respuesta);
+        })
+}
+)
 
 /* Fin de mostrar */
 
