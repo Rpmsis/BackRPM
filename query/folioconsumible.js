@@ -1,6 +1,6 @@
 const mysql = require('../database/index');
 const moment = require('moment');
-const fecha = moment().format("DDMMYY");
+const fecha = moment().format("YYMMDD");
 var folio = "";
 /* Verifico la fecha del ultimo folio y la comparo con la actual
 fechaAct= 0 => fecha+01

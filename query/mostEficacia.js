@@ -2,7 +2,7 @@ const mysql = require('../database/index');
 
 function mostrar (callback){
     /* "${empresa}"  */
-    mysql.query(`SELECT * FROM actividades inner join asigactivi on actividades.idactividades=asigactivi.idactividad where actividades.kg!=0 && asigactivi.status="TERMINADO" && asigactivi.kgControl=0`, function(error,respuesta){
+    mysql.query(`SELECT * FROM asigactivi inner join actividades on actividades.idactividades=asigactivi.idactividad;`, function(error,respuesta){
         if(error){
             callback(null,{
                 mensaje:  error
@@ -18,4 +18,3 @@ function mostrar (callback){
 
 }
 module.exports = mostrar
-

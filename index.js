@@ -49,6 +49,9 @@ const mostFotoperfil = require('./query/mostFotoperfil');
 const mostPDM = require('./query/mostPDM');
 const mostEntregaafi = require('./query/mostentregaafi');
 const mostVigenciaprestamos = require('./query/mostVigenciaprestamo');
+const mostMenulista = require('./query/mostMenulista');
+const mostNumpersonas = require('./query/mostAsigactivinumpersonas');
+const mostEficacia = require('./query/mostEficacia');
 const Folio = require('./query/folio')
 const Folioconsumible = require('./query/folioconsumible')
 const inserPre = require('./query/insertPregunta');
@@ -91,6 +94,8 @@ const editStatusactividadesT = require('./query/actualizarStatusactividades');
 const editStatusactividadesKg = require('./query/actualizarStatusactividadeskg');
 const editMenusemana = require('./query/actualizarMenusemana');
 const editFotoperfil = require('./query/actualizarFotoperfil');
+const editNumpersonas = require('./query/actualizarNumpasignacion');
+const editEficacia = require('./query/actualizarEficaciaasignacion');
 const elim = require('./query/eliminar');
 const elimUsuarioprov = require('./query/eliminarUsuarioprov');
 const verificar_Token = require('./middleware/Valida_Token');
@@ -686,7 +691,7 @@ app.get('/Tiempocontrol', (req, res) => {
 )
 //Muestra las actividades que tienen kilogramos, y deben ingresar, una vez finalizada la actividad
 app.get('/EficienciaKg', (req, res) => {
-    mostEficienciakg(fecha, function (error, respuesta) {
+    mostEficienciakg( function (error, respuesta) {
         if (error) {
             console.log(error)
             res.status(404).json({
@@ -1032,7 +1037,7 @@ app.get('/idinsumos/:id', async (req, res) => {
             })
         }
         else {
-            const datosActivo= respuesta.respuesta.find(filtro => filtro.folioInsumos === idactivo);
+            const datosActivo = respuesta.respuesta.find(filtro => filtro.folioInsumos === idactivo);
             console.log(datosActivo);
             /* res.status(200).json({
                 respuesta
@@ -1043,7 +1048,7 @@ app.get('/idinsumos/:id', async (req, res) => {
 }
 )
 app.get('/vigenciaprestamo', (req, res) => {
-    const fechavigencia= moment(fecha).subtract(7, 'days').format('YYYY-MM-DD');
+    const fechavigencia = moment(fecha).subtract(7, 'days').format('YYYY-MM-DD');
     console.log(fechavigencia);
     mostVigenciaprestamos(fechavigencia, function (error, respuesta) {
         if (error) {
@@ -1059,29 +1064,147 @@ app.get('/vigenciaprestamo', (req, res) => {
             })
         }
         //console.log(respuesta);
-    }) 
+    })
 }
 )
 app.get('/ubicacionMantt', (req, res) => {
 
-        mostubi(function (error, respuesta) {
-            if (error) {
-                console.log(error)
-                res.status(404).json({
-                    mensaje: respuesta.mensaje
-                })
-            }
-            else {
-                //console.log(respuesta.respuesta);
-                res.status(200).json({
-                    respuesta
-                })
-            }
-            //console.log(respuesta);
-        })
+    mostubi(function (error, respuesta) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            //console.log(respuesta.respuesta);
+            res.status(200).json({
+                respuesta
+            })
+        }
+        //console.log(respuesta);
+    })
+}
+)
+app.get('/MenuLista', async (req, res) => {
+    var fechainicio = req.query.fechainicio;
+    var fechafin = req.query.fechafin;
+
+    //console.log(fechainicio, fechafin);
+    mostMenulista(fechainicio, fechafin, async function (error, respuesta) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            //console.log(respuesta.respuesta);
+            const platosentrada = respuesta.respuesta.map((filtro) => {
+                return {
+                    platoentrada: filtro.imagen1
+                };
+            });
+            /* const prueba= "uploads/"+platosentrada[0].platoentrada;
+            console.log(platosentrada);
+
+            fs.readFile(prueba, (err, data) => {
+                if (err) throw err;
+                let base64Image = Buffer.from(data, 'binary').toString('base64');
+                const imagenfinal= "data:image/png;base64,"+ base64Image;
+                //console.log(imagenfinal);
+            }); */
+
+            const convertirImagenesABase64 = async (platos) => {
+                const base64Images = [];
+
+                for (const plato of platos) {
+                    const rutaImagen = "uploads/" + plato.platoentrada;
+
+                    // Leer la imagen y convertirla a base64
+                    try {
+                        const data = await fs.promises.readFile(rutaImagen);
+                        let base64Image = Buffer.from(data, 'binary').toString('base64');
+                        const imagenFinal = "data:image/jpeg;base64," + base64Image; // Cambia 'jpeg' por el tipo adecuado si es necesario
+                        base64Images.push(imagenFinal);
+                    } catch (err) {
+                        console.error(`Error al leer la imagen ${rutaImagen}:`, err);
+                    }
+                }
+
+                return base64Images;
+            };
+
+            // Llamada a la función
+            const sopa = await convertirImagenesABase64(platosentrada);
+
+            res.status(200).json({
+                respuesta,
+                sopa
+            })
+        }
+        //console.log(respuesta);
+    })
+}
+)
+app.get('/Eficacia', (req, res) => {
+
+    mostEficacia( function (error, respuesta) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            //console.log(respuesta.respuesta);
+            res.status(200).json({
+                respuesta
+            })
+        }
+        //console.log(respuesta);
+    })
+}
+)
+app.get('/minimoconsumibles', (req, res) => {
+    mostConsumible(function (error, respuesta) {
+
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            //console.log(respuesta.respuesta);
+            const limite = respuesta.respuesta.filter((filtro) => filtro.cantidad <= filtro.minimo);
+            //console.log(limite);
+            res.status(200).json({
+                limite
+            })
+        }
+        //console.log(respuesta);
+    })
 }
 )
 
+app.get('/verificarpermiso', verificar_Token, (req, res) => {
+    const usuario = req.usuario;
+    const responsable = usuario.nombre;
+    const repuesta = "";
+
+    if (responsable === "LUIS REY HERNANDEZ ROMERO") {
+        res.status(200).json({
+            respuesta: "SI"
+        })
+    }
+    else {
+        res.status(400).json({
+            respuesta: "NO"
+        })
+    }
+}
+)
 /* Fin de mostrar */
 
 /* Insertar */
@@ -1685,13 +1808,13 @@ app.post('/insertarConsumibles', (req, res) => {
             // Una vez que tenemos el folio, procedemos con la inserción
             const folio = respuesta.folio;
             console.log("Folio obtenido: ", folio)
-            if (folio && fecha && req.body.unidadmedida && req.body.tipo && req.body.descripcion) {
+            if (folio && fecha && req.body.unidadmedida && req.body.tipo && req.body.descripcion && req.body.minimo) {
                 const cantidad = 0;
                 const codigobarras = "";
                 const costo = 0;
 
                 /* folioActivo,fecha,unidadmedida,cantidad,tipo,descripcion,codigobarras */
-                inserConsumible(folio, fecha, req.body.unidadmedida, cantidad, costo, req.body.tipo, req.body.descripcion, codigobarras, function (error, respuesta) {
+                inserConsumible(folio, fecha, req.body.unidadmedida, cantidad, costo, req.body.tipo, req.body.descripcion, codigobarras, req.body.minimo, function (error, respuesta) {
                     if (error) {
                         console.log(error)
                         res.status(404).json({
@@ -1699,6 +1822,7 @@ app.post('/insertarConsumibles', (req, res) => {
                         })
                     }
                     else {
+                        io.emit('escuchando', respuesta);
                         res.status(200).json({
                             mensaje: respuesta.mensaje
                         })
@@ -1845,6 +1969,8 @@ app.post('/insertarAsigactividad', verificar_Token, (req, res) => {
     //console.log(usuario)  
     const responsable = usuario.nombre;
     const kg = 0;
+    const numpersonas = 0;
+    const eficacia = 0;
     //console.log(responsable)
     mostAsignacion(responsable, fecha, function (error, respuesta) {
         if (error) {
@@ -1869,7 +1995,7 @@ app.post('/insertarAsigactividad', verificar_Token, (req, res) => {
                     console.log("No existe esta actividad");
                     const status = "INICIAR"
                     const timecontrol = 0;
-                    insertarAsigactivi(fecha, usuario.nombre, req.body.fechainicio, req.body.empresa, req.body.idactividad, status, timecontrol, kg, function (error, respuesta) {
+                    insertarAsigactivi(fecha, usuario.nombre, req.body.fechainicio, req.body.empresa, req.body.idactividad, status, timecontrol, kg, numpersonas, eficacia, function (error, respuesta) {
                         if (error) {
                             console.log(error)
                             res.status(404).json({
@@ -1948,6 +2074,7 @@ app.post('/insertarCompra', (req, res) => {
                                         })
                                     }
                                     else {
+                                        io.emit('escuchando', respuesta);
                                         res.status(200).json({
                                             mensaje: respuesta.mensaje
                                         })
@@ -1975,6 +2102,7 @@ app.post('/insertarCompra', (req, res) => {
                                         })
                                     }
                                     else {
+                                        io.emit('escuchando', respuesta);
                                         res.status(200).json({
                                             mensaje: respuesta.mensaje
                                         })
@@ -2091,7 +2219,7 @@ app.post('/insertarControl', (req, res) => {
         const lon = 0;
         const lat = 0;
         const status = "INICIAR";
-        console.log(req.body);
+        //console.log(req.body);
         mostControlasignados(req.body.idchecksupervisor, fecha, function (error, respuesta) {
             if (error) {
                 console.log(error)
@@ -2102,9 +2230,9 @@ app.post('/insertarControl', (req, res) => {
             }
             else {
                 //console.log(req.body)
-                console.log(respuesta.respuesta)
+                //console.log(respuesta.respuesta)
                 const datosFil = respuesta.respuesta.find((filtro) => filtro.responsables === req.body.responsables);
-                console.log(datosFil);
+                //console.log(datosFil);
                 if (datosFil) {
                     console.log("El responsable esta asignado en otra actividad");
                     res.status(400).json({
@@ -2112,6 +2240,7 @@ app.post('/insertarControl', (req, res) => {
                     });
 
                 } else {
+                    //console.log(req.body.idasigactivi,);
                     mostIdusuario(function (error, respuesta) {
                         if (error) {
                             console.log(error)
@@ -2124,6 +2253,7 @@ app.post('/insertarControl', (req, res) => {
                             const searchidcheck = respuesta.respuesta.find(filtro => filtro.NombreCompleto === req.body.responsables);
                             console.log(searchidcheck);
                             const idcheck = searchidcheck.idCheck;
+
                             console.log(idcheck);
 
 
@@ -2135,9 +2265,36 @@ app.post('/insertarControl', (req, res) => {
                                     })
                                 }
                                 else {
-                                    res.status(200).json({
-                                        mensaje: respuesta.mensaje
+                                    mostNumpersonas(req.body.idasigactivi, function (error, respuesta) {
+                                        if (error) {
+                                            console.log(error)
+                                            res.status(404).json({
+                                                mensaje: respuesta.mensaje
+                                            })
+                                        }
+                                        else {
+                                            console.log(respuesta.respuesta[0].numpersonas);
+                                            const personastotales = respuesta.respuesta[0].numpersonas + 1;
+                                            console.log(personastotales);
+                                            editNumpersonas(req.body.idasigactivi, personastotales, function (error, respuesta) {
+                                                if (error) {
+                                                    console.log(error)
+                                                    res.status(404).json({
+                                                        mensaje: respuesta.mensaje
+                                                    })
+                                                }
+                                                else {
+                                                    io.emit('escuchando', respuesta.mensaje);
+                                                    res.status(200).json({
+                                                        mensaje: respuesta.mensaje
+                                                    })
+                                                }
+                                                //console.log(respuesta);
+                                            })
+                                        }
+                                        //console.log(respuesta);
                                     })
+
                                 }
                                 //console.log(respuesta);
                             })
@@ -3131,36 +3288,29 @@ app.put('/actualizarTimefin', (req, res) => {
                                                             //console.log(actividadRealizada);
                                                             //console.log(actividadRealizada.kg);
                                                             if (actividadRealizada.kg === 0) {
-                                                                if (actividadRealizada.timestandar > timeasignacion) {
-                                                                    console.log(timeasignacion);
-                                                                    if (timeasignacion <= 59) {
-                                                                        const horafinal = 0;
-                                                                        const eficienciafinal1 = 60 / timeasignacion;
-                                                                        const eficienciafinal = Math.round((eficienciafinal1 + Number.EPSILON) * 100) / 100;
-                                                                        editStatusactividadesT(req.body.idactividades, horafinal, timeasignacion, timeasignacion, eficienciafinal, function (error, respuesta) {
-                                                                            if (error) {
-                                                                                console.log(error)
-                                                                                res.status(404).json({
-                                                                                    mensaje: respuesta.mensaje
-                                                                                })
-                                                                            }
-                                                                            else {
-                                                                                io.emit('escuchando', respuesta.mensaje);
-                                                                                res.status(200).json({
-                                                                                    mensaje: respuesta.mensaje
-                                                                                })
-                                                                            }
-                                                                            console.log(respuesta);
+                                                                /* Calculo de la eficaciona de la actividad */
+                                                                const tiemporecord = actividadRealizada.timestandar;
+                                                                mostNumpersonas(req.body.idasigactivi, function (error, respuesta) {
+                                                                    if (error) {
+                                                                        console.log(error)
+                                                                        res.status(404).json({
+                                                                            mensaje: respuesta.mensaje
                                                                         })
                                                                     }
                                                                     else {
-                                                                        console.log("convertir el tiempo asignacion en horas y minutos");
-                                                                        const eficienciafinal1 = 60 / timeasignacion;
-                                                                        const eficienciafinal = Math.round((eficienciafinal1 + Number.EPSILON) * 100) / 100;
+                                                                        /* Calculo del tiempo esperado */
+                                                                        const numpersonas = respuesta.respuesta[0].numpersonas;
+                                                                        const tiempoesperado = tiemporecord / numpersonas;
+                                                                        console.log(tiempoesperado);
 
-                                                                        const horas = Math.floor(timeasignacion / 60);
-                                                                        const minutos = timeasignacion % 60;
-                                                                        editStatusactividadesT(req.body.idactividades, horas, minutos, timeasignacion, eficienciafinal, function (error, respuesta) {
+                                                                        /* Calculo de la eficacia de la actividad */
+                                                                        const eficacia1 = (tiempoesperado / timeasignacion) * 100;
+                                                                        console.log(eficacia1);
+
+                                                                        const eficacia = Math.round((eficacia1 + Number.EPSILON) * 100) / 100;
+                                                                        console.log(eficacia);
+
+                                                                        editEficacia(req.body.idasigactivi, eficacia, function (error, respuesta) {
                                                                             if (error) {
                                                                                 console.log(error)
                                                                                 res.status(404).json({
@@ -3169,19 +3319,64 @@ app.put('/actualizarTimefin', (req, res) => {
                                                                             }
                                                                             else {
                                                                                 io.emit('escuchando', respuesta.mensaje);
-                                                                                res.status(200).json({
-                                                                                    mensaje: respuesta.mensaje
-                                                                                })
+                                                                                if (actividadRealizada.timestandar > timeasignacion) {
+                                                                                    console.log(timeasignacion);
+                                                                                    if (timeasignacion <= 59) {
+                                                                                        const horafinal = 0;
+                                                                                        const eficienciafinal1 = 60 / timeasignacion;
+                                                                                        const eficienciafinal = Math.round((eficienciafinal1 + Number.EPSILON) * 100) / 100;
+                                                                                        editStatusactividadesT(req.body.idactividades, horafinal, timeasignacion, timeasignacion, eficienciafinal, function (error, respuestaStatusactividadesT) {
+                                                                                            if (error) {
+                                                                                                console.log(error)
+                                                                                                res.status(404).json({
+                                                                                                    mensaje: respuesta.mensaje
+                                                                                                })
+                                                                                            }
+                                                                                            else {
+                                                                                                io.emit('escuchando', respuestaStatusactividadesT.mensaje);
+                                                                                                res.status(200).json({
+                                                                                                    mensaje: respuestaStatusactividadesT.mensaje
+                                                                                                })
+                                                                                            }
+                                                                                            console.log(respuestaStatusactividadesT);
+                                                                                        })
+                                                                                    }
+                                                                                    else {
+                                                                                        console.log("convertir el tiempo asignacion en horas y minutos");
+                                                                                        const eficienciafinal1 = 60 / timeasignacion;
+                                                                                        const eficienciafinal = Math.round((eficienciafinal1 + Number.EPSILON) * 100) / 100;
+
+                                                                                        const horas = Math.floor(timeasignacion / 60);
+                                                                                        const minutos = timeasignacion % 60;
+                                                                                        editStatusactividadesT(req.body.idactividades, horas, minutos, timeasignacion, eficienciafinal, function (error, respuestaStatusactividadesT) {
+                                                                                            if (error) {
+                                                                                                console.log(error)
+                                                                                                res.status(404).json({
+                                                                                                    mensaje: respuesta.mensaje
+                                                                                                })
+                                                                                            }
+                                                                                            else {
+                                                                                                io.emit('escuchando', respuestaStatusactividadesT.mensaje);
+                                                                                                res.status(200).json({
+                                                                                                    mensaje: respuestaStatusactividadesT.mensaje
+                                                                                                })
+                                                                                            }
+                                                                                            console.log(respuestaStatusactividadesT);
+                                                                                        })
+                                                                                    }
+
+                                                                                } else {
+                                                                                    res.status(200).json({
+                                                                                        mensaje: "Excedieron el tiempo de la actividad.."
+                                                                                    })
+                                                                                }
                                                                             }
-                                                                            console.log(respuesta);
+                                                                            //console.log(respuesta);
                                                                         })
                                                                     }
+                                                                    //console.log(respuesta);
+                                                                })
 
-                                                                } else {
-                                                                    res.status(200).json({
-                                                                        mensaje: "Excedieron el tiempo de la actividad.."
-                                                                    })
-                                                                }
                                                             }
                                                             else {
                                                                 res.status(200).json({
@@ -3323,7 +3518,7 @@ app.put('/actualizarAsignacionkg', (req, res) => {
     /* idasigactivi, status, timestandar, kg */
     const status = "TERMINADO";
     if (req.body.idasigactivi && req.body.kg) {
-        mostEficienciakg(fecha, function (error, respuesta) {
+        mostEficienciakg(function (error, respuesta) {
             if (error) {
                 console.log(error)
                 res.status(404).json({
@@ -3338,8 +3533,8 @@ app.put('/actualizarAsignacionkg', (req, res) => {
                 const idactividades = asignacion.idactividades;
                 const kilos = parseInt(req.body.kg);
                 const ultimoskg = parseInt(asignacion.kg);
-                const timestandar = parseInt(asignacion.timeControl);
-                editStatusasignacion(req.body.idasigactivi, status, timestandar, kilos, function (error, respuesta) {
+                const timecontrol = parseInt(asignacion.timeControl);
+                editStatusasignacion(req.body.idasigactivi, status, timecontrol, kilos, function (error, respuesta) {
                     if (error) {
                         console.log(error)
                         res.status(404).json({
@@ -3348,31 +3543,29 @@ app.put('/actualizarAsignacionkg', (req, res) => {
                     }
                     else {
                         io.emit('escuchando', respuesta);
-                        if (timestandar <= asignacion.timestandar && kilos > asignacion.kg) {
-                            const eficiencia1 = (60 * kilos) / timestandar;
-                            const nuevaeficiencia = Math.round((eficiencia1 + Number.EPSILON) * 100) / 100;
-                            console.log(nuevaeficiencia);
-                            if (timestandar <= 59) {
-                                const horas = 0;
-                                editStatusactividadesKg(idactividades, kilos, horas, timestandar, timestandar, nuevaeficiencia, function (error, respuesta) {
-                                    if (error) {
-                                        console.log(error)
-                                        res.status(404).json({
-                                            mensaje: respuesta.mensaje
-                                        })
-                                    }
-                                    else {
-                                        res.status(200).json({
-                                            mensaje: respuesta.mensaje
-                                        })
-                                    }
-                                    console.log(respuesta);
+                        mostNumpersonas(req.body.idasigactivi, function (error, respuesta) {
+                            if (error) {
+                                console.log(error)
+                                res.status(404).json({
+                                    mensaje: respuesta.mensaje
                                 })
                             }
                             else {
-                                const horas = Math.floor(timestandar / 60);
-                                const minutos = timestandar % 60;
-                                editStatusactividadesKg(idactividades, ultimoskg, horas, minutos, timestandar, nuevaeficiencia, function (error, respuesta) {
+                                const tiemporecord= asignacion.timestandar;
+                                const cargaterica = (asignacion.kg / tiemporecord)*timecontrol;
+
+                                /* Calculo del tiempo esperado */
+                                const numpersonas = respuesta.respuesta[0].numpersonas;
+                                const resesperados= cargaterica * numpersonas; 
+                                console.log(resesperados);
+
+                                const eficacia1 = (kilos/resesperados)*100;
+                                console.log(eficacia1);
+                                
+                                const eficacia = Math.round((eficacia1 + Number.EPSILON) * 100) / 100;
+                                console.log(eficacia);
+
+                                editEficacia(req.body.idasigactivi, eficacia, function (error, respuesta) {
                                     if (error) {
                                         console.log(error)
                                         res.status(404).json({
@@ -3380,19 +3573,60 @@ app.put('/actualizarAsignacionkg', (req, res) => {
                                         })
                                     }
                                     else {
-                                        res.status(200).json({
-                                            mensaje: respuesta.mensaje
-                                        })
+                                        io.emit('escuchando', respuesta.mensaje);
+                                        if (timecontrol <= asignacion.timestandar && kilos > asignacion.kg && eficacia > 100) {
+                                            const eficiencia1 = (60 * kilos) / timecontrol ;
+                                            const nuevaeficiencia = Math.round((eficiencia1 + Number.EPSILON) * 100) / 100;
+                                            console.log(nuevaeficiencia);
+                                            if (timecontrol  <= 59) {
+                                                const horas = 0;
+                                                editStatusactividadesKg(idactividades, kilos, horas, timecontrol , timecontrol, nuevaeficiencia, function (error, respuesta) {
+                                                    if (error) {
+                                                        console.log(error)
+                                                        res.status(404).json({
+                                                            mensaje: respuesta.mensaje
+                                                        })
+                                                    }
+                                                    else {
+                                                        io.emit('escuchando', respuesta.mensaje);
+                                                        res.status(200).json({
+                                                            mensaje: respuesta.mensaje
+                                                        })
+                                                    }
+                                                    console.log(respuesta);
+                                                })
+                                            }
+                                            else {
+                                                const horas = Math.floor(timecontrol / 60);
+                                                const minutos = timecontrol % 60;
+                                                editStatusactividadesKg(idactividades, kilos, horas, minutos, timecontrol, nuevaeficiencia, function (error, respuesta) {
+                                                    if (error) {
+                                                        console.log(error)
+                                                        res.status(404).json({
+                                                            mensaje: respuesta.mensaje
+                                                        })
+                                                    }
+                                                    else {
+                                                        io.emit('escuchando', respuesta.mensaje);
+                                                        res.status(200).json({
+                                                            mensaje: respuesta.mensaje
+                                                        })
+                                                    }
+                                                    console.log(respuesta);
+                                                })
+                                            }
+                                        }
+                                        else {
+                                            res.status(400).json({
+                                                mensaje: "Actividad terminada"
+                                            });
+                                        }
                                     }
-                                    console.log(respuesta);
                                 })
                             }
                         }
-                        else {
-                            res.status(400).json({
-                                mensaje: "Actividad terminada"
-                            });
-                        }
+                        )
+                        
                     }
                     //console.log(respuesta);
                 })
