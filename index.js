@@ -52,6 +52,9 @@ const mostVigenciaprestamos = require('./query/mostVigenciaprestamo');
 const mostMenulista = require('./query/mostMenulista');
 const mostNumpersonas = require('./query/mostAsigactivinumpersonas');
 const mostEficacia = require('./query/mostEficacia');
+const mostAltas = require('./query/mostAltas');
+const mostComidasolicitada = require('./query/mostComidasolicitada');
+const mostPermisos = require('./query/mostPermisos');
 const Folio = require('./query/folio')
 const Folioconsumible = require('./query/folioconsumible')
 const inserPre = require('./query/insertPregunta');
@@ -75,6 +78,7 @@ const insertarInsumoasig = require('./query/insertAsignacion');
 const insertarPrestamo = require('./query/insertPrestamo');
 const insertarMenusemana = require('./query/insertMenusemana');
 const insertarEntregaafi = require('./query/insertEntregaafi');
+const insertarComidossolicitadas = require('./query/insertComidassolicitadas');
 const editPreg = require('./query/actualizarPreg');
 const editDesinsum = require('./query/actualizarDesinsum');
 const editMantt = require('./query/actualizarmantt');
@@ -691,7 +695,7 @@ app.get('/Tiempocontrol', (req, res) => {
 )
 //Muestra las actividades que tienen kilogramos, y deben ingresar, una vez finalizada la actividad
 app.get('/EficienciaKg', (req, res) => {
-    mostEficienciakg( function (error, respuesta) {
+    mostEficienciakg(function (error, respuesta) {
         if (error) {
             console.log(error)
             res.status(404).json({
@@ -839,7 +843,11 @@ app.get('/IdusuarioPMateriales', (req, res) => {
 }
 )
 app.get('/Idcheck', (req, res) => {
-    mostIdcheck(req.body.respponsable, function (error, respuesta) {
+    const responsable = req.query.idcheck;
+    const numsemana = req.query.numsemana;
+
+    //console.log(responsable, numsemana);
+    mostIdcheck(responsable, function (error, respuesta) {
         if (error) {
             console.log(error)
             res.status(404).json({
@@ -848,9 +856,42 @@ app.get('/Idcheck', (req, res) => {
         }
         else {
             //console.log(respuesta.respuesta);
-            res.status(200).json({
-                respuesta
-            })
+            if (respuesta.respuesta && respuesta.respuesta.length > 0) {
+                mostComidasolicitada(numsemana, function (error, respuesta) {
+                    if (error) {
+                        console.log(error)
+                        res.status(404).json({
+                            mensaje: respuesta.mensaje
+                        })
+                    }
+                    else {
+                        //console.log(respuesta.respuesta);
+                        const solicito = respuesta.respuesta.find((filtro) => filtro.idcheck === responsable && filtro.numsemana === numsemana);
+                        //console.log(solicito);
+                        if (solicito) {
+                            //console.log("Ya solicito comida")
+                            res.status(400).json({
+                                mensaje: "Ya solicito comida"
+                            })
+                        }
+                        else {
+                            //console.log(respuesta.respuesta);
+                            res.status(200).json({
+                                respuesta
+                            })
+                        }
+
+                    }
+                    //console.log(respuesta);
+                })
+            }
+            else {
+                //console.log("No existe el usuario")
+                res.status(400).json({
+                    mensaje: "No existe el usuario"
+                })
+            }
+
         }
         //console.log(respuesta);
     })
@@ -1047,10 +1088,11 @@ app.get('/idinsumos/:id', async (req, res) => {
     })
 }
 )
+//MODIFICAR LA INSERCIÓN DE PRESTAMO PARA MOSTRAR PRESTAMOS VENCIDOS
 app.get('/vigenciaprestamo', (req, res) => {
     const fechavigencia = moment(fecha).subtract(7, 'days').format('YYYY-MM-DD');
     console.log(fechavigencia);
-    mostVigenciaprestamos(fechavigencia, function (error, respuesta) {
+    mostVigenciaprestamos(fecha, function (error, respuesta) {
         if (error) {
             console.log(error)
             res.status(404).json({
@@ -1090,66 +1132,154 @@ app.get('/MenuLista', async (req, res) => {
     var fechainicio = req.query.fechainicio;
     var fechafin = req.query.fechafin;
 
-    //console.log(fechainicio, fechafin);
-    mostMenulista(fechainicio, fechafin, async function (error, respuesta) {
-        if (error) {
-            console.log(error)
-            res.status(404).json({
-                mensaje: respuesta.mensaje
-            })
-        }
-        else {
-            //console.log(respuesta.respuesta);
-            const platosentrada = respuesta.respuesta.map((filtro) => {
-                return {
-                    platoentrada: filtro.imagen1
-                };
-            });
-            /* const prueba= "uploads/"+platosentrada[0].platoentrada;
-            console.log(platosentrada);
+    const verificardia = moment(fechainicio).format("dddd");
+    //console.log(verificardia);
 
-            fs.readFile(prueba, (err, data) => {
-                if (err) throw err;
-                let base64Image = Buffer.from(data, 'binary').toString('base64');
-                const imagenfinal= "data:image/png;base64,"+ base64Image;
-                //console.log(imagenfinal);
-            }); */
+    const aproxfin = moment(fechainicio).add(4, 'days').format('YYYY-MM-DD');
+    //console.log(aproxfin);
+    if (verificardia === "Monday" && fechafin === aproxfin) {
+        mostMenulista(fechainicio, fechafin, async function (error, respuesta) {
+            if (error) {
+                console.log(error)
+                res.status(404).json({
+                    mensaje: respuesta.mensaje
+                })
+            }
+            else {
+                //console.log(respuesta.respuesta);
+                const platosentrada = respuesta.respuesta.map((filtro) => {
+                    return {
+                        platoentrada: filtro.imagen1
+                    };
+                });
 
-            const convertirImagenesABase64 = async (platos) => {
-                const base64Images = [];
+                const bebida = respuesta.respuesta.map((filtro) => {
+                    return {
+                        bebida: filtro.imagen2
+                    };
+                });
 
-                for (const plato of platos) {
-                    const rutaImagen = "uploads/" + plato.platoentrada;
+                const platoa = respuesta.respuesta.map((filtro) => {
+                    return {
+                        platoa: filtro.imagen3
+                    };
+                });
 
-                    // Leer la imagen y convertirla a base64
-                    try {
-                        const data = await fs.promises.readFile(rutaImagen);
-                        let base64Image = Buffer.from(data, 'binary').toString('base64');
-                        const imagenFinal = "data:image/jpeg;base64," + base64Image; // Cambia 'jpeg' por el tipo adecuado si es necesario
-                        base64Images.push(imagenFinal);
-                    } catch (err) {
-                        console.error(`Error al leer la imagen ${rutaImagen}:`, err);
+                const platob = respuesta.respuesta.map((filtro) => {
+                    return {
+                        platob: filtro.imagen4
+                    };
+                });
+
+                const convertirImagenesABase64S = async (platos) => {
+                    const base64Images = [];
+
+                    for (const plato of platos) {
+                        const rutaImagen = "uploads/" + plato.platoentrada;
+                        // Leer la imagen y convertirla a base64
+                        try {
+                            const data = await fs.promises.readFile(rutaImagen);
+                            let base64Image = Buffer.from(data, 'binary').toString('base64');
+                            const imagenFinal = "data:image/jpeg;base64," + base64Image; // Cambia 'jpeg' por el tipo adecuado si es necesario
+                            base64Images.push(imagenFinal);
+                        } catch (err) {
+                            console.error(`Error al leer la imagen ${rutaImagen}:`, err);
+                        }
                     }
+
+                    return base64Images;
+                };
+
+                const convertirImagenesABase64PA = async (platos) => {
+                    const base64Images = [];
+
+                    for (const plato of platos) {
+                        const rutaImagen = "uploads/" + plato.platoa;
+                        // Leer la imagen y convertirla a base64
+                        try {
+                            const data = await fs.promises.readFile(rutaImagen);
+                            let base64Image = Buffer.from(data, 'binary').toString('base64');
+                            const imagenFinal = "data:image/jpeg;base64," + base64Image; // Cambia 'jpeg' por el tipo adecuado si es necesario
+                            base64Images.push(imagenFinal);
+                        } catch (err) {
+                            console.error(`Error al leer la imagen ${rutaImagen}:`, err);
+                        }
+                    }
+
+                    return base64Images;
+                };
+
+                const convertirImagenesABase64PB = async (platos) => {
+                    const base64Images = [];
+
+                    for (const plato of platos) {
+                        const rutaImagen = "uploads/" + plato.platob;
+                        // Leer la imagen y convertirla a base64
+                        try {
+                            const data = await fs.promises.readFile(rutaImagen);
+                            let base64Image = Buffer.from(data, 'binary').toString('base64');
+                            const imagenFinal = "data:image/jpeg;base64," + base64Image; // Cambia 'jpeg' por el tipo adecuado si es necesario
+                            base64Images.push(imagenFinal);
+                        } catch (err) {
+                            console.error(`Error al leer la imagen ${rutaImagen}:`, err);
+                        }
+                    }
+
+                    return base64Images;
+                };
+
+                const convertirImagenesABase64B = async (platos) => {
+                    const base64Images = [];
+
+                    for (const plato of platos) {
+                        const rutaImagen = "uploads/" + plato.bebida;
+                        // Leer la imagen y convertirla a base64
+                        try {
+                            const data = await fs.promises.readFile(rutaImagen);
+                            let base64Image = Buffer.from(data, 'binary').toString('base64');
+                            const imagenFinal = "data:image/jpeg;base64," + base64Image; // Cambia 'jpeg' por el tipo adecuado si es necesario
+                            base64Images.push(imagenFinal);
+                        } catch (err) {
+                            console.error(`Error al leer la imagen ${rutaImagen}:`, err);
+                        }
+                    }
+
+                    return base64Images;
+                };
+
+                // Llamada a la función
+                try {
+                    const sopas = await convertirImagenesABase64S(platosentrada);
+                    const platofuertea = await convertirImagenesABase64PA(platoa);
+                    const platofuerteb = await convertirImagenesABase64PB(platob);
+                    const bebidas = await convertirImagenesABase64B(bebida);
+
+                    res.status(200).json({
+                        respuesta,
+                        sopas,
+                        platofuertea,
+                        platofuerteb,
+                        bebidas
+                    });
+                } catch (err) {
+                    console.error("Error al convertir las imágenes a Base64:", err);
+                    res.status(500).json({ mensaje: "Error interno del servidor" });
                 }
-
-                return base64Images;
-            };
-
-            // Llamada a la función
-            const sopa = await convertirImagenesABase64(platosentrada);
-
-            res.status(200).json({
-                respuesta,
-                sopa
-            })
-        }
-        //console.log(respuesta);
-    })
+            }
+            //console.log(respuesta);
+        })
+    }
+    else {
+        console.log("Las fechas de la semana son incorrectas.")
+        res.status(400).json({
+            mensaje: "Las fechas de la semana son incorrectas."
+        })
+    }
+    //console.log(fechainicio, fechafin);
 }
 )
 app.get('/Eficacia', (req, res) => {
-
-    mostEficacia( function (error, respuesta) {
+    mostEficacia(function (error, respuesta) {
         if (error) {
             console.log(error)
             res.status(404).json({
@@ -1187,7 +1317,6 @@ app.get('/minimoconsumibles', (req, res) => {
     })
 }
 )
-
 app.get('/verificarpermiso', verificar_Token, (req, res) => {
     const usuario = req.usuario;
     const responsable = usuario.nombre;
@@ -1203,6 +1332,193 @@ app.get('/verificarpermiso', verificar_Token, (req, res) => {
             respuesta: "NO"
         })
     }
+}
+)
+app.get('/Altas', (req, res) => {
+
+    mostAltas(function (error, respuesta) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            //console.log(respuesta.respuesta);
+            res.status(200).json({
+                respuesta
+            })
+        }
+        //console.log(respuesta);
+    })
+}
+)
+app.get('/Globalstatus', (req, res) => {
+    mostEficacia(function (error, respuesta) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            //console.log(respuesta.respuesta);
+            const deldia = respuesta.respuesta.filter((filtro) => filtro.fechainicio === fecha && filtro.status !="INACTIVO");
+            const deldiatotal = deldia.length;
+            console.log("deldia", deldia.length);
+
+            const terminadas = deldia.filter((filtro) => filtro.status === "TERMINADO");
+            const terminadastotal = terminadas.length;
+            console.log("terminadas", terminadas.length);
+
+            const promedio1 = terminadas.reduce((acumulador, filtro) => {
+                return acumulador + filtro.eficienciasig;
+            }, 0);
+            const promedio = Math.round((promedio1 + Number.EPSILON) * 100) / 100;
+            const promediototal1 = promedio / terminadas.length
+            const promediototal = Math.round((promediototal1 + Number.EPSILON) * 100) / 100;
+            console.log(promediototal);
+
+
+            const promedioasig = (terminadastotal * 100) / deldiatotal;
+            const promedioasigtotal = Math.round((promedioasig + Number.EPSILON) * 100) / 100;
+            console.log(promedioasigtotal);
+
+            res.status(200).json({
+                deldiatotal,
+                terminadastotal,
+                promediototal,
+                promedioasigtotal
+            })
+        }
+        //console.log(respuesta);
+    })
+}
+)
+app.get('/comidasolicitadas', (req, res) => {
+    const numsemana = req.query.numsemana;
+    //console.log(numsemana);
+    mostComidasolicitada(numsemana, function (error, respuesta) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            //console.log(respuesta.respuesta);
+            const lunesA = respuesta.respuesta.filter((filtro) => filtro.lunes==="A").length;
+            //console.log(lunesA);
+            const lunesB = respuesta.respuesta.filter((filtro) => filtro.lunes==="B").length;
+            //console.log(lunesB);
+
+            const martesA = respuesta.respuesta.filter((filtro) => filtro.martes==="A").length;
+            //console.log(martesA);
+            const martesB = respuesta.respuesta.filter((filtro) => filtro.martes==="B").length;
+            //console.log(martesB);
+
+            const miercolesA = respuesta.respuesta.filter((filtro) => filtro.miercoles==="A").length;
+            //console.log(miercolesA);
+            const miercolesB = respuesta.respuesta.filter((filtro) => filtro.miercoles==="B").length;
+            //console.log(miercolesB);
+
+            const juevesA = respuesta.respuesta.filter((filtro) => filtro.jueves==="A").length;
+            //console.log(juevesA);
+            const juevesB = respuesta.respuesta.filter((filtro) => filtro.jueves==="B").length;
+            //console.log(juevesB);
+
+            const viernesA = respuesta.respuesta.filter((filtro) => filtro.viernes==="A").length;
+            //console.log(viernesA);
+            const viernesB = respuesta.respuesta.filter((filtro) => filtro.viernes==="B").length;
+            //console.log(viernesB);
+
+
+            res.status(200).json({
+                respuesta,
+                lunesA,
+                lunesB,
+                martesA,
+                martesB,
+                miercolesA,
+                miercolesB,
+                juevesA,
+                juevesB,
+                viernesA,
+                viernesB
+
+            })
+
+        }
+        //console.log(respuesta);
+    })
+
+}
+)
+app.get('/permisos', verificar_Token, (req, res) => {
+    const usuario = req.usuario;
+    const responsable = usuario.id;
+    //console.log(responsable);
+
+    mostPermisos(function (error, respuesta) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            //console.log(respuesta.respuesta);
+            const persona= respuesta.respuesta.find((filtro) => filtro.Id_Permisos === responsable);
+            //console.log(persona);
+            if(persona && persona.Form_comida === "true"){
+                res.status(200).json({
+                    mensaje: "true"
+                }) 
+            }
+            else{
+                console.log("false");
+                res.status(400).json({
+                    
+                    mensaje: "false"
+                })     
+            }
+        }
+        //console.log(respuesta);
+    })
+}
+)
+app.get('/pedidocomida', verificar_Token, (req, res) => {
+    const usuario = req.usuario;
+    const responsable = usuario.id;
+    console.log(responsable);
+    const numsemana = req.query.numsemana;
+    console.log(numsemana);
+
+    mostComidasolicitada( numsemana,function (error, respuesta) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            //console.log(respuesta.respuesta);
+            const solicito = respuesta.respuesta.find((filtro) => filtro.idcheck === responsable);
+            console.log(solicito);
+            if(solicito){
+                res.status(200).json({
+                    solicito
+                }) 
+            }
+            else{
+                console.log("false");
+                res.status(400).json({
+                    mensaje: "No pidio comida"
+                })     
+            }
+        }
+        //console.log(respuesta);
+    })
 }
 )
 /* Fin de mostrar */
@@ -1963,7 +2279,7 @@ app.post('/insertarMaterial', (req, res) => {
         });
     }
 })
-//Inserta las actividades asignadas por el dueño del proceso.
+//MODIFICADO PARA CALCULAR LA EFICACIA
 app.post('/insertarAsigactividad', verificar_Token, (req, res) => {
     const usuario = req.usuario;
     //console.log(usuario)  
@@ -1971,6 +2287,7 @@ app.post('/insertarAsigactividad', verificar_Token, (req, res) => {
     const kg = 0;
     const numpersonas = 0;
     const eficacia = 0;
+    const eficienciasig = 0;
     //console.log(responsable)
     mostAsignacion(responsable, fecha, function (error, respuesta) {
         if (error) {
@@ -1995,7 +2312,7 @@ app.post('/insertarAsigactividad', verificar_Token, (req, res) => {
                     console.log("No existe esta actividad");
                     const status = "INICIAR"
                     const timecontrol = 0;
-                    insertarAsigactivi(fecha, usuario.nombre, req.body.fechainicio, req.body.empresa, req.body.idactividad, status, timecontrol, kg, numpersonas, eficacia, function (error, respuesta) {
+                    insertarAsigactivi(fecha, usuario.nombre, req.body.fechainicio, req.body.empresa, req.body.idactividad, status, timecontrol, kg, numpersonas, eficacia, eficienciasig, function (error, respuesta) {
                         if (error) {
                             console.log(error)
                             res.status(404).json({
@@ -2211,7 +2528,7 @@ app.post('/insertarMovimiento', (req, res) => {
         //console.log(respuesta);
     })
 })
-//Inserta las actividades asignadas por el supervisor a los trabajadores
+//MODIFICADO PARA CALCULAR LA EFICACIA
 app.post('/insertarControl', (req, res) => {
     if (req.body.idactividades && fecha && req.body.responsables && req.body.idasigactivi && req.body.idchecksupervisor) {
         const timestandar = 0;
@@ -2518,7 +2835,7 @@ app.post('/insertarMenu', (req, res) => {
     var diasemana = "";
     /* fecha, fechainicio, diasemana, platoentrada, platofuerteA, platofuerteB, bebida, */
 
-    if (fecha && req.body.fechainicio && req.body.platoentrada && req.body.platofuerteA || req.body.platofuerteB && req.body.bebida) {
+    if (fecha && req.body.fechainicio && req.body.numsemana && req.body.platoentrada && req.body.platofuerteA || req.body.platofuerteB && req.body.bebida) {
         const diasemanamoment = moment(req.body.fechainicio).format('dddd');
         /* Guardar en español */
         switch (diasemanamoment) {
@@ -2598,7 +2915,7 @@ app.post('/insertarMenu', (req, res) => {
                                     //console.log(req.body);
                                     //console.log(diasemanamoment);
                                     if (fecha && req.body.fechainicio && req.body.platoentrada && req.body.platofuerteA || req.body.platofuerteB && req.body.bebida) {
-                                        insertarMenusemana(fecha, req.body.fechainicio, diasemana, req.body.platoentrada, req.body.platofuerteA, req.body.platofuerteB, req.body.bebida, a, b, c, d, function (error, respuesta) {
+                                        insertarMenusemana(fecha, req.body.fechainicio, req.body.numsemana, diasemana, req.body.platoentrada, req.body.platofuerteA, req.body.platofuerteB, req.body.bebida, a, b, c, d, function (error, respuesta) {
                                             if (error) {
                                                 console.log(error)
                                                 res.status(404).json({
@@ -2726,7 +3043,59 @@ app.post('/insertarentregaAFI', (req, res) => {
         });
     }
 })
+app.post('/insertarSolicitudcomida', (req, res) => {
+    console.log(req.body);
 
+
+    //fechacreacion,lunes, martes, miercoles, jueves, viernes, nombre, idcheck, numsemana
+    if (req.body.lunes || req.body.martes || req.body.miercoles || req.body.jueves || req.body.viernes && req.body.idcheck && req.body.numsemana) {
+        //console.log(req.body);
+        const lunes = req.body.lunes || 'NA';
+        const martes = req.body.martes || 'NA';
+        const miercoles = req.body.miercoles || 'NA';
+        const jueves = req.body.jueves || 'NA';
+        const viernes = req.body.viernes || 'NA';
+        mostIdcheck(req.body.idcheck, function (error, respuesta) {
+            if (error) {
+                console.log(error)
+                res.status(404).json({
+                    mensaje: respuesta.mensaje
+                })
+            }
+            else {
+                console.log(respuesta.respuesta);
+                if (respuesta.respuesta && respuesta.respuesta.length > 0) {
+                    const nombre = respuesta.respuesta[0].NombreCompleto;
+                    insertarComidossolicitadas(fecha, lunes, martes, miercoles, jueves, viernes, nombre, req.body.idcheck, req.body.numsemana, function (error, respuesta) {
+
+                        if (error) {
+                            console.log(error)
+                            res.status(404).json({
+                                mensaje: respuesta.mensaje
+                            })
+                        }
+                        else {
+                            io.emit('escuchando', respuesta.mensaje);
+                            res.status(200).json({
+                                mensaje: respuesta.mensaje
+                            })
+                        }
+                        //console.log(respuesta);
+                    })
+
+                }
+            }
+            //console.log(respuesta);
+        })
+
+    }
+    else {
+        console.log("Existen datos vacíos");
+        res.status(400).json({
+            mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
+        });
+    }
+})
 /* Fin de insertar */
 
 
@@ -3156,7 +3525,7 @@ app.put('/actualizarControlstatus', (req, res) => {
         })
     }
 })
-//Actualiza le tiempo en todas las tablas relcionadas, al momento de terminar 
+//MODIFICADO PARA CALULAR LA EFICACIA
 app.put('/actualizarTimefin', (req, res) => {
     /* id, estatus, */
     const horafin = moment().format('HH:mm');
@@ -3310,7 +3679,19 @@ app.put('/actualizarTimefin', (req, res) => {
                                                                         const eficacia = Math.round((eficacia1 + Number.EPSILON) * 100) / 100;
                                                                         console.log(eficacia);
 
-                                                                        editEficacia(req.body.idasigactivi, eficacia, function (error, respuesta) {
+                                                                        const eficienciasig1 = (tiemporecord / timeasignacion) * 100;
+                                                                        const eficienciaasig = Math.round((eficienciasig1 + Number.EPSILON) * 100) / 100;
+                                                                        console.log(eficienciaasig);
+                                                                        var eficienciatotal = 0;
+
+                                                                        if (eficienciaasig > 100) {
+                                                                            eficienciatotal = 100
+                                                                        }
+                                                                        else (
+                                                                            eficienciatotal = eficienciaasig
+                                                                        )
+
+                                                                        editEficacia(req.body.idasigactivi, eficacia, eficienciatotal, function (error, respuesta) {
                                                                             if (error) {
                                                                                 console.log(error)
                                                                                 res.status(404).json({
@@ -3514,6 +3895,7 @@ app.put('/actualizarTimepausa', (req, res) => {
         })
     }
 })
+//MODIFICADO PARA CALCULAR LA EFICACIA
 app.put('/actualizarAsignacionkg', (req, res) => {
     /* idasigactivi, status, timestandar, kg */
     const status = "TERMINADO";
@@ -3532,7 +3914,7 @@ app.put('/actualizarAsignacionkg', (req, res) => {
                 //console.log(asignacion);
                 const idactividades = asignacion.idactividades;
                 const kilos = parseInt(req.body.kg);
-                const ultimoskg = parseInt(asignacion.kg);
+                const actividadkg = parseInt(asignacion.kg);
                 const timecontrol = parseInt(asignacion.timeControl);
                 editStatusasignacion(req.body.idasigactivi, status, timecontrol, kilos, function (error, respuesta) {
                     if (error) {
@@ -3551,21 +3933,35 @@ app.put('/actualizarAsignacionkg', (req, res) => {
                                 })
                             }
                             else {
-                                const tiemporecord= asignacion.timestandar;
-                                const cargaterica = (asignacion.kg / tiemporecord)*timecontrol;
+                                const tiemporecord = asignacion.timestandar;
+                                const cargateorica = (asignacion.kg / tiemporecord) * timecontrol;
 
                                 /* Calculo del tiempo esperado */
                                 const numpersonas = respuesta.respuesta[0].numpersonas;
-                                const resesperados= cargaterica * numpersonas; 
+                                const resesperados = cargateorica * numpersonas;
                                 console.log(resesperados);
 
-                                const eficacia1 = (kilos/resesperados)*100;
+                                const eficacia1 = (kilos / resesperados) * 100;
                                 console.log(eficacia1);
-                                
+
                                 const eficacia = Math.round((eficacia1 + Number.EPSILON) * 100) / 100;
                                 console.log(eficacia);
 
-                                editEficacia(req.body.idasigactivi, eficacia, function (error, respuesta) {
+                                const porhora = (kilos / timecontrol) * 60;
+                                const eficienciasig1 = (porhora * 100) / asignacion.kg;
+                                const eficienciaasig = Math.round((eficienciasig1 + Number.EPSILON) * 100) / 100;
+                                console.log(eficienciaasig);
+
+                                var eficienciatotal = 0;
+
+                                if (eficienciaasig > 100) {
+                                    eficienciatotal = 100
+                                }
+                                else (
+                                    eficienciatotal = eficienciaasig
+                                )
+
+                                editEficacia(req.body.idasigactivi, eficacia, eficienciatotal, function (error, respuesta) {
                                     if (error) {
                                         console.log(error)
                                         res.status(404).json({
@@ -3575,12 +3971,12 @@ app.put('/actualizarAsignacionkg', (req, res) => {
                                     else {
                                         io.emit('escuchando', respuesta.mensaje);
                                         if (timecontrol <= asignacion.timestandar && kilos > asignacion.kg && eficacia > 100) {
-                                            const eficiencia1 = (60 * kilos) / timecontrol ;
+                                            const eficiencia1 = (60 * kilos) / timecontrol;
                                             const nuevaeficiencia = Math.round((eficiencia1 + Number.EPSILON) * 100) / 100;
                                             console.log(nuevaeficiencia);
-                                            if (timecontrol  <= 59) {
+                                            if (timecontrol <= 59) {
                                                 const horas = 0;
-                                                editStatusactividadesKg(idactividades, kilos, horas, timecontrol , timecontrol, nuevaeficiencia, function (error, respuesta) {
+                                                editStatusactividadesKg(idactividades, kilos, horas, timecontrol, timecontrol, nuevaeficiencia, function (error, respuesta) {
                                                     if (error) {
                                                         console.log(error)
                                                         res.status(404).json({
@@ -3626,7 +4022,7 @@ app.put('/actualizarAsignacionkg', (req, res) => {
                             }
                         }
                         )
-                        
+
                     }
                     //console.log(respuesta);
                 })
@@ -3645,7 +4041,7 @@ app.put('/actualizarMenusemana', (req, res) => {
     console.log(req.body)
     var diasemana = "";
 
-    if (req.body.idmenusemana && req.body.fechainicio && req.body.platoentrada && req.body.platofuerteA || req.body.platofuerteB && req.body.bebida) {
+    if (req.body.idmenusemana && req.body.fechainicio && req.body.numsemana && req.body.platoentrada && req.body.platofuerteA || req.body.platofuerteB && req.body.bebida) {
         const diasemanamoment = moment(req.body.fechainicio).format('dddd');
         /* Guardar en español */
         switch (diasemanamoment) {
@@ -3683,7 +4079,7 @@ app.put('/actualizarMenusemana', (req, res) => {
                 //let a = '', b = '', c = '', d = '';
 
                 if (!req.files || Object.keys(req.files).length === 0) {
-                    editMenusemana(req.body.idmenusemana, req.body.fechainicio, diasemana, req.body.platoentrada, req.body.platofuerteA, req.body.platofuerteB, req.body.bebida,
+                    editMenusemana(req.body.idmenusemana, req.body.fechainicio, req.body.numsemana, diasemana, req.body.platoentrada, req.body.platofuerteA, req.body.platofuerteB, req.body.bebida,
                         nuevosdatos[0].imagen1, nuevosdatos[0].imagen2, nuevosdatos[0].imagen3, nuevosdatos[0].imagen4, function (error, respuesta) {
                             if (error) {
                                 console.log(error)
@@ -3750,7 +4146,7 @@ app.put('/actualizarMenusemana', (req, res) => {
                             console.log("bebida 2",nuevoArchivos[1]);
                             console.log("platoA 3",nuevoArchivos[2]);
                             console.log("platoB 4",nuevoArchivos[3]); */
-                            editMenusemana(req.body.idmenusemana, req.body.fechainicio, diasemana, req.body.platoentrada, req.body.platofuerteA, req.body.platofuerteB, req.body.bebida,
+                            editMenusemana(req.body.idmenusemana, req.body.fechainicio, req.body.numsemana, diasemana, req.body.platoentrada, req.body.platofuerteA, req.body.platofuerteB, req.body.bebida,
                                 nuevoArchivos[0], nuevoArchivos[1], nuevoArchivos[2], nuevoArchivos[3], function (error, respuesta) {
                                     if (error) {
                                         console.log(error)

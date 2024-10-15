@@ -1,7 +1,7 @@
 const mysql = require('../database/index');
 
-function mostrar (fecha,callback){
-    mysql.query(`SELECT * FROM prestamo WHERE fechavigencia<="${fecha}" && estatus!="ENTREGADO";`, function(error,respuesta){
+function mostrar (callback){
+    mysql.query(`Select * from Permisos`, function(error,respuesta){
         
         if(error){
             callback(null,{
