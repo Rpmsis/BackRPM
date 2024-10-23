@@ -1,8 +1,8 @@
 const mysql = require('../database/index');
 
-function insertar(fecha, fechainicio, numsemana, diasemana, platoentrada, platofuerteA, platofuerteB, bebida, imagen1, imagen2, imagen3, imagen4, callback) {
-    mysql.query(`Insert into menusemana (fecha,fechainicio,numsemana,diasemana,platoentrada,platofuerteA,platofuerteB,bebida,imagen1,imagen2,imagen3,imagen4) 
-            values ("${fecha}", "${fechainicio}","${numsemana}", "${diasemana}", "${platoentrada}", "${platofuerteA}", "${platofuerteB}","${bebida}","${imagen1}","${imagen2}","${imagen3}","${imagen4}")`, function (error, respuesta) {
+function insertar(fecha, fechainicio, numsemana, estatus, diasemana, platoentrada, platofuerteA, platofuerteB, bebida, imagen1, imagen2, imagen3, imagen4, callback) {
+    mysql.query(`Insert into menusemana (fecha,fechainicio,numsemana, estatus, diasemana,platoentrada,platofuerteA,platofuerteB,bebida,imagen1,imagen2,imagen3,imagen4) 
+            values ("${fecha}", "${fechainicio}","${numsemana}", "${estatus}", "${diasemana}", "${platoentrada}", "${platofuerteA}", "${platofuerteB}","${bebida}","${imagen1}","${imagen2}","${imagen3}","${imagen4}")`, function (error, respuesta) {
 
         if (error) {
             callback(null, {

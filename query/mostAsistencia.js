@@ -1,7 +1,7 @@
 const mysql = require('../database/index');
 
-function mostrar (idcheck,callback){
-    mysql.query(`SELECT idAlta,NombreCompleto, idCheck, Area FROM Alta_Rh where Estatus="ACTIVO" && NombreCompleto != "ADMINISTRADOR ADMINISTRADOR ADMINISTRADOR" && idCheck="${idcheck}"`, function(error,respuesta){
+function mostrar (fecha,callback){
+    mysql.query(`SELECT * FROM asistencia inner join user_asistencia on asistencia.idusuario= user_asistencia.userid where asistencia.fecha="${fecha}";`, function(error,respuesta){
         
         if(error){
             callback(null,{

@@ -55,6 +55,9 @@ const mostEficacia = require('./query/mostEficacia');
 const mostAltas = require('./query/mostAltas');
 const mostComidasolicitada = require('./query/mostComidasolicitada');
 const mostPermisos = require('./query/mostPermisos');
+const mostAsistencia = require('./query/mostAsistencia');
+const mostUserasistencia = require('./query/mostUserasistencia');
+const mostEventosbio = require('./query/mostEventosbio');
 const Folio = require('./query/folio')
 const Folioconsumible = require('./query/folioconsumible')
 const inserPre = require('./query/insertPregunta');
@@ -79,6 +82,8 @@ const insertarPrestamo = require('./query/insertPrestamo');
 const insertarMenusemana = require('./query/insertMenusemana');
 const insertarEntregaafi = require('./query/insertEntregaafi');
 const insertarComidossolicitadas = require('./query/insertComidassolicitadas');
+const insertarAsistencia = require('./query/insertAsistencia');
+const insertarUserasistencia = require('./query/insertUserasistencia');
 const editPreg = require('./query/actualizarPreg');
 const editDesinsum = require('./query/actualizarDesinsum');
 const editMantt = require('./query/actualizarmantt');
@@ -100,6 +105,7 @@ const editMenusemana = require('./query/actualizarMenusemana');
 const editFotoperfil = require('./query/actualizarFotoperfil');
 const editNumpersonas = require('./query/actualizarNumpasignacion');
 const editEficacia = require('./query/actualizarEficaciaasignacion');
+const editAsistencia = require('./query/actualizarAsistenciastatus');
 const elim = require('./query/eliminar');
 const elimUsuarioprov = require('./query/eliminarUsuarioprov');
 const verificar_Token = require('./middleware/Valida_Token');
@@ -119,6 +125,290 @@ const io = require("socket.io")(3003, {
         methods: ["GET", "POST"]
     }
 });
+/* ZKHLIB asistencias */
+const ZKHLIB = require("zkh-lib");
+let obj = new ZKHLIB("192.168.1.69", 4370, 5200, 5000);
+//console.log(Object.getOwnPropertyNames(Object.getPrototypeOf(obj)));
+/* inserta usuarios */
+async function insertarUserasis(respuesta, res, req) {
+    console.log(respuesta);
+    //console.log(respuesta.respuesta[0].idCheck);
+    //console.log(respuesta.respuesta[0].NombreCompleto);
+    const idcheck = respuesta.respuesta[0].idCheck;
+    const nombre = respuesta.respuesta[0].NombreCompleto;
+    const horainicio = req.body.horainicio;
+    const horafin = req.body.horafin;
+    const descanso = req.body.descanso;
+    console.log(req.body);
+    const idstring = String(respuesta.respuesta[0].idAlta);
+    //console.log(idstring);
+
+    //console.log(Object.getOwnPropertyNames(Object.getPrototypeOf(obj)));
+    try {
+        await obj.createSocket();
+        console.log(await obj.getInfo());
+        const info = await obj.getInfo();
+        // Get all logs in the machine
+        //const logs = await obj.getAttendances();
+        //const formattedDate = moment(recordTime).format('DD/MM/YYYY HH:mm:ss');
+        //console.log(logs); 
+        if (info) {
+
+            const id = null;
+            const name = idstring;
+            const password = '78638';
+            const privilege = '0';
+            const fingerprint = null;
+
+            const users = await obj.getUsers();
+            //console.log(users.data);
+            const vexistencia = users.data.find((filtro) => filtro.userId === name);
+            //console.log(vexistencia);
+            if (!vexistencia) {
+                // Insertar el usuario
+                const result = await obj.setUser(id, name, password, privilege, fingerprint);
+                console.log('Usuario insertado:', result);
+                const users = await obj.getUsers();
+                console.log(users);
+                if (result != false) {
+                    console.log("Puedes guardar los datos");
+                    console.log(await obj.getInfo());
+                    //idcheck, nombre, privilegios, contraseña, userid, 
+                    mostUserasistencia(function (error, respuesta) {
+                        if (error) {
+                            console.log(error)
+                            res.status(404).json({
+                                mensaje: respuesta.mensaje
+                            })
+                        }
+                        else {
+                            const existe = respuesta.respuesta.find((filtro) => filtro.userid === name);
+                            if (existe) {
+                                console.log("EL usuario ya existe");
+                                res.status(400).json({
+                                    mensaje: "El usuario ya existe"
+                                });
+
+                            }
+                            else {
+
+                                insertarUserasistencia(idcheck, nombre, privilege, password, horainicio, horafin, descanso, name, (error, respuesta) => {
+                                    if (error) {
+                                        console.error('Error al insertar asistencia:', error.mensaje);
+                                    } else {
+                                        console.log(respuesta);
+                                        io.emit('escuchando', respuesta);
+                                        return res.status(200).json({ respuesta });
+                                    }
+                                });
+                            }
+                        }
+                        //console.log(respuesta);
+                    })
+                }
+                else {
+                    console.log("Error al insertar usuario");
+                    res.status(400).json({
+                        mensaje: "Error al insertar usuario"
+                    });
+
+                }
+            }
+            else {
+                console.log("EL usuario ya existe");
+                res.status(400).json({
+                    mensaje: "El usuario ya existe"
+                });
+
+            }
+
+            await obj.disconnect();
+
+        }
+        else {
+            console.log("No existe conexión con el biometrico");
+            res.status(400).json({
+                mensaje: "No existe conexión con el biometrico"
+            });
+
+        }
+
+    } catch (e) {
+        console.log(e);
+        res.status(404).json({
+            mensaje: e
+        })
+    }
+};
+
+app.post('/insertarBiometrico', (req, res) => {
+    if (req.body.idcheck && req.body.horainicio && req.body.horafin && req.body.descanso) {
+        mostIdcheck(req.body.idcheck, function (error, respuesta) {
+            if (error) {
+                console.log(error)
+                res.status(404).json({
+                    mensaje: respuesta.mensaje
+                })
+            }
+            else {
+                console.log(respuesta);
+                insertarUserasis(respuesta, res, req);
+
+            }
+        })
+    }
+    else {
+        console.log("Existen datos vacíos");
+        res.status(400).json({
+            mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
+        });
+
+    }
+});
+/* fin de insertar usuarios */
+
+/* Registrar asistencias del biometrico*/
+async function registrarAsistencias() {
+    const horactual = moment().format("HH:mm");
+    //console.log(Object.getOwnPropertyNames(Object.getPrototypeOf(obj)));
+    try {
+        await obj.createSocket();
+        console.log(await obj.getInfo());
+        const info = await obj.getInfo();
+        //console.log(info.logCounts); 
+
+        // Get all logs in the machine
+        if (info && info.logCounts > 0) {
+            const logs = await obj.getAttendances();
+            //console.log("logs: ", logs.data);
+            mostUserasistencia(function (error, respuestaUsuarios) {
+                if (error) {
+                    console.log(error);
+                }
+                else {
+                    //console.log(respuestaUsuarios.respuesta);
+                    const resUsuarios = respuestaUsuarios.respuesta;
+                    mostEventosbio(fecha, function (error, respuesta) {
+                        if (error) {
+                            console.log(error)
+                        }
+                        else {
+                            //console.log("registrados:", respuesta.respuesta);
+                            const registrados = respuesta.respuesta;
+                            //console.log("logs: ", logs.data);
+                            logs.data.forEach(log => {
+                                const Datesinformat = log.recordTime;
+                                const fechaMoment = moment(Datesinformat, 'ddd MMM DD YYYY HH:mm:ss [GMT]ZZ');
+                                const fechaForm = fechaMoment.format('YYYY-MM-DD');
+                                const horaForm = fechaMoment.format('HH:mm:ss');
+                                const horabio = fechaMoment.format('HH:mm');
+                                //console.log(fechaForm);
+                                //console.log(horaForm);
+                                //console.log(idusuario); 
+
+                                if (fechaForm === fecha) {
+                                    const verificar = resUsuarios.find((filtro) => filtro.userid === log.deviceUserId);
+                                    if (verificar) {
+                                        //console.log("HORA ENTRADA ", verificar.horaentrada);
+                                        //console.log("HORA SALIDA ", verificar.horasalida);
+                                        if (!registrados.find(reg => reg.idusuario === log.deviceUserId)) {
+                                            //console.log("Aqui insertas datos nuevos: ", log.deviceUserId, "bioId", log.userSn, " Fecha: ", fechaForm, "hora: ", horaForm);
+                                            if (horabio > verificar.horaentrada) {
+                                                const estatus = "RETARDO";
+                                                //console.log("Estatus RETARDO");
+                                                insertarAsistencia(log.deviceUserId, fechaForm, horaForm, estatus, (error, respuesta) => {
+                                                    if (error) {
+                                                        console.error('Error al insertar asistencia:', error.mensaje);
+                                                    } else {
+                                                        //console.log(respuesta);
+                                                        io.emit('escuchando', respuesta);
+
+                                                    }
+                                                });
+                                            }
+                                            else {
+                                                const estatus = "ENTRADA";
+                                                //console.log("estatus ENTRADA");
+                                                insertarAsistencia(log.deviceUserId, fechaForm, horaForm, estatus, (error, respuesta) => {
+                                                    if (error) {
+                                                        console.error('Error al insertar asistencia:', error.mensaje);
+                                                    } else {
+                                                        //console.log(respuesta);
+                                                        io.emit('escuchando', respuesta);
+
+                                                    }
+                                                });
+                                            }
+                                        } else {
+                                            const verificar2 = registrados.find((filtro) => filtro.idusuario === log.deviceUserId);
+                                            //console.log(verificar2);
+                                            //console.log("Se supone que aqui verificas la hora de salida");
+                                            if (verificar2.horafin != "NA") {
+                                                //console.log("NO NECESITAS GUARDARLO");
+                                            } else {
+                                                if (verificar2.estatus === "RETARDO" || "ENTRADA") {
+                                                    if (horabio >= verificar.horasalida) {
+                                                        const estatus = "ASISTENCIA";
+                                                        //console.log(horabio);
+                                                        editAsistencia(verificar2.idasistencia, horaForm, estatus, function (error, respuesta) {
+                                                            if (error) {
+                                                                console.log(error);
+                                                            }
+                                                            else {
+                                                                //console.log(respuesta);
+                                                                io.emit('escuchando', respuesta);
+                                                            }
+                                                            //console.log(respuesta);
+                                                        })
+                                                    } else {
+                                                        //console.log("NO TIENE HORA DE SALIDA");
+
+                                                    }
+                                                } else {
+                                                    //console.log("NO TIENE ESTATUS DE ENTRADA O RETARDO");
+
+                                                }
+                                            }
+                                        }
+                                    }
+                                    else {
+                                        //console.log("No esta registrado como usuario");
+                                        //console.log("userId: ", log.deviceUserId, "bioId", log.userSn, " Fecha: ", fechaForm, "hora: ", horaForm);
+
+                                    }
+                                }
+
+                                /*  if (!registrados.some(reg => reg.userSn === log.userSn && reg.deviceUserId === log.deviceUserId && fechaForm===fecha)) {
+                                     console.log(log.userSn, " Fecha: ", fechaForm, "hora: ", horaForm);
+                                 } */
+                            });
+
+                        }
+                        //console.log(respuesta);
+                    })
+                }
+            }
+            )
+
+
+        } else {
+            console.log('No se encontraron logs de asistencia');
+        }
+
+        await obj.disconnect();
+    } catch (e) {
+        console.log(e);
+    }
+};
+
+
+app.get('/regisAsistencia', (req, res) => {
+    registrarAsistencias();
+});
+//setInterval(registrarAsistencias, 1500);
+/* fin de mostrar asistencias */
+
+/* Fin de las asistencias */
 
 /* Mostrar */
 app.get('/activosFijos', (req, res) => {
@@ -1353,7 +1643,7 @@ app.get('/Altas', (req, res) => {
     })
 }
 )
-app.get('/Globalstatus', (req, res) => {
+app.get('/globalstatus', (req, res) => {
     mostEficacia(function (error, respuesta) {
         if (error) {
             console.log(error)
@@ -1363,7 +1653,7 @@ app.get('/Globalstatus', (req, res) => {
         }
         else {
             //console.log(respuesta.respuesta);
-            const deldia = respuesta.respuesta.filter((filtro) => filtro.fechainicio === fecha && filtro.status !="INACTIVO");
+            const deldia = respuesta.respuesta.filter((filtro) => filtro.fechainicio === fecha && filtro.status != "INACTIVO");
             const deldiatotal = deldia.length;
             console.log("deldia", deldia.length);
 
@@ -1407,29 +1697,29 @@ app.get('/comidasolicitadas', (req, res) => {
         }
         else {
             //console.log(respuesta.respuesta);
-            const lunesA = respuesta.respuesta.filter((filtro) => filtro.lunes==="A").length;
+            const lunesA = respuesta.respuesta.filter((filtro) => filtro.lunes === "A").length;
             //console.log(lunesA);
-            const lunesB = respuesta.respuesta.filter((filtro) => filtro.lunes==="B").length;
+            const lunesB = respuesta.respuesta.filter((filtro) => filtro.lunes === "B").length;
             //console.log(lunesB);
 
-            const martesA = respuesta.respuesta.filter((filtro) => filtro.martes==="A").length;
+            const martesA = respuesta.respuesta.filter((filtro) => filtro.martes === "A").length;
             //console.log(martesA);
-            const martesB = respuesta.respuesta.filter((filtro) => filtro.martes==="B").length;
+            const martesB = respuesta.respuesta.filter((filtro) => filtro.martes === "B").length;
             //console.log(martesB);
 
-            const miercolesA = respuesta.respuesta.filter((filtro) => filtro.miercoles==="A").length;
+            const miercolesA = respuesta.respuesta.filter((filtro) => filtro.miercoles === "A").length;
             //console.log(miercolesA);
-            const miercolesB = respuesta.respuesta.filter((filtro) => filtro.miercoles==="B").length;
+            const miercolesB = respuesta.respuesta.filter((filtro) => filtro.miercoles === "B").length;
             //console.log(miercolesB);
 
-            const juevesA = respuesta.respuesta.filter((filtro) => filtro.jueves==="A").length;
+            const juevesA = respuesta.respuesta.filter((filtro) => filtro.jueves === "A").length;
             //console.log(juevesA);
-            const juevesB = respuesta.respuesta.filter((filtro) => filtro.jueves==="B").length;
+            const juevesB = respuesta.respuesta.filter((filtro) => filtro.jueves === "B").length;
             //console.log(juevesB);
 
-            const viernesA = respuesta.respuesta.filter((filtro) => filtro.viernes==="A").length;
+            const viernesA = respuesta.respuesta.filter((filtro) => filtro.viernes === "A").length;
             //console.log(viernesA);
-            const viernesB = respuesta.respuesta.filter((filtro) => filtro.viernes==="B").length;
+            const viernesB = respuesta.respuesta.filter((filtro) => filtro.viernes === "B").length;
             //console.log(viernesB);
 
 
@@ -1468,19 +1758,19 @@ app.get('/permisos', verificar_Token, (req, res) => {
         }
         else {
             //console.log(respuesta.respuesta);
-            const persona= respuesta.respuesta.find((filtro) => filtro.Id_Permisos === responsable);
+            const persona = respuesta.respuesta.find((filtro) => filtro.Id_Permisos === responsable);
             //console.log(persona);
-            if(persona && persona.Form_comida === "true"){
+            if (persona && persona.Form_comida === "true") {
                 res.status(200).json({
                     mensaje: "true"
-                }) 
+                })
             }
-            else{
+            else {
                 console.log("false");
                 res.status(400).json({
-                    
+
                     mensaje: "false"
-                })     
+                })
             }
         }
         //console.log(respuesta);
@@ -1494,7 +1784,7 @@ app.get('/pedidocomida', verificar_Token, (req, res) => {
     const numsemana = req.query.numsemana;
     console.log(numsemana);
 
-    mostComidasolicitada( numsemana,function (error, respuesta) {
+    mostComidasolicitada(numsemana, function (error, respuesta) {
         if (error) {
             console.log(error)
             res.status(404).json({
@@ -1505,17 +1795,51 @@ app.get('/pedidocomida', verificar_Token, (req, res) => {
             //console.log(respuesta.respuesta);
             const solicito = respuesta.respuesta.find((filtro) => filtro.idcheck === responsable);
             console.log(solicito);
-            if(solicito){
+            if (solicito) {
                 res.status(200).json({
                     solicito
-                }) 
+                })
             }
-            else{
+            else {
                 console.log("false");
                 res.status(400).json({
                     mensaje: "No pidio comida"
-                })     
+                })
             }
+        }
+        //console.log(respuesta);
+    })
+}
+)
+app.get('/userasistencia', (req, res) => {
+    mostUserasistencia(function (error, respuesta) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            res.status(200).json({
+                respuesta
+            })
+        }
+        //console.log(respuesta);
+    })
+}
+)
+app.get('/asistencias', (req, res) => {
+    mostAsistencia(fecha, function (error, respuesta) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            res.status(200).json({
+                respuesta
+            })
         }
         //console.log(respuesta);
     })
@@ -2833,6 +3157,7 @@ app.post('/insertarComida', (req, res) => {
 app.post('/insertarMenu', (req, res) => {
     //console.log(req.body)
     var diasemana = "";
+    const estatus = "INACTIVO"
     /* fecha, fechainicio, diasemana, platoentrada, platofuerteA, platofuerteB, bebida, */
 
     if (fecha && req.body.fechainicio && req.body.numsemana && req.body.platoentrada && req.body.platofuerteA || req.body.platofuerteB && req.body.bebida) {
@@ -2914,8 +3239,8 @@ app.post('/insertarMenu', (req, res) => {
                                     console.log('d:', d); */
                                     //console.log(req.body);
                                     //console.log(diasemanamoment);
-                                    if (fecha && req.body.fechainicio && req.body.platoentrada && req.body.platofuerteA || req.body.platofuerteB && req.body.bebida) {
-                                        insertarMenusemana(fecha, req.body.fechainicio, req.body.numsemana, diasemana, req.body.platoentrada, req.body.platofuerteA, req.body.platofuerteB, req.body.bebida, a, b, c, d, function (error, respuesta) {
+                                    if (fecha && req.body.fechainicio && req.body.numsemana && req.body.platoentrada && req.body.platofuerteA || req.body.platofuerteB && req.body.bebida) {
+                                        insertarMenusemana(fecha, req.body.fechainicio, req.body.numsemana, estatus, diasemana, req.body.platoentrada, req.body.platofuerteA, req.body.platofuerteB, req.body.bebida, a, b, c, d, function (error, respuesta) {
                                             if (error) {
                                                 console.log(error)
                                                 res.status(404).json({
@@ -3680,16 +4005,9 @@ app.put('/actualizarTimefin', (req, res) => {
                                                                         console.log(eficacia);
 
                                                                         const eficienciasig1 = (tiemporecord / timeasignacion) * 100;
-                                                                        const eficienciaasig = Math.round((eficienciasig1 + Number.EPSILON) * 100) / 100;
-                                                                        console.log(eficienciaasig);
-                                                                        var eficienciatotal = 0;
+                                                                        const eficienciatotal = Math.round((eficienciasig1 + Number.EPSILON) * 100) / 100;
+                                                                        console.log(eficienciatotal);
 
-                                                                        if (eficienciaasig > 100) {
-                                                                            eficienciatotal = 100
-                                                                        }
-                                                                        else (
-                                                                            eficienciatotal = eficienciaasig
-                                                                        )
 
                                                                         editEficacia(req.body.idasigactivi, eficacia, eficienciatotal, function (error, respuesta) {
                                                                             if (error) {
@@ -3949,17 +4267,8 @@ app.put('/actualizarAsignacionkg', (req, res) => {
 
                                 const porhora = (kilos / timecontrol) * 60;
                                 const eficienciasig1 = (porhora * 100) / asignacion.kg;
-                                const eficienciaasig = Math.round((eficienciasig1 + Number.EPSILON) * 100) / 100;
-                                console.log(eficienciaasig);
-
-                                var eficienciatotal = 0;
-
-                                if (eficienciaasig > 100) {
-                                    eficienciatotal = 100
-                                }
-                                else (
-                                    eficienciatotal = eficienciaasig
-                                )
+                                const eficienciatotal = Math.round((eficienciasig1 + Number.EPSILON) * 100) / 100;
+                                console.log(eficienciatotal);
 
                                 editEficacia(req.body.idasigactivi, eficacia, eficienciatotal, function (error, respuesta) {
                                     if (error) {
@@ -4013,7 +4322,7 @@ app.put('/actualizarAsignacionkg', (req, res) => {
                                             }
                                         }
                                         else {
-                                            res.status(400).json({
+                                            res.status(200).json({
                                                 mensaje: "Actividad terminada"
                                             });
                                         }
