@@ -1,7 +1,5 @@
 const mysql = require('../database/index');
-const motivo ="NA";
-const horafin = "NA";
-function insertar (idusuario,timerecord,horainicio, estatus, callback){
+function insertar (idusuario,timerecord,horainicio,horafin, estatus, motivo, callback){
     mysql.query(`Insert into asistencia (idusuario, fecha, horainicio, horafin, estatus, motivo) values ("${idusuario}", "${timerecord}", "${horainicio}","${horafin}", "${estatus}", "${motivo}")`, function(error,respuesta){
         
         if(error){

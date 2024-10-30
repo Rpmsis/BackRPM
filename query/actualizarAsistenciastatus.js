@@ -1,6 +1,6 @@
 const mysql = require('../database/index');
-const motivo= "NA"
-function actualizar (id, horafin, estatus, callback){
+
+function actualizar (id, horafin, estatus,motivo, callback){
     mysql.query(`Update asistencia  set horafin = '${horafin}', estatus = '${estatus}', motivo = '${motivo}' WHERE idasistencia = '${id}' `, function(error,respuesta){
         
         if(error){

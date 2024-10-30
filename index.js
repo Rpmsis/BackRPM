@@ -8,6 +8,8 @@ const fileUpload = require('express-fileupload');
 const fs = require('fs');
 const path = require('path');
 const jwt = require('jsonwebtoken');
+
+
 const cargar_archivo = require('./query/archivos_file');
 const actualizar_archivo = require('./query/actualizar_archivos');
 const actualizar_fotoperfil = require('./query/archivo_fotoperfil');
@@ -58,8 +60,13 @@ const mostPermisos = require('./query/mostPermisos');
 const mostAsistencia = require('./query/mostAsistencia');
 const mostUserasistencia = require('./query/mostUserasistencia');
 const mostEventosbio = require('./query/mostEventosbio');
-const Folio = require('./query/folio')
-const Folioconsumible = require('./query/folioconsumible')
+const mostFaltas = require('./query/mostFaltas');
+const mostTodoasistencia = require('./query/mostTodoasistencia');
+const mostTablerologistica = require('./query/mosttablerologistica');
+
+const Folio = require('./query/folio');
+const Folioconsumible = require('./query/folioconsumible');
+
 const inserPre = require('./query/insertPregunta');
 const inser = require('./query/insertar');
 const inserMante = require('./query/insertMant');
@@ -84,6 +91,7 @@ const insertarEntregaafi = require('./query/insertEntregaafi');
 const insertarComidossolicitadas = require('./query/insertComidassolicitadas');
 const insertarAsistencia = require('./query/insertAsistencia');
 const insertarUserasistencia = require('./query/insertUserasistencia');
+
 const editPreg = require('./query/actualizarPreg');
 const editDesinsum = require('./query/actualizarDesinsum');
 const editMantt = require('./query/actualizarmantt');
@@ -108,6 +116,8 @@ const editEficacia = require('./query/actualizarEficaciaasignacion');
 const editAsistencia = require('./query/actualizarAsistenciastatus');
 const elim = require('./query/eliminar');
 const elimUsuarioprov = require('./query/eliminarUsuarioprov');
+
+
 const verificar_Token = require('./middleware/Valida_Token');
 const { rawListeners } = require('./database');
 const { Console } = require('console');
@@ -131,7 +141,7 @@ let obj = new ZKHLIB("192.168.1.69", 4370, 5200, 5000);
 //console.log(Object.getOwnPropertyNames(Object.getPrototypeOf(obj)));
 /* inserta usuarios */
 async function insertarUserasis(respuesta, res, req) {
-    console.log(respuesta);
+    //console.log(respuesta);
     //console.log(respuesta.respuesta[0].idCheck);
     //console.log(respuesta.respuesta[0].NombreCompleto);
     const idcheck = respuesta.respuesta[0].idCheck;
@@ -139,9 +149,19 @@ async function insertarUserasis(respuesta, res, req) {
     const horainicio = req.body.horainicio;
     const horafin = req.body.horafin;
     const descanso = req.body.descanso;
-    console.log(req.body);
+    let horafinMD, horainicioMD;
+    if (req.body.descanso.includes("Sábado") && req.body.descanso.includes("Domingo")) {
+        horafinMD = "NA";
+        horainicioMD = "NA";
+    }
+    else {
+        horafinMD = req.body.horafinMD;
+        horainicioMD = req.body.horainicioMD;
+    }
+
+    //console.log(req.body);
     const idstring = String(respuesta.respuesta[0].idAlta);
-    //console.log(idstring);
+    console.log(idstring);
 
     //console.log(Object.getOwnPropertyNames(Object.getPrototypeOf(obj)));
     try {
@@ -153,74 +173,82 @@ async function insertarUserasis(respuesta, res, req) {
         //const formattedDate = moment(recordTime).format('DD/MM/YYYY HH:mm:ss');
         //console.log(logs); 
         if (info) {
-
+            io.emit('deshabilitar', "BloquearBTN");
             const id = null;
             const name = idstring;
             const password = '78638';
             const privilege = '0';
             const fingerprint = null;
-
-            const users = await obj.getUsers();
-            //console.log(users.data);
-            const vexistencia = users.data.find((filtro) => filtro.userId === name);
-            //console.log(vexistencia);
-            if (!vexistencia) {
-                // Insertar el usuario
-                const result = await obj.setUser(id, name, password, privilege, fingerprint);
-                console.log('Usuario insertado:', result);
+            if (info.userCounts && info.userCounts > 0) {
                 const users = await obj.getUsers();
-                console.log(users);
-                if (result != false) {
-                    console.log("Puedes guardar los datos");
-                    console.log(await obj.getInfo());
-                    //idcheck, nombre, privilegios, contraseña, userid, 
-                    mostUserasistencia(function (error, respuesta) {
-                        if (error) {
-                            console.log(error)
-                            res.status(404).json({
-                                mensaje: respuesta.mensaje
-                            })
-                        }
-                        else {
-                            const existe = respuesta.respuesta.find((filtro) => filtro.userid === name);
-                            if (existe) {
-                                console.log("EL usuario ya existe");
-                                res.status(400).json({
-                                    mensaje: "El usuario ya existe"
-                                });
-
+                //console.log(users.data);
+                const vexistencia = users.data.find((filtro) => filtro.userId === name);
+                //console.log(vexistencia);
+                if (!vexistencia) {
+                    // Insertar el usuario
+                    const result = await obj.setUser(id, name, password, privilege, fingerprint);
+                    console.log('Usuario insertado:', result);
+                    const users = await obj.getUsers();
+                    console.log(users);
+                    if (result != false) {
+                        console.log("Puedes guardar los datos");
+                        console.log(await obj.getInfo());
+                        //idcheck, nombre, privilegios, contraseña, userid, 
+                        mostUserasistencia(function (error, respuesta) {
+                            if (error) {
+                                console.log(error)
+                                res.status(404).json({
+                                    mensaje: respuesta.mensaje
+                                })
                             }
                             else {
+                                const existe = respuesta.respuesta.find((filtro) => filtro.userid === name);
+                                if (existe) {
+                                    console.log("EL usuario ya existe");
+                                    res.status(400).json({
+                                        mensaje: "El usuario ya existe"
+                                    });
 
-                                insertarUserasistencia(idcheck, nombre, privilege, password, horainicio, horafin, descanso, name, (error, respuesta) => {
-                                    if (error) {
-                                        console.error('Error al insertar asistencia:', error.mensaje);
-                                    } else {
-                                        console.log(respuesta);
-                                        io.emit('escuchando', respuesta);
-                                        return res.status(200).json({ respuesta });
-                                    }
-                                });
+                                }
+                                else {
+
+                                    insertarUserasistencia(idcheck, nombre, privilege, password, horainicio, horafin, descanso, horainicioMD, horafinMD, name, (error, respuesta) => {
+                                        if (error) {
+                                            console.error('Error al insertar asistencia:', error.mensaje);
+                                        } else {
+                                            console.log(respuesta);
+                                            io.emit('escuchando', respuesta);
+                                            return res.status(200).json({ respuesta });
+                                        }
+                                    });
+                                }
                             }
-                        }
-                        //console.log(respuesta);
-                    })
+                            //console.log(respuesta);
+                        })
+                    }
+                    else {
+                        console.log("Error al insertar usuario");
+                        res.status(400).json({
+                            mensaje: "Error al insertar usuario"
+                        });
+
+                    }
                 }
                 else {
-                    console.log("Error al insertar usuario");
+                    console.log("EL usuario ya existe");
                     res.status(400).json({
-                        mensaje: "Error al insertar usuario"
+                        mensaje: "El usuario ya existe"
                     });
 
                 }
             }
             else {
-                console.log("EL usuario ya existe");
+                console.log("Agrega el usuario de administrador");
                 res.status(400).json({
-                    mensaje: "El usuario ya existe"
+                    mensaje: "Agrega el usuario de administrador"
                 });
-
             }
+
 
             await obj.disconnect();
 
@@ -232,7 +260,7 @@ async function insertarUserasis(respuesta, res, req) {
             });
 
         }
-
+        await obj.disconnect();
     } catch (e) {
         console.log(e);
         res.status(404).json({
@@ -243,6 +271,7 @@ async function insertarUserasis(respuesta, res, req) {
 
 app.post('/insertarBiometrico', (req, res) => {
     if (req.body.idcheck && req.body.horainicio && req.body.horafin && req.body.descanso) {
+        //console.log(req.body.descanso.includes("Sábado"));
         mostIdcheck(req.body.idcheck, function (error, respuesta) {
             if (error) {
                 console.log(error)
@@ -251,11 +280,42 @@ app.post('/insertarBiometrico', (req, res) => {
                 })
             }
             else {
-                console.log(respuesta);
-                insertarUserasis(respuesta, res, req);
+                if (req.body.descanso.includes("Sábado") && req.body.descanso.includes("Domingo")) {
+                    console.log(respuesta);
+                    if (respuesta.respuesta && respuesta.respuesta.length > 0) {
+                        insertarUserasis(respuesta, res, req);
+                    }
+                    else {
+                        console.log("El usuario no existe");
+                        res.status(400).json({
+                            mensaje: "El usuario no existe, verifique el ID"
+                        });
+                    }
+                }
+                else {
+                    if (req.body.horainicioMD && req.body.horafinMD) {
+                        console.log(respuesta);
+                        if (respuesta.respuesta && respuesta.respuesta.length > 0) {
+                            insertarUserasis(respuesta, res, req);
+                        }
+                        else {
+                            console.log("El usuario no existe");
+                            res.status(400).json({
+                                mensaje: "El usuario no existe, verifique el ID"
+                            });
+                        }
+                    }
+                    else {
+                        console.log("Existen datos vacíos");
+                        res.status(400).json({
+                            mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
+                        });
 
+                    }
+                }
             }
         })
+
     }
     else {
         console.log("Existen datos vacíos");
@@ -269,7 +329,8 @@ app.post('/insertarBiometrico', (req, res) => {
 
 /* Registrar asistencias del biometrico*/
 async function registrarAsistencias() {
-    const horactual = moment().format("HH:mm");
+    const diasemana = moment().format("dddd");
+    //console.log(diasemana);
     //console.log(Object.getOwnPropertyNames(Object.getPrototypeOf(obj)));
     try {
         await obj.createSocket();
@@ -307,80 +368,223 @@ async function registrarAsistencias() {
                                 //console.log(idusuario); 
 
                                 if (fechaForm === fecha) {
-                                    const verificar = resUsuarios.find((filtro) => filtro.userid === log.deviceUserId);
-                                    if (verificar) {
-                                        //console.log("HORA ENTRADA ", verificar.horaentrada);
-                                        //console.log("HORA SALIDA ", verificar.horasalida);
-                                        if (!registrados.find(reg => reg.idusuario === log.deviceUserId)) {
-                                            //console.log("Aqui insertas datos nuevos: ", log.deviceUserId, "bioId", log.userSn, " Fecha: ", fechaForm, "hora: ", horaForm);
-                                            if (horabio > verificar.horaentrada) {
-                                                const estatus = "RETARDO";
-                                                //console.log("Estatus RETARDO");
-                                                insertarAsistencia(log.deviceUserId, fechaForm, horaForm, estatus, (error, respuesta) => {
-                                                    if (error) {
-                                                        console.error('Error al insertar asistencia:', error.mensaje);
-                                                    } else {
-                                                        //console.log(respuesta);
-                                                        io.emit('escuchando', respuesta);
-
-                                                    }
-                                                });
-                                            }
-                                            else {
-                                                const estatus = "ENTRADA";
-                                                //console.log("estatus ENTRADA");
-                                                insertarAsistencia(log.deviceUserId, fechaForm, horaForm, estatus, (error, respuesta) => {
-                                                    if (error) {
-                                                        console.error('Error al insertar asistencia:', error.mensaje);
-                                                    } else {
-                                                        //console.log(respuesta);
-                                                        io.emit('escuchando', respuesta);
-
-                                                    }
-                                                });
-                                            }
-                                        } else {
-                                            const verificar2 = registrados.find((filtro) => filtro.idusuario === log.deviceUserId);
-                                            //console.log(verificar2);
-                                            //console.log("Se supone que aqui verificas la hora de salida");
-                                            if (verificar2.horafin != "NA") {
-                                                //console.log("NO NECESITAS GUARDARLO");
-                                            } else {
-                                                if (verificar2.estatus === "RETARDO" || "ENTRADA") {
-                                                    if (horabio >= verificar.horasalida) {
-                                                        const estatus = "ASISTENCIA";
-                                                        //console.log(horabio);
-                                                        editAsistencia(verificar2.idasistencia, horaForm, estatus, function (error, respuesta) {
+                                    if (registrados && registrados.length > 0) {
+                                        //console.log("Si existen registros");
+                                        const verificar = resUsuarios.find((filtro) => filtro.userid === log.deviceUserId);
+                                        if (verificar) {
+                                            if (diasemana === "Saturday" || "Sunday") {
+                                                //console.log("HORA ENTRADA ", verificar.horaentrada);
+                                                //console.log("HORA SALIDA ", verificar.horasalida);
+                                                if (!registrados.find(reg => reg.idusuario === log.deviceUserId)) {
+                                                    //console.log("Aqui insertas datos nuevos: ", log.deviceUserId, "bioId", log.userSn, " Fecha: ", fechaForm, "hora: ", horaForm);
+                                                    if (horabio > verificar.horaentradaMD) {
+                                                        const estatus = "RETARDO";
+                                                        //console.log("Estatus RETARDO");
+                                                        insertarAsistencia(log.deviceUserId, fechaForm, horaForm, estatus, (error, respuesta) => {
                                                             if (error) {
-                                                                console.log(error);
-                                                            }
-                                                            else {
+                                                                console.error('Error al insertar asistencia:', error.mensaje);
+                                                            } else {
                                                                 //console.log(respuesta);
                                                                 io.emit('escuchando', respuesta);
-                                                            }
-                                                            //console.log(respuesta);
-                                                        })
-                                                    } else {
-                                                        //console.log("NO TIENE HORA DE SALIDA");
 
+                                                            }
+                                                        });
+                                                    }
+                                                    else {
+                                                        const estatus = "ENTRADA";
+                                                        //console.log("estatus ENTRADA");
+                                                        insertarAsistencia(log.deviceUserId, fechaForm, horaForm, estatus, (error, respuesta) => {
+                                                            if (error) {
+                                                                console.error('Error al insertar asistencia:', error.mensaje);
+                                                            } else {
+                                                                //console.log(respuesta);
+                                                                io.emit('escuchando', respuesta);
+
+                                                            }
+                                                        });
                                                     }
                                                 } else {
-                                                    //console.log("NO TIENE ESTATUS DE ENTRADA O RETARDO");
+                                                    const verificar2 = registrados.find((filtro) => filtro.idusuario === log.deviceUserId);
+                                                    //console.log(verificar2);
+                                                    //console.log("Se supone que aqui verificas la hora de salida");
+                                                    if (verificar2.horafin != "NA") {
+                                                        //console.log("NO NECESITAS GUARDARLO");
+                                                    } else {
+                                                        if (verificar2.estatus === "RETARDO" || "ENTRADA") {
+                                                            if (horabio >= verificar.horasalidaMD) {
+                                                                const estatus = "ASISTENCIA";
+                                                                //console.log(horabio);
+                                                                editAsistencia(verificar2.idasistencia, horaForm, estatus, function (error, respuesta) {
+                                                                    if (error) {
+                                                                        console.log(error);
+                                                                    }
+                                                                    else {
+                                                                        //console.log(respuesta);
+                                                                        io.emit('escuchando', respuesta);
+                                                                    }
+                                                                    //console.log(respuesta);
+                                                                })
+                                                            } else {
+                                                                //console.log("NO TIENE HORA DE SALIDA");
 
+                                                            }
+                                                        } else {
+                                                            //console.log("NO TIENE ESTATUS DE ENTRADA O RETARDO");
+
+                                                        }
+                                                    }
                                                 }
+
                                             }
+                                            else {
+                                                //console.log("HORA ENTRADA ", verificar.horaentrada);
+                                                //console.log("HORA SALIDA ", verificar.horasalida);
+                                                if (!registrados.find(reg => reg.idusuario === log.deviceUserId)) {
+                                                    //console.log("Aqui insertas datos nuevos: ", log.deviceUserId, "bioId", log.userSn, " Fecha: ", fechaForm, "hora: ", horaForm);
+                                                    if (horabio > verificar.horaentrada) {
+                                                        const estatus = "RETARDO";
+                                                        //console.log("Estatus RETARDO");
+                                                        insertarAsistencia(log.deviceUserId, fechaForm, horaForm, estatus, (error, respuesta) => {
+                                                            if (error) {
+                                                                console.error('Error al insertar asistencia:', error.mensaje);
+                                                            } else {
+                                                                //console.log(respuesta);
+                                                                io.emit('escuchando', respuesta);
+
+                                                            }
+                                                        });
+                                                    }
+                                                    else {
+                                                        const estatus = "ENTRADA";
+                                                        //console.log("estatus ENTRADA");
+                                                        insertarAsistencia(log.deviceUserId, fechaForm, horaForm, estatus, (error, respuesta) => {
+                                                            if (error) {
+                                                                console.error('Error al insertar asistencia:', error.mensaje);
+                                                            } else {
+                                                                //console.log(respuesta);
+                                                                io.emit('escuchando', respuesta);
+
+                                                            }
+                                                        });
+                                                    }
+                                                } else {
+                                                    const verificar2 = registrados.find((filtro) => filtro.idusuario === log.deviceUserId);
+                                                    //console.log(verificar2);
+                                                    //console.log("Se supone que aqui verificas la hora de salida");
+                                                    if (verificar2.horafin != "NA") {
+                                                        //console.log("NO NECESITAS GUARDARLO");
+                                                    } else {
+                                                        if (verificar2.estatus === "RETARDO" || "ENTRADA") {
+                                                            if (horabio >= verificar.horasalida) {
+                                                                const estatus = "ASISTENCIA";
+                                                                //console.log(horabio);
+                                                                editAsistencia(verificar2.idasistencia, horaForm, estatus, function (error, respuesta) {
+                                                                    if (error) {
+                                                                        console.log(error);
+                                                                    }
+                                                                    else {
+                                                                        //console.log(respuesta);
+                                                                        io.emit('escuchando', respuesta);
+                                                                    }
+                                                                    //console.log(respuesta);
+                                                                })
+                                                            } else {
+                                                                //console.log("NO TIENE HORA DE SALIDA");
+
+                                                            }
+                                                        } else {
+                                                            //console.log("NO TIENE ESTATUS DE ENTRADA O RETARDO");
+
+                                                        }
+                                                    }
+                                                }
+
+                                            }
+                                        }
+                                        else {
+                                            console.log("No esta registrado como usuario");
+                                            //console.log("userId: ", log.deviceUserId, "bioId", log.userSn, " Fecha: ", fechaForm, "hora: ", horaForm);
+
                                         }
                                     }
                                     else {
-                                        //console.log("No esta registrado como usuario");
-                                        //console.log("userId: ", log.deviceUserId, "bioId", log.userSn, " Fecha: ", fechaForm, "hora: ", horaForm);
+                                        //console.log("no existen registros");
+                                        const verificar = resUsuarios.find((filtro) => filtro.userid === log.deviceUserId);
+                                        if (verificar) {
+                                            if (diasemana === "Saturday" || "Sunday") {
+                                                //console.log("HORA ENTRADA ", verificar.horaentrada);
+                                                //console.log("HORA SALIDA ", verificar.horasalida);
 
+                                                if (horabio > verificar.horaentradaMD) {
+                                                    const estatus = "RETARDO";
+                                                    //console.log("Estatus RETARDO");
+                                                    insertarAsistencia(log.deviceUserId, fechaForm, horaForm, estatus, (error, respuesta) => {
+                                                        if (error) {
+                                                            console.error('Error al insertar asistencia:', error.mensaje);
+                                                        } else {
+                                                            //console.log(respuesta);
+                                                            io.emit('escuchando', respuesta);
+
+                                                        }
+                                                    });
+                                                }
+                                                else {
+                                                    const estatus = "ENTRADA";
+                                                    //console.log("estatus ENTRADA");
+                                                    insertarAsistencia(log.deviceUserId, fechaForm, horaForm, estatus, (error, respuesta) => {
+                                                        if (error) {
+                                                            console.error('Error al insertar asistencia:', error.mensaje);
+                                                        } else {
+                                                            //console.log(respuesta);
+                                                            io.emit('escuchando', respuesta);
+
+                                                        }
+                                                    });
+                                                }
+
+
+                                            }
+                                            else {
+                                                //console.log("HORA ENTRADA ", verificar.horaentrada);
+                                                //console.log("HORA SALIDA ", verificar.horasalida);
+                                                if (horabio > verificar.horaentrada) {
+                                                    const estatus = "RETARDO";
+                                                    //console.log("Estatus RETARDO");
+                                                    insertarAsistencia(log.deviceUserId, fechaForm, horaForm, estatus, (error, respuesta) => {
+                                                        if (error) {
+                                                            console.error('Error al insertar asistencia:', error.mensaje);
+                                                        } else {
+                                                            //console.log(respuesta);
+                                                            io.emit('escuchando', respuesta);
+
+                                                        }
+                                                    });
+                                                }
+                                                else {
+                                                    const estatus = "ENTRADA";
+                                                    //console.log("estatus ENTRADA");
+                                                    insertarAsistencia(log.deviceUserId, fechaForm, horaForm, estatus, (error, respuesta) => {
+                                                        if (error) {
+                                                            console.error('Error al insertar asistencia:', error.mensaje);
+                                                        } else {
+                                                            //console.log(respuesta);
+                                                            io.emit('escuchando', respuesta);
+
+                                                        }
+                                                    });
+                                                }
+
+
+                                            }
+                                        }
+                                        else {
+                                            console.log("No esta registrado como usuario", log.deviceUserId);
+                                            //console.log("userId: ", log.deviceUserId, "bioId", log.userSn, " Fecha: ", fechaForm, "hora: ", horaForm);
+
+                                        }
                                     }
-                                }
 
-                                /*  if (!registrados.some(reg => reg.userSn === log.userSn && reg.deviceUserId === log.deviceUserId && fechaForm===fecha)) {
-                                     console.log(log.userSn, " Fecha: ", fechaForm, "hora: ", horaForm);
-                                 } */
+                                }
                             });
 
                         }
@@ -405,7 +609,7 @@ async function registrarAsistencias() {
 app.get('/regisAsistencia', (req, res) => {
     registrarAsistencias();
 });
-//setInterval(registrarAsistencias, 1500);
+//setInterval(registrarAsistencias, 2000);
 /* fin de mostrar asistencias */
 
 /* Fin de las asistencias */
@@ -1840,6 +2044,131 @@ app.get('/asistencias', (req, res) => {
             res.status(200).json({
                 respuesta
             })
+        }
+        //console.log(respuesta);
+    })
+}
+)
+app.get('/faltas', (req, res) => {
+    const dia = moment().format('dddd');
+    var diaes = "";
+
+    /* Guardar en español */
+    switch (dia) {
+        case "Monday":
+            diaes = "Lunes";
+            console.log(diaes);
+            break;
+        case "Tuesday":
+            diaes = "Martes";
+            console.log(diaes);
+            break;
+        case "Wednesday":
+            diaes = "Miercoles";
+            console.log(diaes);
+            break;
+        case "Thursday":
+            diaes = "Jueves";
+            console.log(diaes);
+            break;
+        case "Friday":
+            diaes = "Viernes";
+            console.log(diaes);
+            break;
+        case "Saturday":
+            diaes = "Sábado";
+            console.log(diaes);
+            break;
+        case "Sunday":
+            diaes = "Domingo";
+            console.log(diaes);
+            break;
+    }
+    mostFaltas(diaes, function (error, respuestaFaltas) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            //console.log("respuestaFaltas",respuestaFaltas.respuesta);
+            mostEventosbio(fecha, function (error, respuestaEventosbio) {
+                if (error) {
+                    console.log(error)
+                }
+                else {
+                    //console.log("respuestaEventosbio",respuestaEventosbio.respuesta);
+                    const respuesta = [];
+                    respuestaFaltas.respuesta.forEach((filtro) => {
+                        const verificar = respuestaEventosbio.respuesta.find((filtro2) => filtro2.idusuario === filtro.userid);
+                        //console.log("Verificando: ",verificar);
+                        if (verificar) {
+                            //console.log("ya se registro");
+                        }
+                        else {
+                            respuesta.push(filtro);
+                            //console.log(filtro.nombre, filtro.userid );
+                        }
+                    })
+
+                    //console.log(respuesta);
+
+                    res.status(200).json({
+                        respuesta
+                    })
+                }
+            })
+
+        }
+        //console.log(respuesta);
+    })
+}
+)
+app.get('/todoasistencia', (req, res) => {
+    mostTodoasistencia(function (error, respuesta) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            res.status(200).json({
+                respuesta
+            })
+        }
+        //console.log(respuesta);
+    })
+}
+)
+app.get('/tableroLogistica', (req, res) => {
+    mostTablerologistica(function (error, respuesta) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            //console.log(respuesta.respuesta);
+            const deldiatotal= respuesta.respuesta.length;
+            console.log("asignadas ", deldiatotal);
+
+            const terminadas = respuesta.respuesta.filter((filtro) => filtro.Estatus === "TERMINADO");
+            const terminadastotal = terminadas.length;
+            console.log("terminadas ", terminadas.length);
+
+
+            const promedioasig = (terminadastotal * 100) / deldiatotal;
+            const promedioasigtotal = Math.round((promedioasig + Number.EPSILON) * 100) / 100;
+            console.log("Promedio terminadas ",promedioasigtotal);
+
+            res.status(200).json({
+                deldiatotal,
+                terminadastotal,
+                promedioasigtotal
+            }) 
         }
         //console.log(respuesta);
     })
@@ -3421,6 +3750,60 @@ app.post('/insertarSolicitudcomida', (req, res) => {
         });
     }
 })
+app.post('/insertarAsistencia', (req, res) => {
+    console.log(req.body);
+
+    //idusuario, fecha, horainicio, horafin, estatus, motivo
+    const horainicio = "00:00:00";
+    const horafin = "00:00:00";
+    if (req.body.userid && req.body.estatus) {
+        if (req.body.estatus === "JUSTIFICAR") {
+            if (req.body.motivo) {
+                const estatus ="JUSTIFICADO";
+                insertarAsistencia(req.body.userid, fecha, horainicio, horafin, estatus, req.body.motivo, (error, respuesta) => {
+                    if (error) {
+                        console.error('Error al insertar asistencia:', error.mensaje);
+                    } else {
+                        //console.log(respuesta);
+                        io.emit('escuchando', respuesta);
+                        res.status(200).json({
+                            respuesta
+                        });
+
+                    }
+                });
+            } else {
+                console.log("Existen datos vacíos");
+                res.status(400).json({
+                    mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
+                });
+            }
+        } else {
+            const motivo= "NA";
+            insertarAsistencia(req.body.userid, fecha, horainicio, horafin, req.body.estatus, motivo, (error, respuesta) => {
+                if (error) {
+                    console.error('Error al insertar asistencia:', error.mensaje);
+                } else {
+                    //console.log(respuesta);
+                    io.emit('escuchando', respuesta);
+                    res.status(200).json({
+                        respuesta
+                    });
+
+                }
+            });
+
+        }
+
+
+    }
+    else {
+        console.log("Existen datos vacíos");
+        res.status(400).json({
+            mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
+        });
+    }
+})
 /* Fin de insertar */
 
 
@@ -4521,6 +4904,59 @@ app.put('/actualizarFotoperfil', verificar_Token, (req, res) => {
             }
         })
     }
+})
+app.put('/actualizarAsistencia', (req, res) => {
+    console.log(req.body);
+    const hora = moment().format('HH:mm:ss');
+    if (req.body.idasistencia && req.body.estatus && req.body.hora) {
+        if (req.body.estatus === "SALIR TEMPRANO") {
+            if (req.body.motivo) {
+                editAsistencia(req.body.idasistencia, hora, req.body.estatus, req.body.motivo, function (error, respuesta) {
+                    if (error) {
+                        console.log(error);
+                    }
+                    else {
+                        //console.log(respuesta);
+                        io.emit('escuchando', respuesta);
+                        res.status(200).json({
+                            respuesta
+                        });
+                    }
+                    //console.log(respuesta);
+                })
+            }
+            else {
+                //console.log("Existen datos vacíos");
+                res.status(400).json({
+                    mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
+                });
+
+            }
+        }
+        else {
+            const motivo = "NA";
+            editAsistencia(req.body.idasistencia, req.body.hora, req.body.estatus, motivo, function (error, respuesta) {
+                if (error) {
+                    console.log(error);
+                }
+                else {
+                    //console.log(respuesta);
+                    io.emit('escuchando', respuesta);
+                    res.status(200).json({
+                        respuesta
+                    });
+                }
+                //console.log(respuesta);
+            })
+        }
+    }
+    else {
+        //console.log("Existen datos vacíos");
+        res.status(400).json({
+            mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
+        });
+    }
+
 })
 /* Fin de actualizar */
 

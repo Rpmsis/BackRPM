@@ -1,7 +1,7 @@
 const mysql = require('../database/index');
-
-function insertar (idcheck, nombre, privilegios, contraseña, horainicio, horafin, descanso, userid, callback){
-    mysql.query(`Insert into user_asistencia (idcheck, nombre, privilegios, password, horaentrada, horasalida, descanso, userid) values ("${idcheck}", "${nombre}", "${privilegios}", "${contraseña}", "${horainicio}", "${horafin}", "${descanso}", "${userid}")`, function(error,respuesta){
+const estatusasis= "ACTIVO";
+function insertar (idcheck, nombre, privilegios, contraseña, horainicio, horafin, descanso, horainioMD, horafinMD, userid, callback){
+    mysql.query(`Insert into user_asistencia (idcheck, nombre, privilegios, password, horaentrada, horasalida, descanso, horaentradaMD, horasalidaMD, userid, estatusasis) values ("${idcheck}", "${nombre}", "${privilegios}", "${contraseña}", "${horainicio}", "${horafin}", "${descanso}", "${horainioMD}", "${horafinMD}", "${userid}", "${estatusasis}")`, function(error,respuesta){
         
         if(error){
             callback(null,{
