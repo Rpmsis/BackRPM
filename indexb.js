@@ -2,18 +2,14 @@ const mysql = require('./database/index');
 const express = require('express')
 const cors = require('cors');
 const moment = require('moment');
-const fs = require('fs');
-const path = require('path');
-const jwt = require('jsonwebtoken');
 
 const mostUserasistencia = require('./query/mostUserasistencia');
 const mostEventosbio = require('./query/mostEventosbio');
+const mostEventostodos = require('./query/mostEventostodos');
 const insertarAsistencia = require('./query/insertAsistencia');
 const editAsistencia = require('./query/actualizarAsistenciastatus');
 
-const verificar_Token = require('./middleware/Valida_Token');
-const { rawListeners } = require('./database');
-const { Console } = require('console');
+
 const app = express()
 const port = 3005
 app.use(express.json());
@@ -28,7 +24,7 @@ const io = require("socket.io")(3004, {
 
 /* ZKHLIB asistencias */
 const ZKHLIB = require("zkh-lib");
-let obj = new ZKHLIB("192.168.1.69", 4370, 5200, 5000);
+let obj = new ZKHLIB("192.168.1.82", 4370, 5200, 5000);
 //console.log(Object.getOwnPropertyNames(Object.getPrototypeOf(obj)));
 
 
@@ -54,98 +50,82 @@ async function registrarAsistencias() {
                 else {
                     //console.log(respuestaUsuarios.respuesta);
                     const resUsuarios = respuestaUsuarios.respuesta;
-                    mostEventosbio(fecha, function (error, respuesta) {
-                        if (error) {
-                            console.log(error)
-                        }
-                        else {
-                            //console.log("registrados:", respuesta.respuesta);
-                            const registrados = respuesta.respuesta;
-                            //console.log("logs: ", logs.data);
-                            logs.data.forEach(log => {
-                                const Datesinformat = log.recordTime;
-                                const fechaMoment = moment(Datesinformat, 'ddd MMM DD YYYY HH:mm:ss [GMT]ZZ');
-                                const fechaForm = fechaMoment.format('YYYY-MM-DD');
-                                const horaForm = fechaMoment.format('HH:mm:ss');
-                                const horabio = fechaMoment.format('HH:mm');
-                                //console.log(fechaForm);
-                                //console.log(horaForm);
-                                //console.log(idusuario); 
+                    //console.log("logs: ", logs.data);
+                    logs.data.forEach(log => {
+                        const Datesinformat = log.recordTime;
+                        const fechaMoment = moment(Datesinformat, 'ddd MMM DD YYYY HH:mm:ss [GMT]ZZ');
+                        const fechaForm = fechaMoment.format('YYYY-MM-DD');
+                        const horaForm = fechaMoment.format('HH:mm:ss');
+                        const horabio = fechaMoment.format('HH:mm');
+                        //console.log(fechaForm);
+                        //console.log(horaForm);
+                        //console.log(idusuario); 
 
-                                if (fechaForm === fecha) {
-                                    if (registrados && registrados.length > 0) {
-                                        //console.log("Si existen registros");
-                                        const verificar = resUsuarios.find((filtro) => filtro.userid === log.deviceUserId);
-                                        if (verificar) {
-                                            //console.log(diasemana);
-                                            if (diasemana === "Saturday" || diasemana ==="Sunday") {
-                                                //console.log("algo esta mal");
-                                                //console.log("HORA ENTRADA ", verificar.horaentrada);
-                                                //console.log("HORA SALIDA ", verificar.horasalida);
-                                                if (!registrados.find(reg => reg.idusuario === log.deviceUserId)) {
-                                                    //console.log("Aqui insertas datos nuevos: ", log.deviceUserId, "bioId", log.userSn, " Fecha: ", fechaForm, "hora: ", horaForm);
-                                                    if (horabio > verificar.horaentradaMD) {
-                                                        const estatus = "RETARDO";
-                                                        const motivo ="NA";
-                                                        const horafin = "NA";
-                                                        //console.log("Estatus RETARDO");
-                                                        insertarAsistencia(log.deviceUserId, fechaForm, horaForm,horafin, estatus, motivo, (error, respuesta) => {
-                                                            if (error) {
-                                                                console.error('Error al insertar asistencia:', error.mensaje);
-                                                            } else {
-                                                                //console.log(respuesta);
-                                                                io.emit('escuchando', respuesta);
+                        const verificar = resUsuarios.find((filtro) => filtro.userid === log.deviceUserId);
+                        if (verificar) {
+                            //console.log(diasemana);
+                            if (verificar.turno === "PRIMERO") {
+                                mostEventosbio(fecha, function (error, respuesta) {
+                                    if (error) {
+                                        console.log(error)
+                                    }
+                                    else {
+                                        //console.log("registrados:", respuesta.respuesta);
+                                        const registrados = respuesta.respuesta;
+                                        //console.log(verificar.turno);
+                                        if (fechaForm === fecha) {
+                                            if (registrados && registrados.length > 0) {
+                                                //console.log("Si existen registros");
 
-                                                            }
-                                                        });
-                                                    }
-                                                    else {
-                                                        const estatus = "ENTRADA";
-                                                        const motivo ="NA";
-                                                        const horafin = "NA";
-                                                        //console.log("estatus ENTRADA");
-                                                        insertarAsistencia(log.deviceUserId, fechaForm, horaForm, horafin, estatus, motivo, (error, respuesta) => {
-                                                            if (error) {
-                                                                console.error('Error al insertar asistencia:', error.mensaje);
-                                                            } else {
-                                                                //console.log(respuesta);
-                                                                io.emit('escuchando', respuesta);
-
-                                                            }
-                                                        });
-                                                    }
-                                                } else {
-                                                    const verificar2 = registrados.find((filtro) => filtro.idusuario === log.deviceUserId);
-                                                    //console.log(verificar2);
-                                                    //console.log("Se supone que aqui verificas la hora de salida");
-                                                    if (verificar2.horafin != "NA") {
-                                                        //console.log("NO NECESITAS GUARDARLO");
-                                                    } else {
-                                                        if (verificar2.estatus === "RETARDO") {
-                                                            if (horabio >= verificar.horasalidaMD) {
-                                                                console.log(horabio);
-                                                                const motivo= "NA";
-                                                                editAsistencia(verificar2.idasistencia, horaForm, verificar2.estatus,motivo, function (error, respuesta) {
-                                                                    if (error) {
-                                                                        console.log(error);
-                                                                    }
-                                                                    else {
-                                                                        //console.log(respuesta);
-                                                                        io.emit('escuchando', respuesta);
-                                                                    }
+                                                //console.log(diasemana);
+                                                if (diasemana === "Saturday" || diasemana === "Sunday") {
+                                                    //console.log("algo esta mal");
+                                                    //console.log("HORA ENTRADA ", verificar.horaentrada);
+                                                    //console.log("HORA SALIDA ", verificar.horasalida);
+                                                    if (!registrados.find(reg => reg.idusuario === log.deviceUserId)) {
+                                                        //console.log("Aqui insertas datos nuevos: ", log.deviceUserId, "bioId", log.userSn, " Fecha: ", fechaForm, "hora: ", horaForm);
+                                                        if (horabio > verificar.horaentradaMD) {
+                                                            const estatus = "RETARDO";
+                                                            const motivo = "NA";
+                                                            const horafin = "NA";
+                                                            //console.log("Estatus RETARDO");
+                                                            insertarAsistencia(log.deviceUserId, fechaForm, horaForm, horafin, estatus, motivo, (error, respuesta) => {
+                                                                if (error) {
+                                                                    console.error('Error al insertar asistencia:', error.mensaje);
+                                                                } else {
                                                                     //console.log(respuesta);
-                                                                })
-                                                            } else {
-                                                                console.log("NO TIENE HORA DE SALIDA");
+                                                                    io.emit('escuchando', respuesta);
 
-                                                            }
+                                                                }
+                                                            });
+                                                        }
+                                                        else {
+                                                            const estatus = "ENTRADA";
+                                                            const motivo = "NA";
+                                                            const horafin = "NA";
+                                                            //console.log("estatus ENTRADA");
+                                                            insertarAsistencia(log.deviceUserId, fechaForm, horaForm, horafin, estatus, motivo, (error, respuesta) => {
+                                                                if (error) {
+                                                                    console.error('Error al insertar asistencia:', error.mensaje);
+                                                                } else {
+                                                                    //console.log(respuesta);
+                                                                    io.emit('escuchando', respuesta);
+
+                                                                }
+                                                            });
+                                                        }
+                                                    } else {
+                                                        const verificar2 = registrados.find((filtro) => filtro.idusuario === log.deviceUserId);
+                                                        //console.log(verificar2);
+                                                        //console.log("Se supone que aqui verificas la hora de salida");
+                                                        if (verificar2.horafin != "NA") {
+                                                            //console.log("NO NECESITAS GUARDARLO");
                                                         } else {
-                                                            if(verificar2.estatus === "ENTRADA"){
+                                                            if (verificar2.estatus === "RETARDO") {
                                                                 if (horabio >= verificar.horasalidaMD) {
-                                                                    const estatus = "ASISTENCIA";
-                                                                    //console.log(horabio);
-                                                                    const motivo= "NA";
-                                                                    editAsistencia(verificar2.idasistencia, horaForm, estatus,motivo, function (error, respuesta) {
+                                                                    console.log(horabio);
+                                                                    const motivo = "NA";
+                                                                    editAsistencia(verificar2.idasistencia, horaForm, verificar2.estatus, motivo, function (error, respuesta) {
                                                                         if (error) {
                                                                             console.log(error);
                                                                         }
@@ -156,87 +136,87 @@ async function registrarAsistencias() {
                                                                         //console.log(respuesta);
                                                                     })
                                                                 } else {
-                                                                    //console.log("NO TIENE HORA DE SALIDA");
-    
-                                                                }
-                                                            }
-                                                            else{
-                                                                //console.log("TIENE UN ESTATUS DESCONOCIDO");
-                                                            }
+                                                                    console.log("NO TIENE HORA DE SALIDA");
 
+                                                                }
+                                                            } else {
+                                                                if (verificar2.estatus === "ENTRADA") {
+                                                                    if (horabio >= verificar.horasalidaMD) {
+                                                                        const estatus = "ASISTENCIA";
+                                                                        //console.log(horabio);
+                                                                        const motivo = "NA";
+                                                                        editAsistencia(verificar2.idasistencia, horaForm, estatus, motivo, function (error, respuesta) {
+                                                                            if (error) {
+                                                                                console.log(error);
+                                                                            }
+                                                                            else {
+                                                                                //console.log(respuesta);
+                                                                                io.emit('escuchando', respuesta);
+                                                                            }
+                                                                            //console.log(respuesta);
+                                                                        })
+                                                                    } else {
+                                                                        //console.log("NO TIENE HORA DE SALIDA");
+
+                                                                    }
+                                                                }
+                                                                else {
+                                                                    //console.log("TIENE UN ESTATUS DESCONOCIDO");
+                                                                }
+
+                                                            }
                                                         }
                                                     }
+
                                                 }
+                                                else {
 
-                                            }
-                                            else {
-                                                
-                                                //console.log("HORA ENTRADA ", verificar.horaentrada);
-                                                //console.log("HORA SALIDA ", verificar.horasalida);
-                                                if (!registrados.find(reg => reg.idusuario === log.deviceUserId)) {
-                                                    //console.log("Aqui insertas datos nuevos: ", log.deviceUserId, "bioId", log.userSn, " Fecha: ", fechaForm, "hora: ", horaForm);
-                                                    if (horabio > verificar.horaentrada) {
-                                                        const estatus = "RETARDO";
-                                                        const motivo ="NA";
-                                                        const horafin = "NA";
-                                                        //console.log("Estatus RETARDO");
-                                                        insertarAsistencia(log.deviceUserId, fechaForm, horaForm, horafin, estatus,motivo, (error, respuesta) => {
-                                                            if (error) {
-                                                                console.error('Error al insertar asistencia:', error.mensaje);
-                                                            } else {
-                                                                //console.log(respuesta);
-                                                                io.emit('escuchando', respuesta);
-
-                                                            }
-                                                        });
-                                                    }
-                                                    else {
-                                                        const estatus = "ENTRADA";
-                                                        const motivo ="NA";
-                                                        const horafin = "NA";
-                                                        //console.log("estatus ENTRADA");
-                                                        insertarAsistencia(log.deviceUserId, fechaForm, horaForm, horafin, estatus, motivo, (error, respuesta) => {
-                                                            if (error) {
-                                                                console.error('Error al insertar asistencia:', error.mensaje);
-                                                            } else {
-                                                                //console.log(respuesta);
-                                                                io.emit('escuchando', respuesta);
-
-                                                            }
-                                                        });
-                                                    }
-                                                } else {
-                                                    const verificar2 = registrados.find((filtro) => filtro.idusuario === log.deviceUserId);
-                                                    //console.log(verificar2);
-                                                    //console.log("Se supone que aqui verificas la hora de salida");
-                                                    if (verificar2.horafin != "NA") {
-                                                        //console.log("NO NECESITAS GUARDARLO");
-                                                    } else {
-                                                        if (verificar2.estatus === "RETARDO") {
-                                                            if (horabio >= verificar.horasalida) {
-                                                                const estatus = verificar2.estatus;
-                                                                //console.log(horabio);
-                                                                const motivo= "NA";
-                                                                editAsistencia(verificar2.idasistencia, horaForm, estatus, motivo, function (error, respuesta) {
-                                                                    if (error) {
-                                                                        console.log(error);
-                                                                    }
-                                                                    else {
-                                                                        //console.log(respuesta);
-                                                                        io.emit('escuchando', respuesta);
-                                                                    }
+                                                    //console.log("HORA ENTRADA ", verificar.horaentrada);
+                                                    //console.log("HORA SALIDA ", verificar.horasalida);
+                                                    if (!registrados.find(reg => reg.idusuario === log.deviceUserId)) {
+                                                        //console.log("Aqui insertas datos nuevos: ", log.deviceUserId, "bioId", log.userSn, " Fecha: ", fechaForm, "hora: ", horaForm);
+                                                        if (horabio > verificar.horaentrada) {
+                                                            const estatus = "RETARDO";
+                                                            const motivo = "NA";
+                                                            const horafin = "NA";
+                                                            //console.log("Estatus RETARDO");
+                                                            insertarAsistencia(log.deviceUserId, fechaForm, horaForm, horafin, estatus, motivo, (error, respuesta) => {
+                                                                if (error) {
+                                                                    console.error('Error al insertar asistencia:', error.mensaje);
+                                                                } else {
                                                                     //console.log(respuesta);
-                                                                })
-                                                            } else {
-                                                                //console.log("NO TIENE HORA DE SALIDA");
+                                                                    io.emit('escuchando', respuesta);
 
-                                                            }
+                                                                }
+                                                            });
+                                                        }
+                                                        else {
+                                                            const estatus = "ENTRADA";
+                                                            const motivo = "NA";
+                                                            const horafin = "NA";
+                                                            //console.log("estatus ENTRADA");
+                                                            insertarAsistencia(log.deviceUserId, fechaForm, horaForm, horafin, estatus, motivo, (error, respuesta) => {
+                                                                if (error) {
+                                                                    console.error('Error al insertar asistencia:', error.mensaje);
+                                                                } else {
+                                                                    //console.log(respuesta);
+                                                                    io.emit('escuchando', respuesta);
+
+                                                                }
+                                                            });
+                                                        }
+                                                    } else {
+                                                        const verificar2 = registrados.find((filtro) => filtro.idusuario === log.deviceUserId);
+                                                        //console.log(verificar2);
+                                                        //console.log("Se supone que aqui verificas la hora de salida");
+                                                        if (verificar2.horafin != "NA") {
+                                                            //console.log("NO NECESITAS GUARDARLO");
                                                         } else {
-                                                            if(verificar2.estatus === "ENTRADA"){
+                                                            if (verificar2.estatus === "RETARDO") {
                                                                 if (horabio >= verificar.horasalida) {
-                                                                    const estatus = "ASISTENCIA";
+                                                                    const estatus = verificar2.estatus;
                                                                     //console.log(horabio);
-                                                                    const motivo= "NA";
+                                                                    const motivo = "NA";
                                                                     editAsistencia(verificar2.idasistencia, horaForm, estatus, motivo, function (error, respuesta) {
                                                                         if (error) {
                                                                             console.log(error);
@@ -249,116 +229,485 @@ async function registrarAsistencias() {
                                                                     })
                                                                 } else {
                                                                     //console.log("NO TIENE HORA DE SALIDA");
-    
-                                                                }
-                                                            }
-                                                            else{
-                                                                //console.log("NO un estatus comparable");
-                                                            }
 
+                                                                }
+                                                            } else {
+                                                                if (verificar2.estatus === "ENTRADA") {
+                                                                    if (horabio >= verificar.horasalida) {
+                                                                        const estatus = "ASISTENCIA";
+                                                                        //console.log(horabio);
+                                                                        const motivo = "NA";
+                                                                        editAsistencia(verificar2.idasistencia, horaForm, estatus, motivo, function (error, respuesta) {
+                                                                            if (error) {
+                                                                                console.log(error);
+                                                                            }
+                                                                            else {
+                                                                                //console.log(respuesta);
+                                                                                io.emit('escuchando', respuesta);
+                                                                            }
+                                                                            //console.log(respuesta);
+                                                                        })
+                                                                    } else {
+                                                                        //console.log("NO TIENE HORA DE SALIDA");
+
+                                                                    }
+                                                                }
+                                                                else {
+                                                                    //console.log("NO un estatus comparable");
+                                                                }
+
+                                                            }
                                                         }
                                                     }
+
                                                 }
-
-                                            }
-                                        }
-                                        else {
-                                            console.log("No esta registrado como usuario");
-                                            //console.log("userId: ", log.deviceUserId, "bioId", log.userSn, " Fecha: ", fechaForm, "hora: ", horaForm);
-
-                                        }
-                                    }
-                                    else {
-                                        //console.log("no existen registros");
-                                        const verificar = resUsuarios.find((filtro) => filtro.userid === log.deviceUserId);
-                                        if (verificar) {
-                                            if (diasemana === "Saturday" || diasemana ==="Sunday") {
-                                                //console.log("HORA ENTRADA ", verificar.horaentrada);
-                                                //console.log("HORA SALIDA ", verificar.horasalida);
-
-                                                if (horabio > verificar.horaentradaMD) {
-                                                    const estatus = "RETARDO";
-                                                    const motivo ="NA";
-                                                    const horafin = "NA";
-                                                    //console.log("Estatus RETARDO");
-                                                    insertarAsistencia(log.deviceUserId, fechaForm, horaForm, horafin, estatus, motivo, (error, respuesta) => {
-                                                        if (error) {
-                                                            console.error('Error al insertar asistencia:', error.mensaje);
-                                                        } else {
-                                                            //console.log(respuesta);
-                                                            io.emit('escuchando', respuesta);
-
-                                                        }
-                                                    });
-                                                }
-                                                else {
-                                                    const estatus = "ENTRADA";
-                                                    const motivo ="NA";
-                                                    const horafin = "NA";
-                                                    //console.log("estatus ENTRADA");
-                                                    insertarAsistencia(log.deviceUserId, fechaForm, horaForm, horafin, estatus,motivo, (error, respuesta) => {
-                                                        if (error) {
-                                                            console.error('Error al insertar asistencia:', error.mensaje);
-                                                        } else {
-                                                            //console.log(respuesta);
-                                                            io.emit('escuchando', respuesta);
-
-                                                        }
-                                                    });
-                                                }
-
 
                                             }
                                             else {
-                                                //console.log("HORA ENTRADA ", verificar.horaentrada);
-                                                //console.log("HORA SALIDA ", verificar.horasalida);
-                                                if (horabio > verificar.horaentrada) {
-                                                    const estatus = "RETARDO";
-                                                    const motivo ="NA";
-                                                    const horafin = "NA";
-                                                    //console.log("Estatus RETARDO");
-                                                    insertarAsistencia(log.deviceUserId, fechaForm, horaForm, horafin, estatus,motivo, (error, respuesta) => {
-                                                        if (error) {
-                                                            console.error('Error al insertar asistencia:', error.mensaje);
-                                                        } else {
-                                                            //console.log(respuesta);
-                                                            io.emit('escuchando', respuesta);
+                                                //console.log("no existen registros");
 
-                                                        }
-                                                    });
+                                                if (diasemana === "Saturday" || diasemana === "Sunday") {
+                                                    //console.log("HORA ENTRADA ", verificar.horaentrada);
+                                                    //console.log("HORA SALIDA ", verificar.horasalida);
+
+                                                    if (horabio > verificar.horaentradaMD) {
+                                                        const estatus = "RETARDO";
+                                                        const motivo = "NA";
+                                                        const horafin = "NA";
+                                                        //console.log("Estatus RETARDO");
+                                                        insertarAsistencia(log.deviceUserId, fechaForm, horaForm, horafin, estatus, motivo, (error, respuesta) => {
+                                                            if (error) {
+                                                                console.error('Error al insertar asistencia:', error.mensaje);
+                                                            } else {
+                                                                //console.log(respuesta);
+                                                                io.emit('escuchando', respuesta);
+
+                                                            }
+                                                        });
+                                                    }
+                                                    else {
+                                                        const estatus = "ENTRADA";
+                                                        const motivo = "NA";
+                                                        const horafin = "NA";
+                                                        //console.log("estatus ENTRADA");
+                                                        insertarAsistencia(log.deviceUserId, fechaForm, horaForm, horafin, estatus, motivo, (error, respuesta) => {
+                                                            if (error) {
+                                                                console.error('Error al insertar asistencia:', error.mensaje);
+                                                            } else {
+                                                                //console.log(respuesta);
+                                                                io.emit('escuchando', respuesta);
+
+                                                            }
+                                                        });
+                                                    }
+
+
                                                 }
                                                 else {
-                                                    const estatus = "ENTRADA";
-                                                    const motivo ="NA";
-                                                    const horafin = "NA";
-                                                    //console.log("estatus ENTRADA");
-                                                    insertarAsistencia(log.deviceUserId, fechaForm, horaForm, horafin, estatus,motivo, (error, respuesta) => {
-                                                        if (error) {
-                                                            console.error('Error al insertar asistencia:', error.mensaje);
-                                                        } else {
-                                                            //console.log(respuesta);
-                                                            io.emit('escuchando', respuesta);
+                                                    //console.log("HORA ENTRADA ", verificar.horaentrada);
+                                                    //console.log("HORA SALIDA ", verificar.horasalida);
+                                                    if (horabio > verificar.horaentrada) {
+                                                        const estatus = "RETARDO";
+                                                        const motivo = "NA";
+                                                        const horafin = "NA";
+                                                        //console.log("Estatus RETARDO");
+                                                        insertarAsistencia(log.deviceUserId, fechaForm, horaForm, horafin, estatus, motivo, (error, respuesta) => {
+                                                            if (error) {
+                                                                console.error('Error al insertar asistencia:', error.mensaje);
+                                                            } else {
+                                                                //console.log(respuesta);
+                                                                io.emit('escuchando', respuesta);
 
-                                                        }
-                                                    });
+                                                            }
+                                                        });
+                                                    }
+                                                    else {
+                                                        const estatus = "ENTRADA";
+                                                        const motivo = "NA";
+                                                        const horafin = "NA";
+                                                        //console.log("estatus ENTRADA");
+                                                        insertarAsistencia(log.deviceUserId, fechaForm, horaForm, horafin, estatus, motivo, (error, respuesta) => {
+                                                            if (error) {
+                                                                console.error('Error al insertar asistencia:', error.mensaje);
+                                                            } else {
+                                                                //console.log(respuesta);
+                                                                io.emit('escuchando', respuesta);
+
+                                                            }
+                                                        });
+                                                    }
+
+
                                                 }
 
 
                                             }
-                                        }
-                                        else {
-                                            console.log("No esta registrado como usuario", log.deviceUserId);
-                                            //console.log("userId: ", log.deviceUserId, "bioId", log.userSn, " Fecha: ", fechaForm, "hora: ", horaForm);
 
                                         }
                                     }
+                                })
+                            }
+                            else {
+                                if (verificar.turno === "TERCERO") {
+                                    //console.log(verificar.turno);
+                                    if (fechaForm === fecha) {
+                                        mostEventostodos(function (error, respuesta) {
+                                            if (error) {
+                                                console.log(error)
+                                            }
+                                            else {
+                                                //console.log("registrados:", respuesta.respuesta);
+                                                const registrados = respuesta.respuesta;
+                                                const verificar2 = registrados.find((filtro) => filtro.idusuario === log.deviceUserId && filtro.horafin === "NA");
+                                                //console.log(verificar2);
+                                                //console.log("Hora del biometrico", horabio);
+                                                //console.log("Se supone que aqui verificas la hora de salida");
+                                                if (verificar2) {
+                                                    const fechafinal = moment(verificar2.fecha).add(1, 'days').format('YYYY-MM-DD');
+                                                    if (fechaForm === fechafinal) {
+                                                        if (diasemana === "Saturday" || diasemana === "Sunday") {
+                                                            if (verificar2.estatus === "RETARDO") {
+                                                                if (horabio >= verificar.horasalidaMD) {
+                                                                    console.log(horabio);
+                                                                    const motivo = "NA";
+                                                                    editAsistencia(verificar2.idasistencia, horaForm, verificar2.estatus, motivo, function (error, respuesta) {
+                                                                        if (error) {
+                                                                            console.log(error);
+                                                                        }
+                                                                        else {
+                                                                            //console.log(respuesta);
+                                                                            io.emit('escuchando', respuesta);
+                                                                        }
+                                                                        //console.log(respuesta);
+                                                                    })
+                                                                } else {
+                                                                    console.log("NO TIENE HORA DE SALIDA");
+
+                                                                }
+                                                            } else {
+                                                                if (verificar2.estatus === "ENTRADA") {
+                                                                    if (horabio >= verificar.horasalidaMD) {
+                                                                        const estatus = "ASISTENCIA";
+                                                                        //console.log(horabio);
+                                                                        const motivo = "NA";
+                                                                        editAsistencia(verificar2.idasistencia, horaForm, estatus, motivo, function (error, respuesta) {
+                                                                            if (error) {
+                                                                                console.log(error);
+                                                                            }
+                                                                            else {
+                                                                                //console.log(respuesta);
+                                                                                io.emit('escuchando', respuesta);
+                                                                            }
+                                                                            //console.log(respuesta);
+                                                                        })
+                                                                    } else {
+                                                                        //console.log("NO TIENE HORA DE SALIDA");
+
+                                                                    }
+                                                                }
+                                                                else {
+                                                                    //console.log("TIENE UN ESTATUS DESCONOCIDO");
+                                                                }
+
+                                                            }
+                                                        }
+                                                        else {
+                                                            if (verificar2.estatus === "RETARDO") {
+                                                                if (horabio >= verificar.horasalida) {
+                                                                    console.log(horabio);
+                                                                    const motivo = "NA";
+                                                                    editAsistencia(verificar2.idasistencia, horaForm, verificar2.estatus, motivo, function (error, respuesta) {
+                                                                        if (error) {
+                                                                            console.log(error);
+                                                                        }
+                                                                        else {
+                                                                            //console.log(respuesta);
+                                                                            io.emit('escuchando', respuesta);
+                                                                        }
+                                                                        //console.log(respuesta);
+                                                                    })
+                                                                } else {
+                                                                    console.log("NO TIENE HORA DE SALIDA");
+
+                                                                }
+                                                            } else {
+                                                                if (verificar2.estatus === "ENTRADA") {
+                                                                    if (horabio >= verificar.horasalida) {
+                                                                        const estatus = "ASISTENCIA";
+                                                                        //console.log(horabio);
+                                                                        const motivo = "NA";
+                                                                        editAsistencia(verificar2.idasistencia, horaForm, estatus, motivo, function (error, respuesta) {
+                                                                            if (error) {
+                                                                                console.log(error);
+                                                                            }
+                                                                            else {
+                                                                                //console.log(respuesta);
+                                                                                io.emit('escuchando', respuesta);
+                                                                            }
+                                                                            //console.log(respuesta);
+                                                                        })
+                                                                    } else {
+                                                                        //console.log("NO TIENE HORA DE SALIDA");
+
+                                                                    }
+                                                                }
+                                                                else {
+                                                                    //console.log("TIENE UN ESTATUS DESCONOCIDO");
+                                                                }
+
+                                                            }
+                                                        }
+                                                    }
+                                                } else {
+                                                    mostEventosbio(fecha, function (error, respuesta) {
+                                                        if (error) {
+                                                            console.log(error)
+                                                        }
+                                                        else {
+                                                            console.log("registrados tercero:", respuesta.respuesta);
+                                                            const registrados = respuesta.respuesta;
+                                                            console.log(verificar.turno);
+                                                            if (registrados && registrados.length > 0) {
+                                                                if (diasemana === "Saturday" || diasemana === "Sunday") {
+                                                                    //console.log("algo esta mal");
+                                                                    //console.log("HORA ENTRADA ", verificar.horaentrada);
+                                                                    //console.log("HORA SALIDA ", verificar.horasalida);
+                                                                    if (!registrados.find(reg => reg.idusuario === log.deviceUserId)) {
+
+                                                                        const horaguardada = verificar.horaentradaMD.split(":");
+                                                                        var minutos = parseInt(horaguardada[0]) * 60 + parseInt(horaguardada[1]);
+                                                                        //console.log("Minutos una hora antes ", minutos);
+
+                                                                        const menoshora = minutos - 60;
+                                                                        //console.log("Menos una hora : ", menoshora);
+                                                                        const horantes = Math.floor(menoshora / 60);
+                                                                        const minutosantes = menoshora % 60;
+
+                                                                        const unahorantes = horantes + ':' + minutosantes;
+
+                                                                        //console.log("Hora a comprar: ", unahorantes);
+
+                                                                        if (horabio > unahorantes) {
+                                                                            //console.log("Aqui insertas datos nuevos: ", log.deviceUserId, "bioId", log.userSn, " Fecha: ", fechaForm, "hora: ", horaForm);
+                                                                            if (horabio <= verificar.horaentradaMD) {
+
+                                                                                const estatus = "ENTRADA";
+                                                                                const motivo = "NA";
+                                                                                const horafin = "NA";
+                                                                                //console.log("estatus ENTRADA");
+                                                                                insertarAsistencia(log.deviceUserId, fechaForm, horaForm, horafin, estatus, motivo, (error, respuesta) => {
+                                                                                    if (error) {
+                                                                                        console.error('Error al insertar asistencia:', error.mensaje);
+                                                                                    } else {
+                                                                                        //console.log(respuesta);
+                                                                                        io.emit('escuchando', respuesta);
+
+                                                                                    }
+                                                                                });
+                                                                            }
+                                                                            else {
+                                                                                const estatus = "RETARDO";
+                                                                                const motivo = "NA";
+                                                                                const horafin = "NA";
+                                                                                //console.log("Estatus RETARDO");
+                                                                                insertarAsistencia(log.deviceUserId, fechaForm, horaForm, horafin, estatus, motivo, (error, respuesta) => {
+                                                                                    if (error) {
+                                                                                        console.error('Error al insertar asistencia:', error.mensaje);
+                                                                                    } else {
+                                                                                        //console.log(respuesta);
+                                                                                        io.emit('escuchando', respuesta);
+
+                                                                                    }
+                                                                                });
+
+                                                                            }
+                                                                        }
+                                                                    }
+                                                                }
+                                                                else {
+                                                                    if (!registrados.find(reg => reg.idusuario === log.deviceUserId)) {
+                                                                        const horaguardada = verificar.horaentrada.split(":");
+                                                                        var minutos = parseInt(horaguardada[0]) * 60 + parseInt(horaguardada[1]);
+                                                                        //console.log("Minutos una hora antes ", minutos);
+
+                                                                        const menoshora = minutos - 60;
+
+                                                                        const horantes = Math.floor(menoshora / 60);
+                                                                        const minutosantes = menoshora % 60;
+
+                                                                        const unahorantes = horantes + ':' + minutosantes;
+
+                                                                        //console.log("Hora antes: ", unahorantes);
+                                                                        if (horabio > unahorantes) {
+                                                                            //console.log("Aqui insertas datos nuevos: ", log.deviceUserId, "bioId", log.userSn, " Fecha: ", fechaForm, "hora: ", horaForm);
+                                                                            if (horabio <= verificar.horaentrada) {
+                                                                                const estatus = "ENTRADA";
+                                                                                const motivo = "NA";
+                                                                                const horafin = "NA";
+                                                                                //console.log("estatus ENTRADA");
+                                                                                insertarAsistencia(log.deviceUserId, fechaForm, horaForm, horafin, estatus, motivo, (error, respuesta) => {
+                                                                                    if (error) {
+                                                                                        console.error('Error al insertar asistencia:', error.mensaje);
+                                                                                    } else {
+                                                                                        //console.log(respuesta);
+                                                                                        io.emit('escuchando', respuesta);
+
+                                                                                    }
+                                                                                });
+                                                                            }
+                                                                            else {
+                                                                                const estatus = "RETARDO";
+                                                                                const motivo = "NA";
+                                                                                const horafin = "NA";
+                                                                                //console.log("Estatus RETARDO");
+                                                                                insertarAsistencia(log.deviceUserId, fechaForm, horaForm, horafin, estatus, motivo, (error, respuesta) => {
+                                                                                    if (error) {
+                                                                                        console.error('Error al insertar asistencia:', error.mensaje);
+                                                                                    } else {
+                                                                                        //console.log(respuesta);
+                                                                                        io.emit('escuchando', respuesta);
+
+                                                                                    }
+                                                                                });
+
+                                                                            }
+                                                                        }
+
+                                                                    }
+
+                                                                }
+
+                                                            }
+                                                            else {
+                                                                //console.log("no existen registros");
+
+                                                                if (diasemana === "Saturday" || diasemana === "Sunday") {
+                                                                    //console.log("HORA ENTRADA ", verificar.horaentrada);
+                                                                    //console.log("HORA SALIDA ", verificar.horasalida);
+
+                                                                    const horaguardada = verificar.horaentradaMD.split(":");
+                                                                    var minutos = parseInt(horaguardada[0]) * 60 + parseInt(horaguardada[1]);
+                                                                    console.log("Minutos unahora antes ", minutos);
+
+                                                                    const menoshora = minutos - 60;
+
+                                                                    const horantes = Math.floor(menoshora / 60);
+                                                                    const minutosantes = menoshora % 60;
+
+                                                                    const unahorantes = horantes + ':' + minutosantes;
+
+                                                                    if (horabio > unahorantes) {
+                                                                        if (horabio <= verificar.horaentradaMD) {
+                                                                            const estatus = "ENTRADA";
+                                                                            const motivo = "NA";
+                                                                            const horafin = "NA";
+                                                                            //console.log("estatus ENTRADA");
+                                                                            insertarAsistencia(log.deviceUserId, fechaForm, horaForm, horafin, estatus, motivo, (error, respuesta) => {
+                                                                                if (error) {
+                                                                                    console.error('Error al insertar asistencia:', error.mensaje);
+                                                                                } else {
+                                                                                    //console.log(respuesta);
+                                                                                    io.emit('escuchando', respuesta);
+
+                                                                                }
+                                                                            });
+
+                                                                        }
+                                                                        else {
+                                                                            const estatus = "RETARDO";
+                                                                            const motivo = "NA";
+                                                                            const horafin = "NA";
+                                                                            //console.log("Estatus RETARDO");
+                                                                            insertarAsistencia(log.deviceUserId, fechaForm, horaForm, horafin, estatus, motivo, (error, respuesta) => {
+                                                                                if (error) {
+                                                                                    console.error('Error al insertar asistencia:', error.mensaje);
+                                                                                } else {
+                                                                                    //console.log(respuesta);
+                                                                                    io.emit('escuchando', respuesta);
+
+                                                                                }
+                                                                            });
+                                                                        }
+                                                                    }
+
+
+
+                                                                }
+                                                                else {
+                                                                    //console.log("HORA ENTRADA ", verificar.horaentrada);
+                                                                    //console.log("HORA SALIDA ", verificar.horasalida);
+                                                                    const horaguardada = verificar.horaentrada.split(":");
+                                                                    var minutos = parseInt(horaguardada[0]) * 60 + parseInt(horaguardada[1]);
+                                                                    console.log("Minutos unahora antes ", minutos);
+
+                                                                    const menoshora = minutos - 60;
+
+                                                                    const horantes = Math.floor(menoshora / 60);
+                                                                    const minutosantes = menoshora % 60;
+
+                                                                    const unahorantes = horantes + ':' + minutosantes;
+
+                                                                    if (horabio > unahorantes) {
+                                                                        if (horabio <= verificar.horaentrada) {
+                                                                            const estatus = "ENTRADA";
+                                                                            const motivo = "NA";
+                                                                            const horafin = "NA";
+                                                                            //console.log("estatus ENTRADA");
+                                                                            insertarAsistencia(log.deviceUserId, fechaForm, horaForm, horafin, estatus, motivo, (error, respuesta) => {
+                                                                                if (error) {
+                                                                                    console.error('Error al insertar asistencia:', error.mensaje);
+                                                                                } else {
+                                                                                    //console.log(respuesta);
+                                                                                    io.emit('escuchando', respuesta);
+
+                                                                                }
+                                                                            });
+                                                                        }
+                                                                        else {
+                                                                            const estatus = "RETARDO";
+                                                                            const motivo = "NA";
+                                                                            const horafin = "NA";
+                                                                            //console.log("Estatus RETARDO");
+                                                                            insertarAsistencia(log.deviceUserId, fechaForm, horaForm, horafin, estatus, motivo, (error, respuesta) => {
+                                                                                if (error) {
+                                                                                    console.error('Error al insertar asistencia:', error.mensaje);
+                                                                                } else {
+                                                                                    //console.log(respuesta);
+                                                                                    io.emit('escuchando', respuesta);
+
+                                                                                }
+                                                                            });
+                                                                        }
+
+                                                                    }
+
+                                                                }
+
+
+                                                            }
+                                                        }
+                                                    })
+
+                                                }
+
+                                            }
+                                        })
+                                    }
 
                                 }
-                            });
+                                else {
+                                    console.log("Verificar el turno");
+                                }
+                            }
+                        }
+                        else {
+                            console.log("No esta registrado como usuario");
+                            //console.log("userId: ", log.deviceUserId, "bioId", log.userSn, " Fecha: ", fechaForm, "hora: ", horaForm);
 
                         }
-                        //console.log(respuesta);
-                    })
+
+
+                    });
                 }
             }
             )

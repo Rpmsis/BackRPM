@@ -2,8 +2,8 @@
 
 const mysql = require('../database/index');
 
-function mostrar (callback){
-    mysql.query(`SELECT * FROM menusemana WHERE estatus= "ACTIVO";`, function(error,respuesta){
+function mostrar (fechainicio, fechafinal, callback){
+    mysql.query(`SELECT * FROM menusemana WHERE fechainicio BETWEEN CAST('${fechainicio}' AS DATE) AND CAST('${fechafinal}' AS DATE);`, function(error,respuesta){
         
         if(error){
             callback(null,{
@@ -20,4 +20,3 @@ function mostrar (callback){
 
 }
 module.exports = mostrar
-

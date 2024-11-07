@@ -39,9 +39,13 @@ const mostTiempoactivi = require('./query/mostTiempoactivi');
 const mostStatusresponsable = require('./query/mostStatusresponsable');
 const mostTiempocontrol = require('./query/mostTiempocontrol');
 const mostEficienciakg = require('./query/mostEficienciakg');
+
 const mostMenusemana = require('./query/mostMenusemana');
 const mostMenudeldia = require('./query/mostMenudia');
 const mostSemanamenu = require('./query/mostSemanamenu');
+const mostPrincipalmenu = require('./query/mostSemanamenu');
+const mostNumsemanamenu = require('./query/mostNumsemanamenu');
+
 const mostIdusuarioPMateriales = require('./query/mostIdusuarioPMateriales');
 const mostIdusuarioSRecoleccion = require('./query/mostIdusuarioSRecoleccion');
 const mostIdusuario = require('./query/mostIdusuario');
@@ -114,6 +118,9 @@ const editFotoperfil = require('./query/actualizarFotoperfil');
 const editNumpersonas = require('./query/actualizarNumpasignacion');
 const editEficacia = require('./query/actualizarEficaciaasignacion');
 const editAsistencia = require('./query/actualizarAsistenciastatus');
+const editEstatusmenu = require('./query/actualizarestatusmenu');
+const editPermisomenu = require('./query/actualizarPermisomenu');
+
 const elim = require('./query/eliminar');
 const elimUsuarioprov = require('./query/eliminarUsuarioprov');
 
@@ -137,7 +144,7 @@ const io = require("socket.io")(3003, {
 });
 /* ZKHLIB asistencias */
 const ZKHLIB = require("zkh-lib");
-let obj = new ZKHLIB("192.168.1.69", 4370, 5200, 5000);
+let obj = new ZKHLIB("192.168.1.82", 4370, 5200, 5000);
 //console.log(Object.getOwnPropertyNames(Object.getPrototypeOf(obj)));
 /* inserta usuarios */
 async function insertarUserasis(respuesta, res, req) {
@@ -150,6 +157,7 @@ async function insertarUserasis(respuesta, res, req) {
     const horafin = req.body.horafin;
     const descanso = req.body.descanso;
     let horafinMD, horainicioMD;
+    let turno;
     if (req.body.descanso.includes("Sábado") && req.body.descanso.includes("Domingo")) {
         horafinMD = "NA";
         horainicioMD = "NA";
@@ -158,6 +166,14 @@ async function insertarUserasis(respuesta, res, req) {
         horafinMD = req.body.horafinMD;
         horainicioMD = req.body.horainicioMD;
     }
+
+    if (horafin < horainicio) {
+        turno = "TERCERO";
+    }
+    else {
+        turno = "PRIMERO";
+    }
+
 
     //console.log(req.body);
     const idstring = String(respuesta.respuesta[0].idAlta);
@@ -212,7 +228,7 @@ async function insertarUserasis(respuesta, res, req) {
                                 }
                                 else {
 
-                                    insertarUserasistencia(idcheck, nombre, privilege, password, horainicio, horafin, descanso, horainicioMD, horafinMD, name, (error, respuesta) => {
+                                    insertarUserasistencia(idcheck, nombre, privilege, password, horainicio, horafin, descanso, horainicioMD, horafinMD, name, turno, (error, respuesta) => {
                                         if (error) {
                                             console.error('Error al insertar asistencia:', error.mensaje);
                                         } else {
@@ -763,7 +779,7 @@ app.get('/ubicacion', verificar_Token, (req, res) => {
     const usuario = req.usuario;
     //console.log(usuario)
     const puesto = usuario.puesto;
-    //console.log(puesto)
+    console.log(puesto)
     /* Envia las ubicaciones con base al puesto */
     if (puesto === "COORDINADOR DE PRODUCCION") {
         mostubi(function (error, respuesta) {
@@ -776,7 +792,7 @@ app.get('/ubicacion', verificar_Token, (req, res) => {
             else {
                 //console.log(respuesta.respuesta);
                 const ubicacionesPDM = respuesta.respuesta.filter(filtro => filtro.area === puesto);
-                console.log("PDM", ubicacionesPDM);
+                //console.log("PDM", ubicacionesPDM);
                 res.status(200).json({
                     ubicacionesPDM
                 })
@@ -795,8 +811,10 @@ app.get('/ubicacion', verificar_Token, (req, res) => {
                     })
                 }
                 else {
+                    const ubicacionesPDM = respuesta.respuesta.filter(filtro => filtro.area === puesto);
+                    //console.log("PDM", ubicacionesPDM);
                     res.status(200).json({
-                        respuesta
+                        ubicacionesPDM
                     })
                 }
                 //console.log(respuesta);
@@ -1151,7 +1169,7 @@ app.get('/Tiempoactivi', (req, res) => {
 app.get('/Statusresponsables', (req, res) => {
     const idactividad = req.query.idactividad;
     const idasigactivi = req.query.idasigactivi;
-    console.log("Datos obtenidos: ", idactividad, idasigactivi);
+    //console.log("Datos obtenidos: ", idactividad, idasigactivi);
     mostStatusresponsable(idactividad, fecha, idasigactivi, function (error, respuesta) {
         if (error) {
             console.log(error)
@@ -1188,8 +1206,11 @@ app.get('/Tiempocontrol', (req, res) => {
 }
 )
 //Muestra las actividades que tienen kilogramos, y deben ingresar, una vez finalizada la actividad
-app.get('/EficienciaKg', (req, res) => {
-    mostEficienciakg(function (error, respuesta) {
+app.get('/EficienciaKg', verificar_Token, (req, res) => {
+    const usuario = req.usuario;
+    const responsable = usuario.nombre;
+    console.log(responsable);
+    mostEficienciakg(function (error, respuestaEficienciakg) {
         if (error) {
             console.log(error)
             res.status(404).json({
@@ -1197,7 +1218,8 @@ app.get('/EficienciaKg', (req, res) => {
             })
         }
         else {
-            //console.log(respuesta.respuesta);
+            //console.log(respuestaEficienciakg.respuesta);
+            const respuesta = respuestaEficienciakg.respuesta.filter((filtro) => filtro.responsable === responsable);
             res.status(200).json({
                 respuesta
             })
@@ -1206,7 +1228,10 @@ app.get('/EficienciaKg', (req, res) => {
     })
 }
 )
-app.get('/Menusemana', (req, res) => {
+app.get('/Menusemana', verificar_Token, (req, res) => {
+    const usuario = req.usuario;
+    const responsable = usuario.id;
+
     mostMenusemana(function (error, respuesta) {
         if (error) {
             console.log(error)
@@ -1216,8 +1241,35 @@ app.get('/Menusemana', (req, res) => {
         }
         else {
             //console.log(respuesta.respuesta);
-            res.status(200).json({
-                respuesta
+            const nsemana1= respuesta.respuesta.find((filtro) => filtro.estatus==="ACTIVO");
+            var nsemana = "";
+            if(nsemana1){
+                nsemana= nsemana1.numsemana;
+            }
+            else{
+                nsemana= "NA";
+            }
+            
+            mostPermisos(function (error, respuestaPermisos) {
+                if (error) {
+                    console.log(error)
+                    res.status(404).json({
+                        mensaje: respuesta.mensaje
+                    })
+                }
+                else {
+                    //console.log(respuestaPermisos.respuesta);
+                    const permisomenu1= respuestaPermisos.respuesta.find((filtro) => filtro.Id_Permisos === responsable);
+
+                    const permisomenu = permisomenu1.Form_comida;
+                    
+                    res.status(200).json({
+                        respuesta,
+                        nsemana,
+                        permisomenu
+                    })
+                }
+                //console.log(respuesta);
             })
         }
         //console.log(respuesta);
@@ -1242,6 +1294,24 @@ app.get('/Menudeldia', (req, res) => {
 }
 )
 app.get('/Semanamenu', (req, res) => {
+    mostSemanamenu(function (error, respuesta) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            //console.log(respuesta.respuesta);
+            res.status(200).json({
+                respuesta
+            })
+        }
+        //console.log(respuesta);
+    })
+}
+)
+app.get('/Principalmenu', (req, res) => {
     var fechainicio = "";
     var fechafinal = "";
     const diasemanamoment = moment(fecha).format('dddd');
@@ -1462,6 +1532,7 @@ app.get('/PDM', (req, res) => {
 )
 //Muestra la asignacion de actividades el supervisor en el aparto de control de actividades.
 app.get('/buscar_Supervisor/:id', async (req, res) => {
+    const fecha = moment().format("YYYY-MM-DD");
     var idcheck = req.params.id
     //console.log(idcheck)
     mostIdcheck(idcheck, function (error, respuestaidCheck) {
@@ -1475,7 +1546,7 @@ app.get('/buscar_Supervisor/:id', async (req, res) => {
             //console.log(respuestaidCheck);
             if (respuestaidCheck.respuesta && respuestaidCheck.respuesta.length > 0) {
                 const responsable = respuestaidCheck.respuesta[0].NombreCompleto;
-                //console.log(responsable);
+                console.log(responsable);
 
                 mostPDM(function (error, respuesta) {
                     if (error) {
@@ -1485,7 +1556,7 @@ app.get('/buscar_Supervisor/:id', async (req, res) => {
                         })
                     }
                     else {
-                        console.log(respuesta.respuesta);
+                        //console.log(respuesta.respuesta);
                         const supervisor = respuesta.respuesta.find(filtro => filtro.Nombre === responsable && filtro.Puesto === "SUPERVISOR");
                         const resultadosupervisor = supervisor ? "es supervisor" : "no es supervisor";
                         //console.log(resultadosupervisor);
@@ -1498,9 +1569,10 @@ app.get('/buscar_Supervisor/:id', async (req, res) => {
                             const ayudantes = respuesta.respuesta.filter(filtro => filtro.Ubicacion === supervisor.Ubicacion);
                             //const resultado = Object.values(ayudantes);
 
-                            //console.log("Ayudantes", resultado);
+                            //console.log(supervisor.Ubicacion);
+                            //console.log(fecha);
                             //console.log(respuesta.respuesta);
-                            mostControlactivi(ayudantes[0].Ubicacion, fecha, function (error, respuestaActividades) {
+                            mostControlactivi(supervisor.Ubicacion, fecha, function (error, respuestaActividades) {
                                 if (error) {
                                     console.log(error)
                                     res.status(404).json({
@@ -1508,8 +1580,8 @@ app.get('/buscar_Supervisor/:id', async (req, res) => {
                                     })
                                 }
                                 else {
-                                    //console.log("Actividades asignadas: ", respuesta);
-                                    mostIdusuarioPMateriales(ayudantes[0].Ubicacion, function (error, respuestaMateriales) {
+                                    //console.log("Actividades asignadas: ", respuestaActividades);
+                                    mostIdusuarioPMateriales(supervisor.Ubicacion, function (error, respuestaMateriales) {
                                         if (error) {
                                             console.log(error)
                                             res.status(404).json({
@@ -1772,8 +1844,11 @@ app.get('/MenuLista', async (req, res) => {
     //console.log(fechainicio, fechafin);
 }
 )
-app.get('/Eficacia', (req, res) => {
-    mostEficacia(function (error, respuesta) {
+app.get('/Eficacia', verificar_Token, (req, res) => {
+    const usuario = req.usuario;
+    const responsable = usuario.nombre;
+    console.log(responsable);
+    mostEficacia(function (error, respuestaEficacia) {
         if (error) {
             console.log(error)
             res.status(404).json({
@@ -1781,7 +1856,8 @@ app.get('/Eficacia', (req, res) => {
             })
         }
         else {
-            //console.log(respuesta.respuesta);
+            //console.log(respuestaEficacia.respuesta);
+            const respuesta = respuestaEficacia.respuesta.filter((filtro) => filtro.responsable === responsable);
             res.status(200).json({
                 respuesta
             })
@@ -1847,7 +1923,12 @@ app.get('/Altas', (req, res) => {
     })
 }
 )
-app.get('/globalstatus', (req, res) => {
+app.get('/globalstatus', verificar_Token, (req, res) => {
+    const usuario = req.usuario;
+    //console.log(usuario)
+    const nombre = usuario.nombre;
+    //console.log(nombre); 
+
     mostEficacia(function (error, respuesta) {
         if (error) {
             console.log(error)
@@ -1857,13 +1938,13 @@ app.get('/globalstatus', (req, res) => {
         }
         else {
             //console.log(respuesta.respuesta);
-            const deldia = respuesta.respuesta.filter((filtro) => filtro.fechainicio === fecha && filtro.status != "INACTIVO");
+            const deldia = respuesta.respuesta.filter((filtro) => filtro.fechainicio === fecha && filtro.status != "INACTIVO" && filtro.responsable === nombre);
             const deldiatotal = deldia.length;
-            console.log("deldia", deldia.length);
+            //console.log("deldia", deldia.length);
 
             const terminadas = deldia.filter((filtro) => filtro.status === "TERMINADO");
             const terminadastotal = terminadas.length;
-            console.log("terminadas", terminadas.length);
+            //console.log("terminadas", terminadas.length);
 
             const promedio1 = terminadas.reduce((acumulador, filtro) => {
                 return acumulador + filtro.eficienciasig;
@@ -1871,12 +1952,12 @@ app.get('/globalstatus', (req, res) => {
             const promedio = Math.round((promedio1 + Number.EPSILON) * 100) / 100;
             const promediototal1 = promedio / terminadas.length
             const promediototal = Math.round((promediototal1 + Number.EPSILON) * 100) / 100;
-            console.log(promediototal);
+            //console.log(promediototal);
 
 
             const promedioasig = (terminadastotal * 100) / deldiatotal;
             const promedioasigtotal = Math.round((promedioasig + Number.EPSILON) * 100) / 100;
-            console.log(promedioasigtotal);
+            //console.log(promedioasigtotal);
 
             res.status(200).json({
                 deldiatotal,
@@ -2152,28 +2233,44 @@ app.get('/tableroLogistica', (req, res) => {
         }
         else {
             //console.log(respuesta.respuesta);
-            const deldiatotal= respuesta.respuesta.length;
-            console.log("asignadas ", deldiatotal);
+            const deldiatotal = respuesta.respuesta.length;
+            //console.log("asignadas ", deldiatotal);
 
             const terminadas = respuesta.respuesta.filter((filtro) => filtro.Estatus === "TERMINADO");
             const terminadastotal = terminadas.length;
-            console.log("terminadas ", terminadas.length);
+            //console.log("terminadas ", terminadas.length);
 
 
             const promedioasig = (terminadastotal * 100) / deldiatotal;
             const promedioasigtotal = Math.round((promedioasig + Number.EPSILON) * 100) / 100;
-            console.log("Promedio terminadas ",promedioasigtotal);
+            //console.log("Promedio terminadas ", promedioasigtotal);
 
             res.status(200).json({
                 deldiatotal,
                 terminadastotal,
                 promedioasigtotal
-            }) 
+            })
         }
         //console.log(respuesta);
     })
 }
 )
+app.get('/Numsemanamenu', (req, res) => {
+    mostNumsemanamenu(function (error, respuesta) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            res.status(200).json({
+                respuesta
+            })
+        }
+        //console.log(respuesta);
+    })
+})
 /* Fin de mostrar */
 
 /* Insertar */
@@ -2934,6 +3031,7 @@ app.post('/insertarMaterial', (req, res) => {
 })
 //MODIFICADO PARA CALCULAR LA EFICACIA
 app.post('/insertarAsigactividad', verificar_Token, (req, res) => {
+    const fecha = moment().format("YYYY-MM-DD");
     const usuario = req.usuario;
     //console.log(usuario)  
     const responsable = usuario.nombre;
@@ -3183,6 +3281,7 @@ app.post('/insertarMovimiento', (req, res) => {
 })
 //MODIFICADO PARA CALCULAR LA EFICACIA
 app.post('/insertarControl', (req, res) => {
+    const fecha = moment().format("YYYY-MM-DD");
     if (req.body.idactividades && fecha && req.body.responsables && req.body.idasigactivi && req.body.idchecksupervisor) {
         const timestandar = 0;
         const kg = 0;
@@ -3287,6 +3386,7 @@ app.post('/insertarControl', (req, res) => {
 })
 //Inserta los movimientos de los operadores cuando inician la actividad y cuando reinician una pausa.  
 app.post('/insertarTiempo', (req, res) => {
+    const fecha = moment().format("YYYY-MM-DD");
     const horainicio = moment().format('HH:mm');
     const horafin = "NA";
     const timestandar = 0;
@@ -3759,7 +3859,7 @@ app.post('/insertarAsistencia', (req, res) => {
     if (req.body.userid && req.body.estatus) {
         if (req.body.estatus === "JUSTIFICAR") {
             if (req.body.motivo) {
-                const estatus ="JUSTIFICADO";
+                const estatus = "JUSTIFICADO";
                 insertarAsistencia(req.body.userid, fecha, horainicio, horafin, estatus, req.body.motivo, (error, respuesta) => {
                     if (error) {
                         console.error('Error al insertar asistencia:', error.mensaje);
@@ -3779,7 +3879,7 @@ app.post('/insertarAsistencia', (req, res) => {
                 });
             }
         } else {
-            const motivo= "NA";
+            const motivo = "NA";
             insertarAsistencia(req.body.userid, fecha, horainicio, horafin, req.body.estatus, motivo, (error, respuesta) => {
                 if (error) {
                     console.error('Error al insertar asistencia:', error.mensaje);
@@ -4235,6 +4335,7 @@ app.put('/actualizarControlstatus', (req, res) => {
 })
 //MODIFICADO PARA CALULAR LA EFICACIA
 app.put('/actualizarTimefin', (req, res) => {
+    const fecha = moment().format("YYYY-MM-DD");
     /* id, estatus, */
     const horafin = moment().format('HH:mm');
     const status = "TERMINADO";
@@ -4490,6 +4591,7 @@ app.put('/actualizarTimefin', (req, res) => {
     }
 })
 app.put('/actualizarTimepausa', (req, res) => {
+    const fecha = moment().format("YYYY-MM-DD");
     /* id, estatus, */
     console.log(req.body);
     const horafin = moment().format('HH:mm');
@@ -4598,6 +4700,7 @@ app.put('/actualizarTimepausa', (req, res) => {
 })
 //MODIFICADO PARA CALCULAR LA EFICACIA
 app.put('/actualizarAsignacionkg', (req, res) => {
+    const fecha = moment().format("YYYY-MM-DD");
     /* idasigactivi, status, timestandar, kg */
     const status = "TERMINADO";
     if (req.body.idasigactivi && req.body.kg) {
@@ -4949,6 +5052,138 @@ app.put('/actualizarAsistencia', (req, res) => {
                 //console.log(respuesta);
             })
         }
+    }
+    else {
+        //console.log("Existen datos vacíos");
+        res.status(400).json({
+            mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
+        });
+    }
+
+})
+app.put('/actualizarestatusmenutrue', verificar_Token, (req, res) => {
+    const usuario = req.usuario;
+    //console.log(usuario)
+    const responsable = usuario.id;
+    console.log(req.body);
+    if (req.body.numsemana) {
+        mostMenusemana(function (error, respuesta) {
+            if (error) {
+                console.log(error)
+                res.status(404).json({
+                    mensaje: respuesta.mensaje
+                })
+            }
+            else {
+                //console.log(respuesta.respuesta);
+                const datos = respuesta.respuesta.filter((filtro) => filtro.numsemana === req.body.numsemana);
+
+                const todosdatos = datos.length - 1;
+                const estatus = "ACTIVO"
+                //console.log(todosdatos);
+
+                datos.forEach((data, index) => {
+                    //id, estatus,
+                    //console.log(index);
+                    //console.log(data.idmenusemana);
+                    editEstatusmenu(data.idmenusemana, estatus, function (error, respuesta) {
+                        if (error) {
+                            console.log(error);
+                        }
+                        else {
+                            //console.log(respuesta);
+                            if (todosdatos === index) {
+                                const modulo = "true";
+                                editPermisomenu(responsable, modulo, function (error, respuesta) {
+                                    if (error) {
+                                        console.log(error);
+                                    }
+                                    else {
+                                        //console.log(respuesta);
+                                        res.status(200).json({
+                                            respuesta
+                                        });
+                                    }
+                                    //console.log(respuesta);
+                                })
+                            }
+                            else {
+                                console.log("Aun no");
+                            }
+                        }
+                        //console.log(respuesta);
+                    })
+
+                })
+            }
+            //console.log(respuesta);
+        })
+    }
+    else {
+        //console.log("Existen datos vacíos");
+        res.status(400).json({
+            mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
+        });
+    }
+
+})
+app.put('/actualizarestatusmenuFalse', verificar_Token, (req, res) => {
+    const usuario = req.usuario;
+    //console.log(usuario)
+    const responsable = usuario.id;
+    console.log(req.body);
+    if (req.body.numsemana) {
+        mostMenusemana(function (error, respuesta) {
+            if (error) {
+                console.log(error)
+                res.status(404).json({
+                    mensaje: respuesta.mensaje
+                })
+            }
+            else {
+                //console.log(respuesta.respuesta);
+                const datos = respuesta.respuesta.filter((filtro) => filtro.numsemana === req.body.numsemana);
+
+                const todosdatos = datos.length - 1;
+                const estatus = "INACTIVO"
+                //console.log(todosdatos);
+
+                datos.forEach((data, index) => {
+                    //id, estatus,
+                    //console.log(index);
+                    //console.log(data.idmenusemana);
+                    editEstatusmenu(data.idmenusemana, estatus, function (error, respuesta) {
+                        if (error) {
+                            console.log(error);
+                        }
+                        else {
+                            //console.log(respuesta);
+                            if (todosdatos === index) {
+                                const modulo = "false";
+                                editPermisomenu(responsable, modulo, function (error, respuesta) {
+                                    if (error) {
+                                        console.log(error);
+                                    }
+                                    else {
+                                        //console.log(respuesta);
+                                        res.status(200).json({
+                                            respuesta
+                                        });
+                                    }
+                                    //console.log(respuesta);
+                                })
+                            }
+                            else {
+                                console.log("Aun no");
+                            }
+                        }
+                        //console.log(respuesta);
+                    })
+
+                })
+            }
+            //console.log(respuesta);
+        })
     }
     else {
         //console.log("Existen datos vacíos");

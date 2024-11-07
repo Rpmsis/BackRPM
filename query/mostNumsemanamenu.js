@@ -3,7 +3,7 @@
 const mysql = require('../database/index');
 
 function mostrar (callback){
-    mysql.query(`SELECT * FROM menusemana WHERE estatus= "ACTIVO";`, function(error,respuesta){
+    mysql.query(`SELECT numsemana FROM menusemana where numsemana IS NOT NULL GROUP BY numsemana HAVING COUNT(*) > 0 ORDER BY numsemana ASC;`, function(error,respuesta){
         
         if(error){
             callback(null,{
