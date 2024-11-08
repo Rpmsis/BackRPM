@@ -10,8 +10,8 @@ const insertarAsistencia = require('./query/insertAsistencia');
 const editAsistencia = require('./query/actualizarAsistenciastatus');
 
 
-const app = express()
-const port = 3005
+const app = express();
+const port = 3005;
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cors());
@@ -24,7 +24,7 @@ const io = require("socket.io")(3004, {
 
 /* ZKHLIB asistencias */
 const ZKHLIB = require("zkh-lib");
-let obj = new ZKHLIB("192.168.1.82", 4370, 5200, 5000);
+let obj = new ZKHLIB("192.168.1.201", 4370, 5200, 5000);
 //console.log(Object.getOwnPropertyNames(Object.getPrototypeOf(obj)));
 
 

@@ -126,8 +126,6 @@ const elimUsuarioprov = require('./query/eliminarUsuarioprov');
 
 
 const verificar_Token = require('./middleware/Valida_Token');
-const { rawListeners } = require('./database');
-const { Console } = require('console');
 const app = express()
 const port = 3001
 app.use(express.json());
@@ -1262,6 +1260,7 @@ app.get('/Menusemana', verificar_Token, (req, res) => {
                     const permisomenu1= respuestaPermisos.respuesta.find((filtro) => filtro.Id_Permisos === responsable);
 
                     const permisomenu = permisomenu1.Form_comida;
+                    console.log(permisomenu);
                     
                     res.status(200).json({
                         respuesta,
@@ -1303,8 +1302,24 @@ app.get('/Semanamenu', (req, res) => {
         }
         else {
             //console.log(respuesta.respuesta);
-            res.status(200).json({
-                respuesta
+            const encargado= "RPMhzte2e4rlfd1p8s3";
+            mostPermisos(function (error, respuestaPermisos) {
+                if (error) {
+                    console.log(error)
+                    res.status(404).json({
+                        mensaje: respuestaPermisos.mensaje
+                    })
+                }
+                else {
+                    //console.log(respuestaPermisos.respuesta);
+                    const datospermiso= respuestaPermisos.respuesta.find((filtro) => filtro.Id_Permisos===encargado);
+                    const permiso = datospermiso.Form_comida;
+                    res.status(200).json({
+                        respuesta,
+                        permiso
+                    }) 
+                }
+                //console.log(respuesta);
             })
         }
         //console.log(respuesta);
@@ -3071,7 +3086,7 @@ app.post('/insertarAsigactividad', verificar_Token, (req, res) => {
                             })
                         }
                         else {
-                            io.emit('escuchando', respuesta.mensaje);
+                            io.emit('actividadiaria', respuesta.mensaje);
                             res.status(200).json({
                                 mensaje: respuesta.mensaje
                             })
