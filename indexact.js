@@ -62,7 +62,6 @@ const port = 3005
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cors());
-const fecha = moment().format("YYYY-MM-DD");
 const io = require("socket.io")(3004, {
     cors: {
         methods: ["GET", "POST"]
@@ -164,6 +163,7 @@ app.get('/material', (req, res) => {
 
 //Inserta las actividades.
 app.post('/insertarActif', (req, res) => {
+    const fecha = moment().format("YYYY-MM-DD");
     console.log(req.body);
     // timestandar,hora,minutos
     const fam = "NA";
@@ -331,6 +331,7 @@ app.post('/insertarActif', (req, res) => {
 
 //Inserta los materiales de las actividades. 
 app.post('/insertarMaterial', (req, res) => {
+    const fecha = moment().format("YYYY-MM-DD");
     if (fecha && req.body.fam && req.body.produc) {
         mostMaterial(function (error, respuesta) {
 
@@ -388,6 +389,7 @@ app.post('/insertarMaterial', (req, res) => {
 /* Hoja de actdiarias */
 //muestra las actividades diarias del dueño del proceso
 app.get('/actividiarias', verificar_Token, (req, res) => {
+    const fecha = moment().format("YYYY-MM-DD");
     const usuario = req.usuario;
     const responsable = usuario.nombre;
     //console.log(responsable);
@@ -409,6 +411,7 @@ app.get('/actividiarias', verificar_Token, (req, res) => {
 }
 )
 app.get('/globalstatus', verificar_Token, (req, res) => {
+    const fecha = moment().format("YYYY-MM-DD");
     const usuario = req.usuario;
     //console.log(usuario)
     const nombre = usuario.nombre;
@@ -456,6 +459,7 @@ app.get('/globalstatus', verificar_Token, (req, res) => {
 }
 )
 app.get('/Statusresponsables', (req, res) => {
+    const fecha = moment().format("YYYY-MM-DD");
     const idactividad = req.query.idactividad;
     const idasigactivi = req.query.idasigactivi;
     //console.log("Datos obtenidos: ", idactividad, idasigactivi);
@@ -481,6 +485,7 @@ app.get('/Statusresponsables', (req, res) => {
 
 /* Hoja de asignacion */
 app.get('/asignacion', verificar_Token, (req, res) => {
+    const fecha = moment().format("YYYY-MM-DD");
     const usuario = req.usuario;
     //console.log(usuario)
     const responsable = usuario.nombre;
@@ -543,7 +548,7 @@ app.post('/insertarAsigactividad', verificar_Token, (req, res) => {
                             })
                         }
                         else {
-                            io.emit('actividadiaria', respuesta.mensaje);
+                            io.emit('escuchando', respuesta.mensaje);
                             res.status(200).json({
                                 mensaje: respuesta.mensaje
                             })
@@ -597,6 +602,7 @@ app.put('/actualizarAsig', (req, res) => {
 
 /* Hoja de control */
 app.get('/Controlasignados/:id', (req, res) => {
+    const fecha = moment().format("YYYY-MM-DD");
     var idcheck = req.params.id
     console
     mostControlasignados(idcheck, fecha, function (error, respuesta) {
@@ -1007,7 +1013,8 @@ app.get('/Eficacia', verificar_Token, (req, res) => {
 
 /* Hoja de porusuario */
 app.get('/Controlresponsable', (req, res) => {
-    //console.log(req.query.responsable);
+    const fecha = moment().format("YYYY-MM-DD");
+    console.log(req.query.responsable);
     mostControlresponsable(fecha, req.query.responsable, function (error, respuesta) {
         if (error) {
             console.log(error)
@@ -1016,7 +1023,7 @@ app.get('/Controlresponsable', (req, res) => {
             })
         }
         else {
-            console.log(respuesta);
+            //console.log(respuesta);
             const uniqueControls = {};
             // Iterar sobre la respuesta
             respuesta.respuesta.forEach(item => {
@@ -1027,7 +1034,7 @@ app.get('/Controlresponsable', (req, res) => {
             })
             // Convertir el objeto a un array
             const result = Object.values(uniqueControls);
-            console.log(result);
+            console.log("result ",result);
             res.status(200).json({
                 result
             })
@@ -1546,6 +1553,5 @@ app.post('/insertarTiempo', (req, res) => {
 
 
 app.listen(port, () => {
-    console.log(`Port => ${port}`)
-    console.log(`Fecha => ${fecha}`)
+    console.log(`Port => ${port}`);
 })
