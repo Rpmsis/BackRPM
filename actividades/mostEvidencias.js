@@ -2,7 +2,7 @@ const mysql = require('../database/index');
 
 function mostrar (fecha,idasigactivi, callback){
     /* && status != "TERMINADO" */
-    mysql.query(` select * from controlactivi where  fecha= "${fecha}" && idasigactivi= "${idasigactivi}" `, function(error,respuesta){
+    mysql.query(` select * from evidencia_act where  fecha= "${fecha}" && idasigactivi= "${idasigactivi}" `, function(error,respuesta){
         
         if(error){
             callback(null,{

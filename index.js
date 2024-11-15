@@ -67,6 +67,7 @@ const mostEventosbio = require('./query/mostEventosbio');
 const mostFaltas = require('./query/mostFaltas');
 const mostTodoasistencia = require('./query/mostTodoasistencia');
 const mostTablerologistica = require('./query/mosttablerologistica');
+const mostTableromantt = require('./mantenimiento/mostTableromantt');
 
 const Folio = require('./query/folio');
 const Folioconsumible = require('./query/folioconsumible');
@@ -2281,6 +2282,42 @@ app.get('/Numsemanamenu', (req, res) => {
         else {
             res.status(200).json({
                 respuesta
+            })
+        }
+        //console.log(respuesta);
+    })
+})
+app.get('/tableromantt', (req, res) => {
+    const mes =10;
+    mostTableromantt(mes, function (error, respuesta) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            const confechacompromiso= respuesta.respuesta.length;
+            console.log(confechacompromiso);
+
+
+            let atendidos1= [];
+            respuesta.respuesta.forEach((datos) => {
+                if(datos.Fecha_Atencion<=datos.Fecha_Compromiso){
+                    atendidos1.push(datos);
+                }
+            })
+            const atendidos = atendidos1.length;
+            console.log(atendidos);
+
+            const promedioatendidos = (atendidos * 100) / confechacompromiso;
+            const promedioatendidostotal = Math.round((promedioatendidos + Number.EPSILON) * 100) / 100;
+            console.log(promedioatendidostotal);
+
+            res.status(200).json({
+                confechacompromiso,
+                atendidos,
+                promedioatendidostotal
             })
         }
         //console.log(respuesta);

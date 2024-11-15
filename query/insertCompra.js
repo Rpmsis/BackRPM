@@ -12,7 +12,7 @@ function insertar(folioActivo, fecha, proveedor, cantidad, preciounitario, costo
         }
         else {
             callback(null, {
-                mensaje: folioActivo//'Datos guardados con el id => ' + respuesta.insertId
+                mensaje: respuesta.insertId//'Datos guardados con el id => ' + respuesta.insertId
             })
 
         }

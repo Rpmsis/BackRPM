@@ -19,6 +19,7 @@ const insertarMaterial = require('./actividades/insertMaterial');
 const mostAsigdiario = require('./actividades/mostAsigdiario');
 const mostEficacia = require('./actividades/mostEficacia');
 const mostStatusresponsable = require('./actividades/mostStatusresponsable');
+const mostEvidencias = require('./actividades/mostEvidencias');
 
 
 //Hoja de asignacion
@@ -53,8 +54,13 @@ const mostTiempoactivi = require('./actividades/mostTiempoactivi');
 const editStatustiempo = require('./actividades/actualizarStatustiempo');
 const editStatuscontrol = require('./actividades/actualizarStatuscontrol');
 const editStatusactividadesT = require('./actividades/actualizarStatusactividades');
+const archivo_evidencias = require('./actividades/archivo_evidencias');
+const insertarEvidencia = require('./actividades/insertEvidencia');
 
 
+//Hoja graficas/grafico
+const mostActasignadasmes = require('./actividades/mostChartasignadas');
+const mostActterminadasmes = require('./actividades/mostChartterminadas');
 
 const verificar_Token = require('./middleware/Valida_Token');
 const app = express()
@@ -62,6 +68,8 @@ const port = 3005
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cors());
+app.use(fileUpload());
+app.use('/evidenciasact', express.static(path.join(__dirname, 'evidenciasact')));
 const io = require("socket.io")(3004, {
     cors: {
         methods: ["GET", "POST"]
@@ -460,10 +468,9 @@ app.get('/globalstatus', verificar_Token, (req, res) => {
 )
 app.get('/Statusresponsables', (req, res) => {
     const fecha = moment().format("YYYY-MM-DD");
-    const idactividad = req.query.idactividad;
     const idasigactivi = req.query.idasigactivi;
     //console.log("Datos obtenidos: ", idactividad, idasigactivi);
-    mostStatusresponsable(idactividad, fecha, idasigactivi, function (error, respuesta) {
+    mostStatusresponsable(fecha, idasigactivi, function (error, respuesta) {
         if (error) {
             console.log(error)
             res.status(404).json({
@@ -471,11 +478,33 @@ app.get('/Statusresponsables', (req, res) => {
             })
         }
         else {
+            console.log(respuesta);
             res.status(200).json({
                 respuesta
             })
         }
-        //console.log(respuesta);
+
+    })
+}
+)
+app.get('/evidencias', (req, res) => {
+    const fecha = moment().format("YYYY-MM-DD");
+    const idasigactivi = req.query.idasigactivi;
+    //console.log("Datos obtenidos: ", idactividad, idasigactivi);
+    mostEvidencias(fecha, idasigactivi, function (error, respuesta) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            console.log(respuesta);
+            res.status(200).json({
+                respuesta
+            })
+        }
+
     })
 }
 )
@@ -1014,7 +1043,7 @@ app.get('/Eficacia', verificar_Token, (req, res) => {
 /* Hoja de porusuario */
 app.get('/Controlresponsable', (req, res) => {
     const fecha = moment().format("YYYY-MM-DD");
-    console.log(req.query.responsable);
+    //console.log(req.query.responsable);
     mostControlresponsable(fecha, req.query.responsable, function (error, respuesta) {
         if (error) {
             console.log(error)
@@ -1034,7 +1063,7 @@ app.get('/Controlresponsable', (req, res) => {
             })
             // Convertir el objeto a un array
             const result = Object.values(uniqueControls);
-            console.log("result ",result);
+            //console.log("result ",result);
             res.status(200).json({
                 result
             })
@@ -1078,7 +1107,7 @@ app.post('/insertarTiempo', (req, res) => {
                                     return acumulador + filtro.timestandar;
                                 }, 0);
 
-                                console.log("Tiempo asignacion: ", timeasignacion);
+                                //console.log("Tiempo asignacion: ", timeasignacion);
                                 const kg = 0;
                                 editStatusasignacion(req.body.idasigactivi, req.body.status, timeasignacion, kg, function (error, respuesta) {
                                     if (error) {
@@ -1122,7 +1151,7 @@ app.put('/actualizarTimefin', (req, res) => {
     var timestandar = 0;
     //console.log(req.body);
     if (req.body.idcontrolactivi) {
-        console.log(req.body.idcontrolactivi);
+        //console.log(req.body.idcontrolactivi);
         mostTiempoactivi(function (error, respuestaTiempo) {
             if (error) {
                 console.log(error)
@@ -1149,7 +1178,7 @@ app.put('/actualizarTimefin', (req, res) => {
                 //console.log("Mintos de hora final ", minutosHasta)
                 var diferenciaMinutos = minutosHasta - minutosDesde;
                 timestandar = diferenciaMinutos;
-                console.log("Timestandar ", timestandar);
+                //console.log("Timestandar ", timestandar);
 
                 editStatustiempo(idTiempos, horafin, timestandar, status, motivo, function (error, respuestaStatustiempo) {
                     if (error) {
@@ -1162,9 +1191,9 @@ app.put('/actualizarTimefin', (req, res) => {
                         const totalTiempo = tiemponuevo.reduce((acumulador, filtro) => {
                             return acumulador + filtro.timestandar;
                         }, 0);
-                        console.log("Tiempos guardados= ", totalTiempo)
+                        //console.log("Tiempos guardados= ", totalTiempo)
                         const timecontrol = timestandar + totalTiempo;
-                        console.log("Tiempo total estandar= ", timecontrol)
+                        //console.log("Tiempo total estandar= ", timecontrol)
                         editStatuscontrol(idcontrol, timecontrol, status, function (error, respuestaStatuscontrol) {
                             if (error) {
                                 console.log(error)
@@ -1182,19 +1211,19 @@ app.put('/actualizarTimefin', (req, res) => {
                                     }
                                     else {
                                         const todosTerminado = respuestaTiempocontrol.respuesta.every(item => item.status === "TERMINADO");
-                                        console.log(todosTerminado);
+                                        //console.log(todosTerminado);
                                         // Generar la respuesta si existen datos sin el status TERMINADO es false y se envia un "sinrespuesta", en caso de todos esten en estatus TERMINADO envia un ...
 
                                         const resultado = todosTerminado ? "todosterminados" : "sinrespuesta";
                                         if (resultado === "sinrespuesta") {
-                                            console.log("No todos estan terminados ", resultado);
+                                            //console.log("No todos estan terminados ", resultado);
                                             //console.log(respuestaTiempocontrol.respuesta);
 
                                             const timeasignacion = respuestaTiempocontrol.respuesta.reduce((acumulador, filtro) => {
                                                 return acumulador + filtro.timestandar;
                                             }, 0);
 
-                                            console.log("Tiempo asignacion: ", timeasignacion);
+                                            //console.log("Tiempo asignacion: ", timeasignacion);
                                             const kg = 0;
                                             editStatusasignacion(req.body.idasigactivi, req.body.status, timeasignacion, kg, function (error, respuesta) {
                                                 if (error) {
@@ -1220,7 +1249,7 @@ app.put('/actualizarTimefin', (req, res) => {
                                                 return acumulador + filtro.timestandar;
                                             }, 0);
 
-                                            console.log("Tiempo asignacion: ", timeasignacion);
+                                            //console.log("Tiempo asignacion: ", timeasignacion);
                                             const kg = 0;
                                             const status = "TERMINADO"
                                             editStatusasignacion(req.body.idasigactivi, status, timeasignacion, kg, function (error, respuesta) {
@@ -1258,18 +1287,18 @@ app.put('/actualizarTimefin', (req, res) => {
                                                                         /* Calculo del tiempo esperado */
                                                                         const numpersonas = respuesta.respuesta[0].numpersonas;
                                                                         const tiempoesperado = tiemporecord / numpersonas;
-                                                                        console.log(tiempoesperado);
+                                                                        //console.log(tiempoesperado);
 
                                                                         /* Calculo de la eficacia de la actividad */
                                                                         const eficacia1 = (tiempoesperado / timeasignacion) * 100;
-                                                                        console.log(eficacia1);
+                                                                        //console.log(eficacia1);
 
                                                                         const eficacia = Math.round((eficacia1 + Number.EPSILON) * 100) / 100;
-                                                                        console.log(eficacia);
+                                                                        //console.log(eficacia);
 
                                                                         const eficienciasig1 = (tiemporecord / timeasignacion) * 100;
                                                                         const eficienciatotal = Math.round((eficienciasig1 + Number.EPSILON) * 100) / 100;
-                                                                        console.log(eficienciatotal);
+                                                                        //console.log(eficienciatotal);
 
 
                                                                         editEficacia(req.body.idasigactivi, eficacia, eficienciatotal, function (error, respuesta) {
@@ -1282,7 +1311,7 @@ app.put('/actualizarTimefin', (req, res) => {
                                                                             else {
                                                                                 io.emit('escuchando', respuesta.mensaje);
                                                                                 if (actividadRealizada.timestandar > timeasignacion) {
-                                                                                    console.log(timeasignacion);
+                                                                                    //console.log(timeasignacion);
                                                                                     if (timeasignacion <= 59) {
                                                                                         const horafinal = 0;
                                                                                         const eficienciafinal1 = 60 / timeasignacion;
@@ -1304,7 +1333,7 @@ app.put('/actualizarTimefin', (req, res) => {
                                                                                         })
                                                                                     }
                                                                                     else {
-                                                                                        console.log("convertir el tiempo asignacion en horas y minutos");
+                                                                                        //console.log("convertir el tiempo asignacion en horas y minutos");
                                                                                         const eficienciafinal1 = 60 / timeasignacion;
                                                                                         const eficienciafinal = Math.round((eficienciafinal1 + Number.EPSILON) * 100) / 100;
 
@@ -1372,12 +1401,12 @@ app.put('/actualizarTimefin', (req, res) => {
 app.put('/actualizarTimepausa', (req, res) => {
     const fecha = moment().format("YYYY-MM-DD");
     /* id, estatus, */
-    console.log(req.body);
+    //console.log(req.body);
     const horafin = moment().format('HH:mm');
     const status = "EN PAUSA";
     var timestandar = 0;
     if (req.body.idcontrolactivi && req.body.motivoselec && req.body.motivodes) {
-        console.log(req.body.idcontrolactivi);
+        //console.log(req.body.idcontrolactivi);
         const motivo = "Motivo: " + req.body.motivoselec + ", Descripción: " + req.body.motivodes;
         mostTiempoactivi(function (error, respuestaTiempo) {
             if (error) {
@@ -1397,15 +1426,15 @@ app.put('/actualizarTimepausa', (req, res) => {
                 var desde = hinicio.split(":");
                 var hasta = horafin.split(":");
                 var minutosDesde = parseInt(desde[0]) * 60 + parseInt(desde[1]);
-                console.log("Minutos hora inicio ", minutosDesde)
+                //console.log("Minutos hora inicio ", minutosDesde)
                 var minutosHasta = parseInt(hasta[0]) * 60 + parseInt(hasta[1]);
                 if (minutosHasta < minutosDesde) {
                     minutosHasta += 24 * 60;  // Sumamos 24 horas en minutos
                 }
-                console.log("Mintos de hora final ", minutosHasta)
+                //console.log("Mintos de hora final ", minutosHasta)
                 var diferenciaMinutos = minutosHasta - minutosDesde;
                 timestandar = diferenciaMinutos;
-                console.log("Timestandar ", timestandar);
+                //console.log("Timestandar ", timestandar);
 
                 editStatustiempo(idTiempos, horafin, timestandar, status, motivo, function (error, respuesta) {
                     if (error) {
@@ -1435,7 +1464,7 @@ app.put('/actualizarTimepausa', (req, res) => {
                                             return acumulador + filtro.timestandar;
                                         }, 0);
 
-                                        console.log("Tiempo asignacion: ", timeasignacion);
+                                        //console.log("Tiempo asignacion: ", timeasignacion);
                                         const kg = 0;
                                         editStatusasignacion(req.body.idasigactivi, status, timeasignacion, kg, function (error, respuesta) {
                                             if (error) {
@@ -1513,7 +1542,7 @@ app.post('/insertarTiempo', (req, res) => {
                                     return acumulador + filtro.timestandar;
                                 }, 0);
 
-                                console.log("Tiempo asignacion: ", timeasignacion);
+                                //console.log("Tiempo asignacion: ", timeasignacion);
                                 const kg = 0;
                                 editStatusasignacion(req.body.idasigactivi, req.body.status, timeasignacion, kg, function (error, respuesta) {
                                     if (error) {
@@ -1548,8 +1577,141 @@ app.post('/insertarTiempo', (req, res) => {
         });
     }
 })
+app.post('/guardarevidencia', (req, res) => {
+    const fecha = moment().format("YYYY-MM-DD");
+    const hora = moment().format('LTS');
+    //console.log(req.body);
+    //console.log(req.files);
+    //console.log(fecha, hora);
+    if (!req.files || Object.keys(req.files).length === 0 && req.body.idcontrolactivi && req.body.idasigactivi && req.body.responsable) {
+        // No se proporcionaron archivos
+        res.status(400).json({
+            mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
+        });
+    }
+    else {
+        //idcontrolactivi,idasigactivi,responsable,fecha, hora, archivo,
+        archivo_evidencias(req, res, (err, archivo) => {
+            if (err) {
+                console.log(err);
+                return res.status(500).send('Error al cargar el archivo');
+            } else {
+                //console.log("Respuesta img guardadas ", archivo);
+                insertarEvidencia(req.body.idcontrolactivi, req.body.idasigactivi, req.body.responsable, fecha, hora, archivo, function (error, respuesta) {
+                    if (error) {
+                        console.log(error)
+                        res.status(404).json({
+                            mensaje: respuesta.mensaje
+                        })
+                    }
+                    else {
+                        io.emit('newevidencia', req.body.idasigactivi);
+                        res.status(200).json({
+                            mensaje: respuesta.mensaje
+                        })
+                    }
+                    //console.log(respuesta);
+                })
+            }
+        })
+    }
+})
 /* Fin de hoja porusuario */
 
+
+
+/* Hoja de grafica/grafica */
+app.get('/asignadasmes', verificar_Token, (req, res) => {
+    const usuario = req.usuario;
+    const responsable = usuario.nombre;
+    //console.log(responsable);
+    mostActasignadasmes(responsable, function (error, respuesta) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            console.log(respuesta.respuesta);
+            const masignadas = respuesta.respuesta.map((filtro) => [
+                filtro.mes
+            ]);
+            //console.log(casignadas);
+            const mesobj = masignadas.flat();
+            //console.log(mes);
+            let mes = [];
+            mesobj.forEach((datos)=>{
+                moment.locale('es');
+                const mesnum = datos-1;
+                const mesnombre = moment().month(mesnum).format('MMMM');
+                mes.push(mesnombre);
+            });
+            //console.log(mes);
+            
+
+            const casignadas = respuesta.respuesta.map((filtro) => [
+                filtro.Cantidad
+            ]);
+            //console.log(casignadas);
+            const asignados = casignadas.flat();
+            //console.log(asignados);
+
+            res.status(200).json({
+                asignados,
+                mes
+            })
+        }
+        //console.log(respuesta);
+    })
+}
+)
+app.get('/terminadasmes', verificar_Token, (req, res) => {
+    const usuario = req.usuario;
+    const responsable = usuario.nombre;
+    //console.log(responsable);
+    mostActterminadasmes(responsable, function (error, respuesta) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            console.log(respuesta.respuesta);
+            const mterminadas = respuesta.respuesta.map((filtro) => [
+                filtro.mes
+            ]);
+            //console.log(casignadas);
+            const mesobj = mterminadas.flat();
+            //console.log(mes);
+            let mes = [];
+            mesobj.forEach((datos)=>{
+                moment.locale('es');
+                const mesnum = datos-1;
+                const mesnombre = moment().month(mesnum).format('MMMM');
+                mes.push(mesnombre);
+            });
+            //console.log(mes);
+            
+
+            const cterminadas = respuesta.respuesta.map((filtro) => [
+                filtro.Cantidad
+            ]);
+            //console.log(casignadas);
+            const terminadas = cterminadas.flat();
+            //console.log(asignados);
+
+            res.status(200).json({
+                terminadas,
+                mes
+            })
+        }
+        //console.log(respuesta);
+    })
+}
+)
+/* Fin hoja de grafica/grafica */
 
 
 app.listen(port, () => {
