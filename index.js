@@ -2287,9 +2287,9 @@ app.get('/Numsemanamenu', (req, res) => {
         //console.log(respuesta);
     })
 })
-app.get('/tableromantt', (req, res) => {
-    const mes =10;
-    mostTableromantt(mes, function (error, respuesta) {
+app.get('/tableromantt/:mes', (req, res) => {
+    console.log(req.params.mes)
+    mostTableromantt(req.params.mes, function (error, respuesta) {
         if (error) {
             console.log(error)
             res.status(404).json({
@@ -2298,7 +2298,7 @@ app.get('/tableromantt', (req, res) => {
         }
         else {
             const confechacompromiso= respuesta.respuesta.length;
-            console.log(confechacompromiso);
+            //console.log(confechacompromiso);
 
 
             let atendidos1= [];
@@ -2308,11 +2308,11 @@ app.get('/tableromantt', (req, res) => {
                 }
             })
             const atendidos = atendidos1.length;
-            console.log(atendidos);
+            //console.log(atendidos);
 
             const promedioatendidos = (atendidos * 100) / confechacompromiso;
             const promedioatendidostotal = Math.round((promedioatendidos + Number.EPSILON) * 100) / 100;
-            console.log(promedioatendidostotal);
+            //console.log(promedioatendidostotal);
 
             res.status(200).json({
                 confechacompromiso,
