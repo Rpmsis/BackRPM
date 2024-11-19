@@ -1,8 +1,8 @@
 const mysql = require('../database/indexP');
 
-function mostrar(responsable, callback) {
+function mostrar(responsable,empresa, callback) {
     mysql.query(`SELECT  MONTH(fechainicio) AS mes, COUNT(*) as Cantidad
-                FROM asigactivi where asigactivi.status="TERMINADO" && asigactivi.responsable="${responsable}"
+                FROM asigactivi where asigactivi.status="TERMINADO" && asigactivi.responsable="${responsable}" && asigactivi.empresa="${empresa}"
                 GROUP BY MONTH(fechainicio)
                 HAVING COUNT(*) > 1;`, function (error, respuesta) {
 

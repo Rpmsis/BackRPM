@@ -44,6 +44,9 @@ const mostEficienciakg = require('./actividades/mostEficienciakg');
 const editStatusasignacion = require('./actividades/actualizarStatusasignacion');
 const editEficacia = require('./actividades/actualizarEficaciaasignacion');
 const editStatusactividadesKg = require('./actividades/actualizarStatusactividadeskg');
+/* FUNCION ACTUALIZADA CON LOS REQUERIMIENTOS DE ING FELIPE EL 19-11-2024 -----------------------------------------*/
+const mostAsignaciones = require('./actividades/mostAsignaciones');
+const editControlkg = require('./actividades/actualizarControlkg');
 
 //Hoja porusuario
 const mostControlresponsable = require('./actividades/mostControlresponsable');
@@ -56,11 +59,15 @@ const editStatuscontrol = require('./actividades/actualizarStatuscontrol');
 const editStatusactividadesT = require('./actividades/actualizarStatusactividades');
 const archivo_evidencias = require('./actividades/archivo_evidencias');
 const insertarEvidencia = require('./actividades/insertEvidencia');
+/* FUNCION ACTUALIZADA CON LOS REQUERIMIENTOS DE ING FELIPE EL 19-11-2024 -----------------------------------------*/
+const mostVerificarstatus = require('./actividades/mostControlverificarstatus');
 
 
 //Hoja graficas/grafico
 const mostActasignadasmes = require('./actividades/mostChartasignadas');
 const mostActterminadasmes = require('./actividades/mostChartterminadas');
+const mostAsigactivi_mes = require('./actividades/mostChartasigactivi_mes');
+const mostControl_mes = require('./actividades/mostChartcontrol_mes');
 
 const verificar_Token = require('./middleware/Valida_Token');
 const app = express()
@@ -478,7 +485,7 @@ app.get('/Statusresponsables', (req, res) => {
             })
         }
         else {
-            console.log(respuesta);
+            //console.log(respuesta);
             res.status(200).json({
                 respuesta
             })
@@ -661,7 +668,113 @@ app.get('/Controlasignados/:id', (req, res) => {
         //console.log(respuesta);
     })
 })
+
+/* FUNCION ACTUALIZADA CON LOS REQUERIMIENTOS DE ING FELIPE EL 19-11-2024--------------------------------------------- */
 app.post('/insertarControl', (req, res) => {
+    const fecha = moment().format("YYYY-MM-DD");
+    if (req.body.idactividades && fecha && req.body.responsables && req.body.idasigactivi && req.body.idchecksupervisor) {
+        const timestandar = 0;
+        const kg = 0;
+        const lon = 0;
+        const lat = 0;
+        const status = "INICIAR";
+        //console.log(req.body);
+        mostControlasignados(req.body.idchecksupervisor, fecha, function (error, respuesta) {
+            if (error) {
+                console.log(error)
+                res.status(404).json({
+                    mensaje: respuesta.mensaje
+
+                })
+            }
+            else {
+                console.log(req.body)
+                //console.log(respuesta.respuesta)
+                const datosFil = respuesta.respuesta.find((filtro) => filtro.idactividades === req.body.idactividades && filtro.responsables=== req.body.responsables);
+                console.log(datosFil);
+                if (datosFil) {
+                    console.log("El responsable ya esta asignado en la actividad");
+                    res.status(400).json({
+                        mensaje: "El responsable ya esta asignado en la actividad"
+                    });
+
+                } else {
+                    //console.log(req.body.idasigactivi,);
+                    mostIdusuario(function (error, respuesta) {
+                        if (error) {
+                            console.log(error)
+                            res.status(404).json({
+                                mensaje: respuesta.mensaje
+                            })
+                        }
+                        else {
+                            console.log(req.body.responsables);
+                            const searchidcheck = respuesta.respuesta.find(filtro => filtro.NombreCompleto === req.body.responsables);
+                            console.log(searchidcheck);
+                            const idcheck = searchidcheck.idCheck;
+
+                            console.log(idcheck);
+
+
+                            insertarControlactivi(req.body.idactividades, fecha, req.body.responsables, timestandar, kg, lon, lat, status, req.body.idasigactivi, idcheck, req.body.idchecksupervisor, function (error, respuesta) {
+                                if (error) {
+                                    console.log(error)
+                                    res.status(404).json({
+                                        mensaje: respuesta.mensaje
+                                    })
+                                }
+                                else {
+                                    mostNumpersonas(req.body.idasigactivi, function (error, respuesta) {
+                                        if (error) {
+                                            console.log(error)
+                                            res.status(404).json({
+                                                mensaje: respuesta.mensaje
+                                            })
+                                        }
+                                        else {
+                                            console.log(respuesta.respuesta[0].numpersonas);
+                                            const personastotales = respuesta.respuesta[0].numpersonas + 1;
+                                            console.log(personastotales);
+                                            editNumpersonas(req.body.idasigactivi, personastotales, function (error, respuesta) {
+                                                if (error) {
+                                                    console.log(error)
+                                                    res.status(404).json({
+                                                        mensaje: respuesta.mensaje
+                                                    })
+                                                }
+                                                else {
+                                                    io.emit('escuchando', respuesta.mensaje);
+                                                    res.status(200).json({
+                                                        mensaje: respuesta.mensaje
+                                                    })
+                                                }
+                                                //console.log(respuesta);
+                                            })
+                                        }
+                                        //console.log(respuesta);
+                                    })
+
+                                }
+                                //console.log(respuesta);
+                            })
+
+                        }
+                        //console.log(respuesta);
+                    })
+                }
+            }
+            //console.log(respuesta);
+        })
+
+    }
+    else {
+        console.log("Existen datos vacíos");
+        res.status(400).json({
+            mensaje: "Existen datos vacíos"
+        });
+    }
+})
+/* app.post('/insertarControl', (req, res) => {
     const fecha = moment().format("YYYY-MM-DD");
     if (req.body.idactividades && fecha && req.body.responsables && req.body.idasigactivi && req.body.idchecksupervisor) {
         const timestandar = 0;
@@ -764,7 +877,7 @@ app.post('/insertarControl', (req, res) => {
             mensaje: "Existen datos vacíos"
         });
     }
-})
+}) */
 app.get('/buscar_Supervisor/:id', async (req, res) => {
     const fecha = moment().format("YYYY-MM-DD");
     var idcheck = req.params.id
@@ -876,6 +989,7 @@ app.get('/EficienciaKg', verificar_Token, (req, res) => {
     })
 }
 )
+/* FUNCION ACTUALIZADA CON LOS REQUERIMIENTOS DE ING FELIPE EL 19-11-2024 -----------------------------------------*/
 app.put('/actualizarAsignacionkg', (req, res) => {
     const fecha = moment().format("YYYY-MM-DD");
     /* idasigactivi, status, timestandar, kg */
@@ -889,15 +1003,13 @@ app.put('/actualizarAsignacionkg', (req, res) => {
                 })
             }
             else {
-                console.log(req.body);
+                //console.log(respuesta.respuesta);
                 const idasigactivi = parseInt(req.body.idasigactivi);
                 const asignacion = respuesta.respuesta.find(filtro => filtro.idasigactivi === idasigactivi);
                 //console.log(asignacion);
                 const idactividades = asignacion.idactividades;
-                const kilos = parseInt(req.body.kg);
-                const actividadkg = parseInt(asignacion.kg);
                 const timecontrol = parseInt(asignacion.timeControl);
-                editStatusasignacion(req.body.idasigactivi, status, timecontrol, kilos, function (error, respuesta) {
+                mostAsignaciones(idasigactivi, function (error, respuesta) {
                     if (error) {
                         console.log(error)
                         res.status(404).json({
@@ -905,69 +1017,38 @@ app.put('/actualizarAsignacionkg', (req, res) => {
                         })
                     }
                     else {
-                        io.emit('escuchando', respuesta);
-                        mostNumpersonas(req.body.idasigactivi, function (error, respuesta) {
-                            if (error) {
-                                console.log(error)
-                                res.status(404).json({
-                                    mensaje: respuesta.mensaje
-                                })
-                            }
-                            else {
-                                const tiemporecord = asignacion.timestandar;
-                                const cargateorica = (asignacion.kg / tiemporecord) * timecontrol;
-
-                                /* Calculo del tiempo esperado */
-                                const numpersonas = respuesta.respuesta[0].numpersonas;
-                                const resesperados = cargateorica * numpersonas;
-                                console.log(resesperados);
-
-                                const eficacia1 = (kilos / resesperados) * 100;
-                                console.log(eficacia1);
-
-                                const eficacia = Math.round((eficacia1 + Number.EPSILON) * 100) / 100;
-                                console.log(eficacia);
-
-                                const porhora = (kilos / timecontrol) * 60;
-                                const eficienciasig1 = (porhora * 100) / asignacion.kg;
-                                const eficienciatotal = Math.round((eficienciasig1 + Number.EPSILON) * 100) / 100;
-                                console.log(eficienciatotal);
-
-                                editEficacia(req.body.idasigactivi, eficacia, eficienciatotal, function (error, respuesta) {
-                                    if (error) {
-                                        console.log(error)
-                                        res.status(404).json({
-                                            mensaje: respuesta.mensaje
-                                        })
-                                    }
-                                    else {
-                                        io.emit('escuchando', respuesta.mensaje);
-                                        if (timecontrol <= asignacion.timestandar && kilos > asignacion.kg && eficacia > 100) {
-                                            const eficiencia1 = (60 * kilos) / timecontrol;
-                                            const nuevaeficiencia = Math.round((eficiencia1 + Number.EPSILON) * 100) / 100;
-                                            console.log(nuevaeficiencia);
-                                            if (timecontrol <= 59) {
-                                                const horas = 0;
-                                                editStatusactividadesKg(idactividades, kilos, horas, timecontrol, timecontrol, nuevaeficiencia, function (error, respuesta) {
-                                                    if (error) {
-                                                        console.log(error)
-                                                        res.status(404).json({
-                                                            mensaje: respuesta.mensaje
-                                                        })
-                                                    }
-                                                    else {
-                                                        io.emit('escuchando', respuesta.mensaje);
-                                                        res.status(200).json({
-                                                            mensaje: respuesta.mensaje
-                                                        })
-                                                    }
-                                                    console.log(respuesta);
+                        console.log(respuesta.respuesta[0].kg);
+                        const totaldatos = respuesta.respuesta.length - 1;
+                        const kilos = parseFloat(req.body.kg) + parseFloat(respuesta.respuesta[0].kg);
+                        respuesta.respuesta.forEach((datos, index) => {
+                            editControlkg(datos.idcontrolactivi, kilos, function (error, respuesta) {
+                                if (error) {
+                                    console.log(error)
+                                    res.status(404).json({
+                                        mensaje: respuesta.mensaje
+                                    })
+                                }
+                                else {
+                                    if (totaldatos === index) {
+                                        editStatusasignacion(req.body.idasigactivi, status, timecontrol, kilos, function (error, respuesta) {
+                                            if (error) {
+                                                console.log(error)
+                                                res.status(404).json({
+                                                    mensaje: respuesta.mensaje
                                                 })
                                             }
                                             else {
-                                                const horas = Math.floor(timecontrol / 60);
-                                                const minutos = timecontrol % 60;
-                                                editStatusactividadesKg(idactividades, kilos, horas, minutos, timecontrol, nuevaeficiencia, function (error, respuesta) {
+                                                io.emit('escuchando', respuesta);
+
+                                                const eficacia = 0;
+                                                console.log(eficacia);
+
+                                                const porhora = (kilos / timecontrol) * 60;
+                                                const eficienciasig1 = (porhora * 100) / asignacion.kg;
+                                                const eficienciatotal = Math.round((eficienciasig1 + Number.EPSILON) * 100) / 100;
+                                                console.log(eficienciatotal);
+
+                                                editEficacia(req.body.idasigactivi, eficacia, eficienciatotal, function (error, respuesta) {
                                                     if (error) {
                                                         console.log(error)
                                                         res.status(404).json({
@@ -976,28 +1057,49 @@ app.put('/actualizarAsignacionkg', (req, res) => {
                                                     }
                                                     else {
                                                         io.emit('escuchando', respuesta.mensaje);
-                                                        res.status(200).json({
-                                                            mensaje: respuesta.mensaje
-                                                        })
+                                                        if (eficienciatotal >= 100) {
+                                                            const hora = 1;
+                                                            const minutos = 0;
+                                                            const timecontrol = 60;
+                                                            const kilos = Math.round((porhora + Number.EPSILON) * 100) / 100;
+                                                            console.log(kilos);
+                                                            editStatusactividadesKg(idactividades, kilos, hora, minutos, timecontrol, eficienciatotal, function (error, respuesta) {
+                                                                if (error) {
+                                                                    console.log(error)
+                                                                    res.status(404).json({
+                                                                        mensaje: respuesta.mensaje
+                                                                    })
+                                                                }
+                                                                else {
+                                                                    io.emit('escuchando', respuesta.mensaje);
+                                                                    res.status(200).json({
+                                                                        mensaje: respuesta.mensaje
+                                                                    })
+                                                                }
+                                                                console.log(respuesta);
+                                                            })
+                                                        }
+                                                        else {
+                                                            res.status(200).json({
+                                                                mensaje: "Actividad terminada"
+                                                            });
+                                                        }
                                                     }
-                                                    console.log(respuesta);
                                                 })
+
+
                                             }
-                                        }
-                                        else {
-                                            res.status(200).json({
-                                                mensaje: "Actividad terminada"
-                                            });
-                                        }
+                                            //console.log(respuesta);
+                                        })
                                     }
-                                })
-                            }
-                        }
-                        )
+                                }
+                            })
+                        });
 
                     }
-                    //console.log(respuesta);
                 })
+
+
             }
             //console.log(respuesta);
         })
@@ -1070,77 +1172,6 @@ app.get('/Controlresponsable', (req, res) => {
         }
         //console.log(respuesta);
     })
-})
-app.post('/insertarTiempo', (req, res) => {
-    const fecha = moment().format("YYYY-MM-DD");
-    const horainicio = moment().format('HH:mm');
-    const horafin = "NA";
-    const timestandar = 0;
-    const status = "EN PROCESO";
-    const motivo = "NA"
-    if (fecha && horainicio && req.body.idcontrolactivi) {
-        insertarTiempos(fecha, horainicio, horafin, timestandar, status, motivo, req.body.idcontrolactivi, function (error, respuestaTiempo) {
-            if (error) {
-                console.log(error)
-                res.status(404).json({
-                    mensaje: respuesta.mensaje
-                })
-            }
-            else {
-                editControlstatus(req.body.idcontrolactivi, status, function (error, respuesta) {
-                    if (error) {
-                        console.log(error)
-                        res.status(404).json({
-                            mensaje: respuesta.mensaje
-                        })
-                    }
-                    else {
-                        mostTiempocontrol(req.body.idactividades, fecha, function (error, respuestaTiempocontrol) {
-                            if (error) {
-                                console.log(error)
-                                res.status(404).json({
-                                    mensaje: respuestaTiempocontrol.mensaje
-                                })
-                            }
-                            else {
-                                const timeasignacion = respuestaTiempocontrol.respuesta.reduce((acumulador, filtro) => {
-                                    return acumulador + filtro.timestandar;
-                                }, 0);
-
-                                //console.log("Tiempo asignacion: ", timeasignacion);
-                                const kg = 0;
-                                editStatusasignacion(req.body.idasigactivi, req.body.status, timeasignacion, kg, function (error, respuesta) {
-                                    if (error) {
-                                        console.log(error)
-                                        res.status(404).json({
-                                            mensaje: respuesta.mensaje
-                                        })
-                                    }
-                                    else {
-                                        io.emit('escuchando', respuesta);
-                                        res.status(200).json({
-                                            mensaje: respuestaTiempo.mensaje
-                                        })
-                                    }
-                                })
-                            }
-                        })
-                        /* res.status(200).json({
-                            mensaje: respuestaTiempo.mensaje
-                        }) */
-                    }
-                    console.log(respuesta);
-                })
-            }
-            //console.log(respuesta);
-        })
-    }
-    else {
-        console.log("Existen datos vacíos");
-        res.status(400).json({
-            mensaje: "Existen datos vacíos"
-        });
-    }
 })
 app.put('/actualizarTimefin', (req, res) => {
     const fecha = moment().format("YYYY-MM-DD");
@@ -1506,76 +1537,99 @@ app.put('/actualizarTimepausa', (req, res) => {
         })
     }
 })
+/* FUNCION ACTUALIZADA CON LOS REQUERIMIENTOS DE ING FELIPE EL 19-11-2024 -----------------------------------------*/
 app.post('/insertarTiempo', (req, res) => {
     const fecha = moment().format("YYYY-MM-DD");
     const horainicio = moment().format('HH:mm');
     const horafin = "NA";
     const timestandar = 0;
     const status = "EN PROCESO";
-    const motivo = "NA"
-    if (fecha && horainicio && req.body.idcontrolactivi) {
-        insertarTiempos(fecha, horainicio, horafin, timestandar, status, motivo, req.body.idcontrolactivi, function (error, respuestaTiempo) {
-            if (error) {
-                console.log(error)
-                res.status(404).json({
-                    mensaje: respuesta.mensaje
-                })
+    const motivo = "NA";
+
+    //console.log(req.body);
+    mostVerificarstatus(req.body.responsables, fecha, function (error, respuesta) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            //console.log(respuesta.respuesta);
+            if (respuesta.respuesta && respuesta.respuesta.length > 0 && respuesta.respuesta[0].idcontrolactivi != req.body.idcontrolactivi) {
+                console.log("Finaliza la actividad que tienes pendiente!!");
+                res.status(400).json({
+                    mensaje: "Finaliza la actividad que tienes pendiente!!"
+                });
             }
             else {
-                editControlstatus(req.body.idcontrolactivi, status, function (error, respuesta) {
-                    if (error) {
-                        console.log(error)
-                        res.status(404).json({
-                            mensaje: respuesta.mensaje
-                        })
-                    }
-                    else {
-                        mostTiempocontrol(req.body.idactividades, fecha, function (error, respuestaTiempocontrol) {
-                            if (error) {
-                                console.log(error)
-                                res.status(404).json({
-                                    mensaje: respuestaTiempocontrol.mensaje
-                                })
-                            }
-                            else {
-                                const timeasignacion = respuestaTiempocontrol.respuesta.reduce((acumulador, filtro) => {
-                                    return acumulador + filtro.timestandar;
-                                }, 0);
+                console.log("Puedes comenzar una actividad")
 
-                                //console.log("Tiempo asignacion: ", timeasignacion);
-                                const kg = 0;
-                                editStatusasignacion(req.body.idasigactivi, req.body.status, timeasignacion, kg, function (error, respuesta) {
-                                    if (error) {
-                                        console.log(error)
-                                        res.status(404).json({
-                                            mensaje: respuesta.mensaje
-                                        })
-                                    }
-                                    else {
-                                        io.emit('escuchando', respuesta);
-                                        res.status(200).json({
-                                            mensaje: respuestaTiempo.mensaje
-                                        })
-                                    }
-                                })
-                            }
-                        })
-                        /* res.status(200).json({
-                            mensaje: respuestaTiempo.mensaje
-                        }) */
-                    }
-                    console.log(respuesta);
-                })
+                if (fecha && horainicio && req.body.idcontrolactivi) {
+                    insertarTiempos(fecha, horainicio, horafin, timestandar, status, motivo, req.body.idcontrolactivi, function (error, respuestaTiempo) {
+                        if (error) {
+                            console.log(error)
+                            res.status(404).json({
+                                mensaje: respuesta.mensaje
+                            })
+                        }
+                        else {
+                            editControlstatus(req.body.idcontrolactivi, status, function (error, respuesta) {
+                                if (error) {
+                                    console.log(error)
+                                    res.status(404).json({
+                                        mensaje: respuesta.mensaje
+                                    })
+                                }
+                                else {
+                                    mostTiempocontrol(req.body.idactividades, fecha, function (error, respuestaTiempocontrol) {
+                                        if (error) {
+                                            console.log(error)
+                                            res.status(404).json({
+                                                mensaje: respuestaTiempocontrol.mensaje
+                                            })
+                                        }
+                                        else {
+                                            const timeasignacion = respuestaTiempocontrol.respuesta.reduce((acumulador, filtro) => {
+                                                return acumulador + filtro.timestandar;
+                                            }, 0);
+
+                                            //console.log("Tiempo asignacion: ", timeasignacion);
+                                            const kilos = 0;
+                                            editStatusasignacion(req.body.idasigactivi, req.body.status, timeasignacion, kilos, function (error, respuesta) {
+                                                if (error) {
+                                                    console.log(error)
+                                                    res.status(404).json({
+                                                        mensaje: respuesta.mensaje
+                                                    })
+                                                }
+                                                else {
+                                                    io.emit('escuchando', respuesta);
+                                                    res.status(200).json({
+                                                        mensaje: respuestaTiempo.mensaje
+                                                    })
+                                                }
+                                            })
+
+                                        }
+                                    })
+                                }
+                                console.log(respuesta);
+                            })
+                        }
+                        //console.log(respuesta);
+                    })
+                }
+                else {
+                    console.log("Existen datos vacíos");
+                    res.status(400).json({
+                        mensaje: "Existen datos vacíos"
+                    });
+                }
             }
-            //console.log(respuesta);
-        })
-    }
-    else {
-        console.log("Existen datos vacíos");
-        res.status(400).json({
-            mensaje: "Existen datos vacíos"
-        });
-    }
+        }
+    })
+
 })
 app.post('/guardarevidencia', (req, res) => {
     const fecha = moment().format("YYYY-MM-DD");
@@ -1621,11 +1675,12 @@ app.post('/guardarevidencia', (req, res) => {
 
 
 /* Hoja de grafica/grafica */
-app.get('/asignadasmes', verificar_Token, (req, res) => {
+app.get('/asignadasmes/:empresa', verificar_Token, (req, res) => {
     const usuario = req.usuario;
     const responsable = usuario.nombre;
     //console.log(responsable);
-    mostActasignadasmes(responsable, function (error, respuesta) {
+    //console.log("asignadasmes",req.params.empresa);
+    mostActasignadasmes(responsable, req.params.empresa, function (error, respuesta) {
         if (error) {
             console.log(error)
             res.status(404).json({
@@ -1633,7 +1688,7 @@ app.get('/asignadasmes', verificar_Token, (req, res) => {
             })
         }
         else {
-            console.log(respuesta.respuesta);
+            //console.log(respuesta.respuesta);
             const masignadas = respuesta.respuesta.map((filtro) => [
                 filtro.mes
             ]);
@@ -1641,14 +1696,14 @@ app.get('/asignadasmes', verificar_Token, (req, res) => {
             const mesobj = masignadas.flat();
             //console.log(mes);
             let mes = [];
-            mesobj.forEach((datos)=>{
+            mesobj.forEach((datos) => {
                 moment.locale('es');
-                const mesnum = datos-1;
+                const mesnum = datos - 1;
                 const mesnombre = moment().month(mesnum).format('MMMM');
                 mes.push(mesnombre);
             });
             //console.log(mes);
-            
+
 
             const casignadas = respuesta.respuesta.map((filtro) => [
                 filtro.Cantidad
@@ -1666,11 +1721,12 @@ app.get('/asignadasmes', verificar_Token, (req, res) => {
     })
 }
 )
-app.get('/terminadasmes', verificar_Token, (req, res) => {
+app.get('/terminadasmes/:empresa', verificar_Token, (req, res) => {
     const usuario = req.usuario;
     const responsable = usuario.nombre;
     //console.log(responsable);
-    mostActterminadasmes(responsable, function (error, respuesta) {
+    //console.log("terminadasmes ",req.params.empresa);
+    mostActterminadasmes(responsable, req.params.empresa, function (error, respuesta) {
         if (error) {
             console.log(error)
             res.status(404).json({
@@ -1678,7 +1734,7 @@ app.get('/terminadasmes', verificar_Token, (req, res) => {
             })
         }
         else {
-            console.log(respuesta.respuesta);
+            //console.log(respuesta.respuesta);
             const mterminadas = respuesta.respuesta.map((filtro) => [
                 filtro.mes
             ]);
@@ -1686,14 +1742,14 @@ app.get('/terminadasmes', verificar_Token, (req, res) => {
             const mesobj = mterminadas.flat();
             //console.log(mes);
             let mes = [];
-            mesobj.forEach((datos)=>{
+            mesobj.forEach((datos) => {
                 moment.locale('es');
-                const mesnum = datos-1;
+                const mesnum = datos - 1;
                 const mesnombre = moment().month(mesnum).format('MMMM');
                 mes.push(mesnombre);
             });
             //console.log(mes);
-            
+
 
             const cterminadas = respuesta.respuesta.map((filtro) => [
                 filtro.Cantidad
@@ -1711,6 +1767,75 @@ app.get('/terminadasmes', verificar_Token, (req, res) => {
     })
 }
 )
+app.get('/asigactivimes', verificar_Token, (req, res) => {
+    /* responsable,idactividad,mes, */
+    const usuario = req.usuario;
+    const responsable = usuario.nombre;
+
+    const idactividad = req.query.id;
+    const mes = req.query.mes;
+    //console.log(idactividad);
+    mostAsigactivi_mes(responsable, idactividad, mes, function (error, respuesta) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            //console.log(respuesta.respuesta);
+            let tiempo = respuesta.respuesta[0].tiempo_total;
+            let kilos = respuesta.respuesta[0].kg_total;
+
+            //console.log(tiempo);
+            //console.log(kilos);
+            const horas = Math.floor(tiempo / 60);
+            const minutos = tiempo % 60;
+            res.status(200).json({
+                horas,
+                minutos,
+                kilos
+            })
+        }
+        //console.log(respuesta);
+    })
+}
+)
+app.get('/controlmes', (req, res) => {
+    const idactividad = req.query.id;
+    const mes = req.query.mes;
+    mostControl_mes(idactividad, mes, function (error, respuesta) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            console.log(respuesta.respuesta);
+            let tiempo = 0;
+            let kilos = 0;
+            //console.log(todos);
+            /* respuesta.respuesta.forEach((datos) => {
+                tiempo = datos.timeControl + tiempo;
+                kilos = datos.kgControl + kilos;
+            });
+
+            //console.log(tiempo);
+            //console.log(kilos);
+            const horas = Math.floor(tiempo / 60);
+            const minutos = tiempo % 60;
+            res.status(200).json({
+                horas,
+                minutos,
+                kilos
+            })  */
+        }
+        //console.log(respuesta);
+    })
+}
+)
+
 /* Fin hoja de grafica/grafica */
 
 
