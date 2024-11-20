@@ -28,7 +28,9 @@ const insertarAsigactivi = require('./actividades/insertAsigactivi');
 const editAsignacion = require('./actividades/actualizarAsigactivi');
 
 //Hoja de control
+/* MODIFICADO CAMBIOS DEL 2024-11-20 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
 const mostControlasignados = require('./actividades/mostControlasig');
+
 const mostIdusuario = require('./actividades/mostIdusuario');
 const insertarControlactivi = require('./actividades/insertControlactivi');
 const mostNumpersonas = require('./actividades/mostAsigactivinumpersonas');
@@ -44,12 +46,13 @@ const mostEficienciakg = require('./actividades/mostEficienciakg');
 const editStatusasignacion = require('./actividades/actualizarStatusasignacion');
 const editEficacia = require('./actividades/actualizarEficaciaasignacion');
 const editStatusactividadesKg = require('./actividades/actualizarStatusactividadeskg');
-/* FUNCION ACTUALIZADA CON LOS REQUERIMIENTOS DE ING FELIPE EL 19-11-2024 -----------------------------------------*/
 const mostAsignaciones = require('./actividades/mostAsignaciones');
 const editControlkg = require('./actividades/actualizarControlkg');
 
 //Hoja porusuario
+/* MODIFICADO CAMBIOS DEL 2024-11-20 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
 const mostControlresponsable = require('./actividades/mostControlresponsable');
+
 const insertarTiempos = require('./actividades/insertTiempos');
 const editControlstatus = require('./actividades/actualizarControlstatus');
 const mostTiempocontrol = require('./actividades/mostTiempocontrol');
@@ -59,7 +62,7 @@ const editStatuscontrol = require('./actividades/actualizarStatuscontrol');
 const editStatusactividadesT = require('./actividades/actualizarStatusactividades');
 const archivo_evidencias = require('./actividades/archivo_evidencias');
 const insertarEvidencia = require('./actividades/insertEvidencia');
-/* FUNCION ACTUALIZADA CON LOS REQUERIMIENTOS DE ING FELIPE EL 19-11-2024 -----------------------------------------*/
+/* MODIFICADO CAMBIOS DEL 2024-11-20 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
 const mostVerificarstatus = require('./actividades/mostControlverificarstatus');
 
 
@@ -668,8 +671,6 @@ app.get('/Controlasignados/:id', (req, res) => {
         //console.log(respuesta);
     })
 })
-
-/* FUNCION ACTUALIZADA CON LOS REQUERIMIENTOS DE ING FELIPE EL 19-11-2024--------------------------------------------- */
 app.post('/insertarControl', (req, res) => {
     const fecha = moment().format("YYYY-MM-DD");
     if (req.body.idactividades && fecha && req.body.responsables && req.body.idasigactivi && req.body.idchecksupervisor) {
@@ -690,7 +691,7 @@ app.post('/insertarControl', (req, res) => {
             else {
                 console.log(req.body)
                 //console.log(respuesta.respuesta)
-                const datosFil = respuesta.respuesta.find((filtro) => filtro.idactividades === req.body.idactividades && filtro.responsables=== req.body.responsables);
+                const datosFil = respuesta.respuesta.find((filtro) => filtro.idactividades === req.body.idactividades && filtro.responsables === req.body.responsables);
                 console.log(datosFil);
                 if (datosFil) {
                     console.log("El responsable ya esta asignado en la actividad");
@@ -989,7 +990,6 @@ app.get('/EficienciaKg', verificar_Token, (req, res) => {
     })
 }
 )
-/* FUNCION ACTUALIZADA CON LOS REQUERIMIENTOS DE ING FELIPE EL 19-11-2024 -----------------------------------------*/
 app.put('/actualizarAsignacionkg', (req, res) => {
     const fecha = moment().format("YYYY-MM-DD");
     /* idasigactivi, status, timestandar, kg */
@@ -1429,6 +1429,7 @@ app.put('/actualizarTimefin', (req, res) => {
         })
     }
 })
+/* MODIFICADO CAMBIOS DEL 2024-11-20 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
 app.put('/actualizarTimepausa', (req, res) => {
     const fecha = moment().format("YYYY-MM-DD");
     /* id, estatus, */
@@ -1436,6 +1437,7 @@ app.put('/actualizarTimepausa', (req, res) => {
     const horafin = moment().format('HH:mm');
     const status = "EN PAUSA";
     var timestandar = 0;
+
     if (req.body.idcontrolactivi && req.body.motivoselec && req.body.motivodes) {
         //console.log(req.body.idcontrolactivi);
         const motivo = "Motivo: " + req.body.motivoselec + ", Descripción: " + req.body.motivodes;
@@ -1475,29 +1477,30 @@ app.put('/actualizarTimepausa', (req, res) => {
                         })
                     }
                     else {
-                        editStatuscontrol(idcontrol, timestandar, status, function (error, respuestaStatuscontrol) {
+                        mostTiempocontrol(req.body.idactividades, fecha, function (error, respuestaTiempocontrol) {
                             if (error) {
                                 console.log(error)
                                 res.status(404).json({
-                                    mensaje: respuesta.mensaje
+                                    mensaje: respuestaTiempocontrol.mensaje
                                 })
                             }
                             else {
-                                mostTiempocontrol(req.body.idactividades, fecha, function (error, respuestaTiempocontrol) {
+                                const timeasignacion = respuestaTiempocontrol.respuesta.reduce((acumulador, filtro) => {
+                                    return acumulador + filtro.timestandar;
+                                }, 0);
+
+                                console.log("Tiempo asignacion: ", timeasignacion);
+                                const controlytiempo = timeasignacion + timestandar;
+                                const kg = 0;
+                                editStatuscontrol(idcontrol, controlytiempo, status, function (error, respuestaStatuscontrol) {
                                     if (error) {
                                         console.log(error)
                                         res.status(404).json({
-                                            mensaje: respuestaTiempocontrol.mensaje
+                                            mensaje: respuesta.mensaje
                                         })
                                     }
                                     else {
-                                        const timeasignacion = respuestaTiempocontrol.respuesta.reduce((acumulador, filtro) => {
-                                            return acumulador + filtro.timestandar;
-                                        }, 0);
-
-                                        //console.log("Tiempo asignacion: ", timeasignacion);
-                                        const kg = 0;
-                                        editStatusasignacion(req.body.idasigactivi, status, timeasignacion, kg, function (error, respuesta) {
+                                        editStatusasignacion(req.body.idasigactivi, status, controlytiempo, kg, function (error, respuesta) {
                                             if (error) {
                                                 console.log(error)
                                                 res.status(404).json({
@@ -1512,13 +1515,9 @@ app.put('/actualizarTimepausa', (req, res) => {
                                             }
                                         })
                                     }
+                                    //console.log(respuesta);
                                 })
-
-                                /* res.status(200).json({
-                                    mensaje: respuestaStatuscontrol.mensaje
-                                }) */
                             }
-                            //console.log(respuesta);
                         })
                     }
                     console.log(respuesta);
@@ -1526,9 +1525,6 @@ app.put('/actualizarTimepausa', (req, res) => {
             }
             //console.log(respuesta);
         })
-
-
-        /*  */
     }
     else {
         console.log("Existen datos vacíos")
@@ -1537,7 +1533,6 @@ app.put('/actualizarTimepausa', (req, res) => {
         })
     }
 })
-/* FUNCION ACTUALIZADA CON LOS REQUERIMIENTOS DE ING FELIPE EL 19-11-2024 -----------------------------------------*/
 app.post('/insertarTiempo', (req, res) => {
     const fecha = moment().format("YYYY-MM-DD");
     const horainicio = moment().format('HH:mm');
@@ -1812,24 +1807,24 @@ app.get('/controlmes', (req, res) => {
             })
         }
         else {
-            console.log(respuesta.respuesta);
-            let tiempo = 0;
-            let kilos = 0;
-            //console.log(todos);
-            /* respuesta.respuesta.forEach((datos) => {
-                tiempo = datos.timeControl + tiempo;
-                kilos = datos.kgControl + kilos;
-            });
+            //console.log("Controlmes ",respuesta.respuesta);
+            const responsables1 = respuesta.respuesta.map((datos) => [datos.responsables]);
+            const responsables = responsables1.flat();
+            console.log(responsables);
 
+            let nombre = [];
+            responsables.forEach((filtro) => { const separado = filtro.split(' '); nombre.push(separado[0]); })
+            console.log(nombre);
+
+            const tiempo1 = respuesta.respuesta.map((datos) => [datos.tiempo_total]);
+            const tiempo = tiempo1.flat();
             //console.log(tiempo);
-            //console.log(kilos);
-            const horas = Math.floor(tiempo / 60);
-            const minutos = tiempo % 60;
+
             res.status(200).json({
-                horas,
-                minutos,
-                kilos
-            })  */
+                responsables,
+                tiempo,
+                nombre
+            })
         }
         //console.log(respuesta);
     })
