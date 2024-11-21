@@ -6,23 +6,21 @@ const fs = require('fs');
 const path = require('path');
 const jwt = require('jsonwebtoken');
 
-//Mostrar para la hoja de actforaneas
+//Hoja de actforaneas
 const mostubi = require('./actividades/mostUbi');
 const mostActif = require('./actividades/mostActvif');
 const mostMaterial = require('./actividades/mostMaterial');
-//Insertar para actforaneas
 const inserActif = require('./actividades/insertActif');
 const insertarMaterial = require('./actividades/insertMaterial');
 
 
-//Mostrar actdiarias
-const mostAsigdiario = require('./actividades/mostAsigdiario');
-const mostEficacia = require('./actividades/mostEficacia');
+//Hoja actdiarias
 const mostStatusresponsable = require('./actividades/mostStatusresponsable');
 const mostEvidencias = require('./actividades/mostEvidencias');
 
 
 //Hoja de asignacion
+/* MODIFICADO PARA PERMISO DE ING. CHRISTIAN */
 const mostAsignacion = require('./actividades/mostAsignactivi');
 const insertarAsigactivi = require('./actividades/insertAsigactivi');
 const editAsignacion = require('./actividades/actualizarAsigactivi');
@@ -88,13 +86,14 @@ const io = require("socket.io")(3004, {
 
 
 
-/* Hoja de insercion de actividades:  actForaneas */
-/* Mustra la lista de ubicaciones de los formularios de actividades */
+/* Hoja de actForaneas */
+/* MODIFICADO PARA PERMISO DE ING. CHRISTIAN */
 app.get('/ubicacion', verificar_Token, (req, res) => {
     const usuario = req.usuario;
     //console.log(usuario)
     const puesto = usuario.puesto;
-    console.log(puesto)
+    const id = usuario.id;
+    //console.log(puesto)
     /* Envia las ubicaciones con base al puesto */
     if (puesto === "COORDINADOR DE PRODUCCION") {
         mostubi(function (error, respuesta) {
@@ -116,7 +115,8 @@ app.get('/ubicacion', verificar_Token, (req, res) => {
         })
     }
     else {
-        if (puesto === "GERENTE DE SISTEMAS DE RECOLECCION") {
+        if (puesto === "GERENTE DE SISTEMAS DE RECOLECCION" || id==="RPMhztezf1lfbjn5nt") {
+            const puestosdr= "GERENTE DE SISTEMAS DE RECOLECCION";
             mostubi(function (error, respuesta) {
 
                 if (error) {
@@ -126,7 +126,7 @@ app.get('/ubicacion', verificar_Token, (req, res) => {
                     })
                 }
                 else {
-                    const ubicacionesPDM = respuesta.respuesta.filter(filtro => filtro.area === puesto);
+                    const ubicacionesPDM = respuesta.respuesta.filter(filtro => filtro.area === puestosdr);
                     //console.log("PDM", ubicacionesPDM);
                     res.status(200).json({
                         ubicacionesPDM
@@ -139,7 +139,7 @@ app.get('/ubicacion', verificar_Token, (req, res) => {
 }
 )
 
-//muestra las actividades registradas
+
 app.get('/actividades', (req, res) => {
     mostActif(function (error, respuesta) {
         if (error) {
@@ -157,9 +157,6 @@ app.get('/actividades', (req, res) => {
     })
 }
 )
-
-
-//Muestra los materiales de la actividad
 app.get('/material', (req, res) => {
     mostMaterial(function (error, respuesta) {
 
@@ -178,9 +175,13 @@ app.get('/material', (req, res) => {
     })
 }
 )
-
-//Inserta las actividades.
-app.post('/insertarActif', (req, res) => {
+app.post('/insertarActif', verificar_Token, (req, res) => {
+    const usuario = req.usuario;
+    //console.log(usuario)
+    const nombre = usuario.nombre;
+    const id = usuario.id;
+    console.log(nombre, id);
+    const periodo = "EXTRAORDINARIO"
     const fecha = moment().format("YYYY-MM-DD");
     console.log(req.body);
     // timestandar,hora,minutos
@@ -201,7 +202,7 @@ app.post('/insertarActif', (req, res) => {
                         const eficiencia1 = (60 * kilos) / tiempoest;
                         const eficiencia = Math.round((eficiencia1 + Number.EPSILON) * 100) / 100;
                         console.log(tiempoest);
-                        inserActif(req.body.actividad, fecha, req.body.kg, req.body.familias, req.body.productos, req.body.ubicacion, tiempoest, hora, minutos, eficiencia, function (error, respuesta) {
+                        inserActif(req.body.actividad, fecha, req.body.kg, req.body.familias, req.body.productos, req.body.ubicacion, tiempoest, hora, minutos, eficiencia,nombre, id, periodo, function (error, respuesta) {
                             if (error) {
                                 console.log(error)
                                 res.status(404).json({
@@ -233,7 +234,7 @@ app.post('/insertarActif', (req, res) => {
                         const hora = 0;
                         const eficiencia1 = (60 * kilos) / minutos;
                         const eficiencia = Math.round((eficiencia1 + Number.EPSILON) * 100) / 100;
-                        inserActif(req.body.actividad, fecha, req.body.kg, req.body.familias, req.body.productos, req.body.ubicacion, req.body.minutos, hora, req.body.minutos, eficiencia, function (error, respuesta) {
+                        inserActif(req.body.actividad, fecha, req.body.kg, req.body.familias, req.body.productos, req.body.ubicacion, req.body.minutos, hora, req.body.minutos, eficiencia,nombre, id, periodo, function (error, respuesta) {
 
                             if (error) {
                                 console.log(error)
@@ -275,7 +276,7 @@ app.post('/insertarActif', (req, res) => {
                         const eficiencia1 = 60 / tiempoest;
                         const eficiencia = Math.round((eficiencia1 + Number.EPSILON) * 100) / 100;
                         console.log(tiempoest);
-                        inserActif(req.body.actividad, fecha, kilos, fam, proc, req.body.ubicacion, tiempoest, req.body.hora, req.body.minutos, eficiencia, function (error, respuesta) {
+                        inserActif(req.body.actividad, fecha, kilos, fam, proc, req.body.ubicacion, tiempoest, req.body.hora, req.body.minutos, eficiencia,nombre, id, periodo, function (error, respuesta) {
 
                             if (error) {
                                 console.log(error)
@@ -308,7 +309,7 @@ app.post('/insertarActif', (req, res) => {
                         const kilos = 0;
                         const eficiencia1 = 60 / parseInt(req.body.minutos);
                         const eficiencia = Math.round((eficiencia1 + Number.EPSILON) * 100) / 100;
-                        inserActif(req.body.actividad, fecha, kilos, fam, proc, req.body.ubicacion, req.body.minutos, hora, req.body.minutos, eficiencia, function (error, respuesta) {
+                        inserActif(req.body.actividad, fecha, kilos, fam, proc, req.body.ubicacion, req.body.minutos, hora, req.body.minutos, eficiencia,nombre, id, periodo, function (error, respuesta) {
 
                             if (error) {
                                 console.log(error)
@@ -346,8 +347,6 @@ app.post('/insertarActif', (req, res) => {
         });
     }
 })
-
-//Inserta los materiales de las actividades. 
 app.post('/insertarMaterial', (req, res) => {
     const fecha = moment().format("YYYY-MM-DD");
     if (fecha && req.body.fam && req.body.produc) {
@@ -397,45 +396,68 @@ app.post('/insertarMaterial', (req, res) => {
         });
     }
 })
-
-/* Fin de hoja de insercion de actividades:  actForaneas */
+/* Fin de hoja de actForaneas */
 
 
 
 
 
 /* Hoja de actdiarias */
-//muestra las actividades diarias del dueño del proceso
+/* MODIFICADO PARA PERMISO DE ING. CHRISTIAN */
 app.get('/actividiarias', verificar_Token, (req, res) => {
     const fecha = moment().format("YYYY-MM-DD");
     const usuario = req.usuario;
     const responsable = usuario.nombre;
     //console.log(responsable);
-    mostAsigdiario(fecha, responsable, function (error, respuesta) {
-        if (error) {
-            console.log(error)
-            res.status(404).json({
-                mensaje: respuesta.mensaje
-            })
-        }
-        else {
+    const id = usuario.id;
+    //console.log(responsable);
+    if(id==="RPMhzte1p8rlfmmq44l" || id==="RPMhztezf1lfbjn5nt"){
+        mostAsignacion( function (error, respuestaAsig) {
+            if (error) {
+                console.log(error)
+                res.status(404).json({
+                    mensaje: respuestaAsig.mensaje
+                })
+            }
+            else {
+                const respuesta = respuestaAsig.respuesta.filter(filtro => (filtro.responsable==="MIGUEL DE LA CRUZ PUEBLITA" || filtro.responsable === " CHRISTIAN ELEAZAR AGUILAR CABALLERO") && filtro.fechainicio === fecha);
+                //console.log(nuevarespuesta);
+                res.status(200).json({
+                    respuesta
+                })
+            }
             //console.log(respuesta);
-            res.status(200).json({
-                respuesta
-            })
-        }
-        //console.log(respuesta);
-    })
+        })
+    }
+    else{
+        mostAsignacion(function (error, respuestaAsig) {
+            if (error) {
+                console.log(error)
+                res.status(404).json({
+                    mensaje: respuestaAsig.mensaje
+                })
+            }
+            else {
+                const respuesta = respuestaAsig.respuesta.filter(filtro => filtro.responsable===responsable && filtro.fechainicio === fecha);
+                //console.log(nuevarespuesta);
+                res.status(200).json({
+                    respuesta
+                })
+            }
+            //console.log(respuesta);
+        })
+    }
 }
 )
+/* MODIFICADO PARA PERMISO DE ING. CHRISTIAN */
 app.get('/globalstatus', verificar_Token, (req, res) => {
     const fecha = moment().format("YYYY-MM-DD");
     const usuario = req.usuario;
     //console.log(usuario)
-    const nombre = usuario.nombre;
-    //console.log(nombre); 
-
-    mostEficacia(function (error, respuesta) {
+    const responsable = usuario.nombre;
+    const id = usuario.id;
+    //console.log(responsable);
+    mostAsignacion(function (error, respuesta) {
         if (error) {
             console.log(error)
             res.status(404).json({
@@ -443,8 +465,13 @@ app.get('/globalstatus', verificar_Token, (req, res) => {
             })
         }
         else {
-            //console.log(respuesta.respuesta);
-            const deldia = respuesta.respuesta.filter((filtro) => filtro.fechainicio === fecha && filtro.status != "INACTIVO" && filtro.responsable === nombre);
+            let deldia= {};
+            if(id==="RPMhzte1p8rlfmmq44l" || id==="RPMhztezf1lfbjn5nt"){
+                deldia = respuesta.respuesta.filter(filtro => (filtro.responsable==="MIGUEL DE LA CRUZ PUEBLITA" || filtro.responsable === " CHRISTIAN ELEAZAR AGUILAR CABALLERO") && filtro.fechainicio === fecha);
+            }
+            else{
+                deldia = respuesta.respuesta.filter(filtro => filtro.responsable===responsable && filtro.fechainicio === fecha);
+            }
             const deldiatotal = deldia.length;
             //console.log("deldia", deldia.length);
 
@@ -523,40 +550,63 @@ app.get('/evidencias', (req, res) => {
 
 
 /* Hoja de asignacion */
+/* MODIFICADO PARA PERMISO DE ING. CHRISTIAN */
 app.get('/asignacion', verificar_Token, (req, res) => {
     const fecha = moment().format("YYYY-MM-DD");
     const usuario = req.usuario;
-    //console.log(usuario)
+    console.log(usuario);
     const responsable = usuario.nombre;
-    //console.log(responsable)
-    mostAsignacion(responsable, fecha, function (error, respuesta) {
-        if (error) {
-            console.log(error)
-            res.status(404).json({
-                mensaje: respuesta.mensaje
-            })
-        }
-        else {
-            const nuevarespuesta = respuesta.respuesta.filter(filtro => filtro.status != "TERMINADO");
-            //console.log(nuevarespuesta);
-            res.status(200).json({
-                nuevarespuesta
-            })
-        }
-        //console.log(respuesta);
-    })
+    const id = usuario.id;
+    //console.log(responsable);
+    if(id==="RPMhzte1p8rlfmmq44l" || id==="RPMhztezf1lfbjn5nt"){
+        mostAsignacion( function (error, respuesta) {
+            if (error) {
+                console.log(error)
+                res.status(404).json({
+                    mensaje: respuesta.mensaje
+                })
+            }
+            else {
+                const nuevarespuesta = respuesta.respuesta.filter(filtro => filtro.status != "TERMINADO" && (filtro.responsable==="MIGUEL DE LA CRUZ PUEBLITA" || filtro.responsable === " CHRISTIAN ELEAZAR AGUILAR CABALLERO") && filtro.fechainicio >= fecha);
+                //console.log(nuevarespuesta);
+                res.status(200).json({
+                    nuevarespuesta
+                })
+            }
+            //console.log(respuesta);
+        })
+    }
+    else{
+        mostAsignacion(function (error, respuesta) {
+            if (error) {
+                console.log(error)
+                res.status(404).json({
+                    mensaje: respuesta.mensaje
+                })
+            }
+            else {
+                const nuevarespuesta = respuesta.respuesta.filter(filtro => filtro.status != "TERMINADO" && filtro.responsable===responsable && filtro.fechainicio >= fecha);
+                //console.log(nuevarespuesta);
+                res.status(200).json({
+                    nuevarespuesta
+                })
+            }
+            //console.log(respuesta);
+        })
+    }
 })
+/* MODIFICADO PARA PERMISO DE ING. CHRISTIAN */
 app.post('/insertarAsigactividad', verificar_Token, (req, res) => {
     const fecha = moment().format("YYYY-MM-DD");
     const usuario = req.usuario;
     //console.log(usuario)  
-    const responsable = usuario.nombre;
+    //const responsable = usuario.nombre;
     const kg = 0;
     const numpersonas = 0;
     const eficacia = 0;
     const eficienciasig = 0;
     //console.log(responsable)
-    mostAsignacion(responsable, fecha, function (error, respuesta) {
+    mostAsignacion(function (error, respuesta) {
         if (error) {
             console.log(error)
             res.status(404).json({
@@ -775,110 +825,6 @@ app.post('/insertarControl', (req, res) => {
         });
     }
 })
-/* app.post('/insertarControl', (req, res) => {
-    const fecha = moment().format("YYYY-MM-DD");
-    if (req.body.idactividades && fecha && req.body.responsables && req.body.idasigactivi && req.body.idchecksupervisor) {
-        const timestandar = 0;
-        const kg = 0;
-        const lon = 0;
-        const lat = 0;
-        const status = "INICIAR";
-        //console.log(req.body);
-        mostControlasignados(req.body.idchecksupervisor, fecha, function (error, respuesta) {
-            if (error) {
-                console.log(error)
-                res.status(404).json({
-                    mensaje: respuesta.mensaje
-
-                })
-            }
-            else {
-                //console.log(req.body)
-                //console.log(respuesta.respuesta)
-                const datosFil = respuesta.respuesta.find((filtro) => filtro.responsables === req.body.responsables);
-                //console.log(datosFil);
-                if (datosFil) {
-                    console.log("El responsable esta asignado en otra actividad");
-                    res.status(400).json({
-                        mensaje: "El responsable esta asignado en otra actividad"
-                    });
-
-                } else {
-                    //console.log(req.body.idasigactivi,);
-                    mostIdusuario(function (error, respuesta) {
-                        if (error) {
-                            console.log(error)
-                            res.status(404).json({
-                                mensaje: respuesta.mensaje
-                            })
-                        }
-                        else {
-                            console.log(req.body.responsables);
-                            const searchidcheck = respuesta.respuesta.find(filtro => filtro.NombreCompleto === req.body.responsables);
-                            console.log(searchidcheck);
-                            const idcheck = searchidcheck.idCheck;
-
-                            console.log(idcheck);
-
-
-                            insertarControlactivi(req.body.idactividades, fecha, req.body.responsables, timestandar, kg, lon, lat, status, req.body.idasigactivi, idcheck, req.body.idchecksupervisor, function (error, respuesta) {
-                                if (error) {
-                                    console.log(error)
-                                    res.status(404).json({
-                                        mensaje: respuesta.mensaje
-                                    })
-                                }
-                                else {
-                                    mostNumpersonas(req.body.idasigactivi, function (error, respuesta) {
-                                        if (error) {
-                                            console.log(error)
-                                            res.status(404).json({
-                                                mensaje: respuesta.mensaje
-                                            })
-                                        }
-                                        else {
-                                            console.log(respuesta.respuesta[0].numpersonas);
-                                            const personastotales = respuesta.respuesta[0].numpersonas + 1;
-                                            console.log(personastotales);
-                                            editNumpersonas(req.body.idasigactivi, personastotales, function (error, respuesta) {
-                                                if (error) {
-                                                    console.log(error)
-                                                    res.status(404).json({
-                                                        mensaje: respuesta.mensaje
-                                                    })
-                                                }
-                                                else {
-                                                    io.emit('escuchando', respuesta.mensaje);
-                                                    res.status(200).json({
-                                                        mensaje: respuesta.mensaje
-                                                    })
-                                                }
-                                                //console.log(respuesta);
-                                            })
-                                        }
-                                        //console.log(respuesta);
-                                    })
-
-                                }
-                                //console.log(respuesta);
-                            })
-
-                        }
-                        //console.log(respuesta);
-                    })
-                }
-            }
-            //console.log(respuesta);
-        })
-
-    }
-    else {
-        console.log("Existen datos vacíos");
-        res.status(400).json({
-            mensaje: "Existen datos vacíos"
-        });
-    }
-}) */
 app.get('/buscar_Supervisor/:id', async (req, res) => {
     const fecha = moment().format("YYYY-MM-DD");
     var idcheck = req.params.id
@@ -968,9 +914,11 @@ app.get('/buscar_Supervisor/:id', async (req, res) => {
 
 
 /* Hoja de editeficienciakg */
+/* MODIFICADO PARA PERMISO DE ING. CHRISTIAN */
 app.get('/EficienciaKg', verificar_Token, (req, res) => {
     const usuario = req.usuario;
     const responsable = usuario.nombre;
+    const id = usuario.id;
     console.log(responsable);
     mostEficienciakg(function (error, respuestaEficienciakg) {
         if (error) {
@@ -981,7 +929,13 @@ app.get('/EficienciaKg', verificar_Token, (req, res) => {
         }
         else {
             //console.log(respuestaEficienciakg.respuesta);
-            const respuesta = respuestaEficienciakg.respuesta.filter((filtro) => filtro.responsable === responsable);
+            let respuesta= {};
+            if(id==="RPMhzte1p8rlfmmq44l" || id==="RPMhztezf1lfbjn5nt"){
+                respuesta = respuestaEficienciakg.respuesta.filter(filtro => (filtro.responsable==="MIGUEL DE LA CRUZ PUEBLITA" || filtro.responsable === " CHRISTIAN ELEAZAR AGUILAR CABALLERO"));
+            }
+            else{
+                respuesta = respuestaEficienciakg.respuesta.filter((filtro) => filtro.responsable === responsable);
+            }
             res.status(200).json({
                 respuesta
             })
@@ -1116,26 +1070,49 @@ app.put('/actualizarAsignacionkg', (req, res) => {
 
 
 /* Hoja de eficacia */
+/* MODIFICADO PARA PERMISO DE ING. CHRISTIAN */
 app.get('/Eficacia', verificar_Token, (req, res) => {
     const usuario = req.usuario;
     const responsable = usuario.nombre;
-    console.log(responsable);
-    mostEficacia(function (error, respuestaEficacia) {
-        if (error) {
-            console.log(error)
-            res.status(404).json({
-                mensaje: respuesta.mensaje
-            })
-        }
-        else {
-            //console.log(respuestaEficacia.respuesta);
-            const respuesta = respuestaEficacia.respuesta.filter((filtro) => filtro.responsable === responsable);
-            res.status(200).json({
-                respuesta
-            })
-        }
-        //console.log(respuesta);
-    })
+    //console.log(responsable);
+    const id = usuario.id;
+    //console.log(responsable);
+    if(id==="RPMhzte1p8rlfmmq44l" || id==="RPMhztezf1lfbjn5nt"){
+        mostAsignacion( function (error, respuestaAsig) {
+            if (error) {
+                console.log(error)
+                res.status(404).json({
+                    mensaje: respuestaAsig.mensaje
+                })
+            }
+            else {
+                const respuesta = respuestaAsig.respuesta.filter(filtro => (filtro.responsable==="MIGUEL DE LA CRUZ PUEBLITA" || filtro.responsable === " CHRISTIAN ELEAZAR AGUILAR CABALLERO"));
+                //console.log(nuevarespuesta);
+                res.status(200).json({
+                    respuesta
+                })
+            }
+            //console.log(respuesta);
+        })
+    }
+    else{
+        mostAsignacion(function (error, respuestaAsig) {
+            if (error) {
+                console.log(error)
+                res.status(404).json({
+                    mensaje: respuestaAsig.mensaje
+                })
+            }
+            else {
+                const respuesta = respuestaAsig.respuesta.filter(filtro => filtro.responsable===responsable);
+                //console.log(nuevarespuesta);
+                res.status(200).json({
+                    respuesta
+                })
+            }
+            //console.log(respuesta);
+        })
+    }
 }
 )
 /* Fin de hoja de eficacia */
