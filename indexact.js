@@ -1906,7 +1906,7 @@ app.get('/actividadesaut', (req, res) => {
     asignacionaut();
 });
 // Tarea programada para ejecutarse todos los días a la hora que le indiques
-const job = schedule.scheduleJob('24 12 * * *', function () {
+const job = schedule.scheduleJob('30 00 * * *', function () {
     console.log('¡La tarea diaria se ejecutó a las 10:47 AM UTC!');
     asignacionaut();
 });
