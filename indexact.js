@@ -5,6 +5,7 @@ const fileUpload = require('express-fileupload');
 const fs = require('fs');
 const path = require('path');
 const jwt = require('jsonwebtoken');
+const schedule = require('node-schedule');
 
 //Hoja de actforaneas
 const mostubi = require('./actividades/mostUbi');
@@ -12,6 +13,7 @@ const mostActif = require('./actividades/mostActvif');
 const mostMaterial = require('./actividades/mostMaterial');
 const inserActif = require('./actividades/insertActif');
 const insertarMaterial = require('./actividades/insertMaterial');
+const editActividades = require('./actividades/actualizarActividades');
 
 
 //Hoja actdiarias
@@ -70,6 +72,12 @@ const mostActterminadasmes = require('./actividades/mostChartterminadas');
 const mostAsigactivi_mes = require('./actividades/mostChartasigactivi_mes');
 const mostControl_mes = require('./actividades/mostChartcontrol_mes');
 
+
+/* INSERTAR ACTIVIDADES AUTOMATICAMENTE*/
+const mostActividiarias = require('./actividades/mostActividiarias');
+/* FIN DE INSERTAR ACTIVIDADES AUTOMATICAMENTE*/
+
+
 const verificar_Token = require('./middleware/Valida_Token');
 const app = express()
 const port = 3005
@@ -115,8 +123,8 @@ app.get('/ubicacion', verificar_Token, (req, res) => {
         })
     }
     else {
-        if (puesto === "GERENTE DE SISTEMAS DE RECOLECCION" || id==="RPMhztezf1lfbjn5nt") {
-            const puestosdr= "GERENTE DE SISTEMAS DE RECOLECCION";
+        if (puesto === "GERENTE DE SISTEMAS DE RECOLECCION" || id === "RPMhztezf1lfbjn5nt") {
+            const puestosdr = "GERENTE DE SISTEMAS DE RECOLECCION";
             mostubi(function (error, respuesta) {
 
                 if (error) {
@@ -175,19 +183,20 @@ app.get('/material', (req, res) => {
     })
 }
 )
+/* MODIFICADO PARA ACTIVIDADES PERIODICAS */
 app.post('/insertarActif', verificar_Token, (req, res) => {
     const usuario = req.usuario;
     //console.log(usuario)
     const nombre = usuario.nombre;
     const id = usuario.id;
     console.log(nombre, id);
-    const periodo = "EXTRAORDINARIO"
+    //const periodo = "EXTRAORDINARIO"
     const fecha = moment().format("YYYY-MM-DD");
     console.log(req.body);
     // timestandar,hora,minutos
     const fam = "NA";
     const proc = "NA";
-    if (req.body.unidad && req.body.actividad && fecha && req.body.ubicacion && req.body.minutos) {
+    if (req.body.unidad && req.body.actividad && fecha && req.body.ubicacion && req.body.minutos && req.body.periodo) {
         if (req.body.unidad === "SI") {
             if (req.body.kg && req.body.familias && req.body.productos) {
                 const minutos = parseFloat(req.body.minutos);
@@ -202,7 +211,7 @@ app.post('/insertarActif', verificar_Token, (req, res) => {
                         const eficiencia1 = (60 * kilos) / tiempoest;
                         const eficiencia = Math.round((eficiencia1 + Number.EPSILON) * 100) / 100;
                         console.log(tiempoest);
-                        inserActif(req.body.actividad, fecha, req.body.kg, req.body.familias, req.body.productos, req.body.ubicacion, tiempoest, hora, minutos, eficiencia,nombre, id, periodo, function (error, respuesta) {
+                        inserActif(req.body.actividad, fecha, req.body.kg, req.body.familias, req.body.productos, req.body.ubicacion, tiempoest, hora, minutos, eficiencia, nombre, id, req.body.periodo, function (error, respuesta) {
                             if (error) {
                                 console.log(error)
                                 res.status(404).json({
@@ -234,7 +243,7 @@ app.post('/insertarActif', verificar_Token, (req, res) => {
                         const hora = 0;
                         const eficiencia1 = (60 * kilos) / minutos;
                         const eficiencia = Math.round((eficiencia1 + Number.EPSILON) * 100) / 100;
-                        inserActif(req.body.actividad, fecha, req.body.kg, req.body.familias, req.body.productos, req.body.ubicacion, req.body.minutos, hora, req.body.minutos, eficiencia,nombre, id, periodo, function (error, respuesta) {
+                        inserActif(req.body.actividad, fecha, req.body.kg, req.body.familias, req.body.productos, req.body.ubicacion, req.body.minutos, hora, req.body.minutos, eficiencia, nombre, id, req.body.periodo, function (error, respuesta) {
 
                             if (error) {
                                 console.log(error)
@@ -276,7 +285,7 @@ app.post('/insertarActif', verificar_Token, (req, res) => {
                         const eficiencia1 = 60 / tiempoest;
                         const eficiencia = Math.round((eficiencia1 + Number.EPSILON) * 100) / 100;
                         console.log(tiempoest);
-                        inserActif(req.body.actividad, fecha, kilos, fam, proc, req.body.ubicacion, tiempoest, req.body.hora, req.body.minutos, eficiencia,nombre, id, periodo, function (error, respuesta) {
+                        inserActif(req.body.actividad, fecha, kilos, fam, proc, req.body.ubicacion, tiempoest, req.body.hora, req.body.minutos, eficiencia, nombre, id, req.body.periodo, function (error, respuesta) {
 
                             if (error) {
                                 console.log(error)
@@ -309,7 +318,7 @@ app.post('/insertarActif', verificar_Token, (req, res) => {
                         const kilos = 0;
                         const eficiencia1 = 60 / parseInt(req.body.minutos);
                         const eficiencia = Math.round((eficiencia1 + Number.EPSILON) * 100) / 100;
-                        inserActif(req.body.actividad, fecha, kilos, fam, proc, req.body.ubicacion, req.body.minutos, hora, req.body.minutos, eficiencia,nombre, id, periodo, function (error, respuesta) {
+                        inserActif(req.body.actividad, fecha, kilos, fam, proc, req.body.ubicacion, req.body.minutos, hora, req.body.minutos, eficiencia, nombre, id, req.body.periodo, function (error, respuesta) {
 
                             if (error) {
                                 console.log(error)
@@ -396,6 +405,35 @@ app.post('/insertarMaterial', (req, res) => {
         });
     }
 })
+
+/* MODIFICADO PARA ACTIVIDADES PERIODICAS */
+app.put('/editactividad', (req, res) => {
+    console.log(req.body)
+    if (req.body.idactividades && req.body.periodo) {
+        editActividades(req.body.idactividades, req.body.periodo, function (error, respuesta) {
+
+            if (error) {
+                console.log(error)
+                res.status(404).json({
+                    mensaje: respuesta.mensaje
+                })
+            }
+            else {
+                res.status(200).json({
+                    mensaje: respuesta.mensaje
+                })
+            }
+            //console.log(respuesta);
+        })
+
+    }
+    else {
+        console.log("Existen datos vacíos");
+        res.status(400).json({
+            mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
+        });
+    }
+})
 /* Fin de hoja de actForaneas */
 
 
@@ -411,25 +449,7 @@ app.get('/actividiarias', verificar_Token, (req, res) => {
     //console.log(responsable);
     const id = usuario.id;
     //console.log(responsable);
-    if(id==="RPMhzte1p8rlfmmq44l" || id==="RPMhztezf1lfbjn5nt"){
-        mostAsignacion( function (error, respuestaAsig) {
-            if (error) {
-                console.log(error)
-                res.status(404).json({
-                    mensaje: respuestaAsig.mensaje
-                })
-            }
-            else {
-                const respuesta = respuestaAsig.respuesta.filter(filtro => (filtro.responsable==="MIGUEL DE LA CRUZ PUEBLITA" || filtro.responsable === " CHRISTIAN ELEAZAR AGUILAR CABALLERO") && filtro.fechainicio === fecha);
-                //console.log(nuevarespuesta);
-                res.status(200).json({
-                    respuesta
-                })
-            }
-            //console.log(respuesta);
-        })
-    }
-    else{
+    if (id === "RPMhzte1p8rlfmmq44l" || id === "RPMhztezf1lfbjn5nt") {
         mostAsignacion(function (error, respuestaAsig) {
             if (error) {
                 console.log(error)
@@ -438,7 +458,25 @@ app.get('/actividiarias', verificar_Token, (req, res) => {
                 })
             }
             else {
-                const respuesta = respuestaAsig.respuesta.filter(filtro => filtro.responsable===responsable && filtro.fechainicio === fecha);
+                const respuesta = respuestaAsig.respuesta.filter(filtro => (filtro.responsable === "MIGUEL DE LA CRUZ PUEBLITA" || filtro.responsable === " CHRISTIAN ELEAZAR AGUILAR CABALLERO") && filtro.fechainicio === fecha);
+                //console.log(nuevarespuesta);
+                res.status(200).json({
+                    respuesta
+                })
+            }
+            //console.log(respuesta);
+        })
+    }
+    else {
+        mostAsignacion(function (error, respuestaAsig) {
+            if (error) {
+                console.log(error)
+                res.status(404).json({
+                    mensaje: respuestaAsig.mensaje
+                })
+            }
+            else {
+                const respuesta = respuestaAsig.respuesta.filter(filtro => filtro.responsable === responsable && filtro.fechainicio === fecha);
                 //console.log(nuevarespuesta);
                 res.status(200).json({
                     respuesta
@@ -465,12 +503,12 @@ app.get('/globalstatus', verificar_Token, (req, res) => {
             })
         }
         else {
-            let deldia= {};
-            if(id==="RPMhzte1p8rlfmmq44l" || id==="RPMhztezf1lfbjn5nt"){
-                deldia = respuesta.respuesta.filter(filtro => (filtro.responsable==="MIGUEL DE LA CRUZ PUEBLITA" || filtro.responsable === " CHRISTIAN ELEAZAR AGUILAR CABALLERO") && filtro.fechainicio === fecha);
+            let deldia = {};
+            if (id === "RPMhzte1p8rlfmmq44l" || id === "RPMhztezf1lfbjn5nt") {
+                deldia = respuesta.respuesta.filter(filtro => (filtro.responsable === "MIGUEL DE LA CRUZ PUEBLITA" || filtro.responsable === " CHRISTIAN ELEAZAR AGUILAR CABALLERO") && filtro.fechainicio === fecha);
             }
-            else{
-                deldia = respuesta.respuesta.filter(filtro => filtro.responsable===responsable && filtro.fechainicio === fecha);
+            else {
+                deldia = respuesta.respuesta.filter(filtro => filtro.responsable === responsable && filtro.fechainicio === fecha);
             }
             const deldiatotal = deldia.length;
             //console.log("deldia", deldia.length);
@@ -524,6 +562,7 @@ app.get('/Statusresponsables', (req, res) => {
     })
 }
 )
+/*EVIDENCIAS*/
 app.get('/evidencias', (req, res) => {
     const fecha = moment().format("YYYY-MM-DD");
     const idasigactivi = req.query.idasigactivi;
@@ -558,25 +597,7 @@ app.get('/asignacion', verificar_Token, (req, res) => {
     const responsable = usuario.nombre;
     const id = usuario.id;
     //console.log(responsable);
-    if(id==="RPMhzte1p8rlfmmq44l" || id==="RPMhztezf1lfbjn5nt"){
-        mostAsignacion( function (error, respuesta) {
-            if (error) {
-                console.log(error)
-                res.status(404).json({
-                    mensaje: respuesta.mensaje
-                })
-            }
-            else {
-                const nuevarespuesta = respuesta.respuesta.filter(filtro => filtro.status != "TERMINADO" && (filtro.responsable==="MIGUEL DE LA CRUZ PUEBLITA" || filtro.responsable === " CHRISTIAN ELEAZAR AGUILAR CABALLERO") && filtro.fechainicio >= fecha);
-                //console.log(nuevarespuesta);
-                res.status(200).json({
-                    nuevarespuesta
-                })
-            }
-            //console.log(respuesta);
-        })
-    }
-    else{
+    if (id === "RPMhzte1p8rlfmmq44l" || id === "RPMhztezf1lfbjn5nt") {
         mostAsignacion(function (error, respuesta) {
             if (error) {
                 console.log(error)
@@ -585,7 +606,25 @@ app.get('/asignacion', verificar_Token, (req, res) => {
                 })
             }
             else {
-                const nuevarespuesta = respuesta.respuesta.filter(filtro => filtro.status != "TERMINADO" && filtro.responsable===responsable && filtro.fechainicio >= fecha);
+                const nuevarespuesta = respuesta.respuesta.filter(filtro => filtro.status != "TERMINADO" && (filtro.responsable === "MIGUEL DE LA CRUZ PUEBLITA" || filtro.responsable === " CHRISTIAN ELEAZAR AGUILAR CABALLERO") && filtro.fechainicio >= fecha);
+                //console.log(nuevarespuesta);
+                res.status(200).json({
+                    nuevarespuesta
+                })
+            }
+            //console.log(respuesta);
+        })
+    }
+    else {
+        mostAsignacion(function (error, respuesta) {
+            if (error) {
+                console.log(error)
+                res.status(404).json({
+                    mensaje: respuesta.mensaje
+                })
+            }
+            else {
+                const nuevarespuesta = respuesta.respuesta.filter(filtro => filtro.status != "TERMINADO" && filtro.responsable === responsable && filtro.fechainicio >= fecha);
                 //console.log(nuevarespuesta);
                 res.status(200).json({
                     nuevarespuesta
@@ -929,11 +968,11 @@ app.get('/EficienciaKg', verificar_Token, (req, res) => {
         }
         else {
             //console.log(respuestaEficienciakg.respuesta);
-            let respuesta= {};
-            if(id==="RPMhzte1p8rlfmmq44l" || id==="RPMhztezf1lfbjn5nt"){
-                respuesta = respuestaEficienciakg.respuesta.filter(filtro => (filtro.responsable==="MIGUEL DE LA CRUZ PUEBLITA" || filtro.responsable === " CHRISTIAN ELEAZAR AGUILAR CABALLERO"));
+            let respuesta = {};
+            if (id === "RPMhzte1p8rlfmmq44l" || id === "RPMhztezf1lfbjn5nt") {
+                respuesta = respuestaEficienciakg.respuesta.filter(filtro => (filtro.responsable === "MIGUEL DE LA CRUZ PUEBLITA" || filtro.responsable === " CHRISTIAN ELEAZAR AGUILAR CABALLERO"));
             }
-            else{
+            else {
                 respuesta = respuestaEficienciakg.respuesta.filter((filtro) => filtro.responsable === responsable);
             }
             res.status(200).json({
@@ -1077,25 +1116,7 @@ app.get('/Eficacia', verificar_Token, (req, res) => {
     //console.log(responsable);
     const id = usuario.id;
     //console.log(responsable);
-    if(id==="RPMhzte1p8rlfmmq44l" || id==="RPMhztezf1lfbjn5nt"){
-        mostAsignacion( function (error, respuestaAsig) {
-            if (error) {
-                console.log(error)
-                res.status(404).json({
-                    mensaje: respuestaAsig.mensaje
-                })
-            }
-            else {
-                const respuesta = respuestaAsig.respuesta.filter(filtro => (filtro.responsable==="MIGUEL DE LA CRUZ PUEBLITA" || filtro.responsable === " CHRISTIAN ELEAZAR AGUILAR CABALLERO"));
-                //console.log(nuevarespuesta);
-                res.status(200).json({
-                    respuesta
-                })
-            }
-            //console.log(respuesta);
-        })
-    }
-    else{
+    if (id === "RPMhzte1p8rlfmmq44l" || id === "RPMhztezf1lfbjn5nt") {
         mostAsignacion(function (error, respuestaAsig) {
             if (error) {
                 console.log(error)
@@ -1104,7 +1125,25 @@ app.get('/Eficacia', verificar_Token, (req, res) => {
                 })
             }
             else {
-                const respuesta = respuestaAsig.respuesta.filter(filtro => filtro.responsable===responsable);
+                const respuesta = respuestaAsig.respuesta.filter(filtro => (filtro.responsable === "MIGUEL DE LA CRUZ PUEBLITA" || filtro.responsable === " CHRISTIAN ELEAZAR AGUILAR CABALLERO"));
+                //console.log(nuevarespuesta);
+                res.status(200).json({
+                    respuesta
+                })
+            }
+            //console.log(respuesta);
+        })
+    }
+    else {
+        mostAsignacion(function (error, respuestaAsig) {
+            if (error) {
+                console.log(error)
+                res.status(404).json({
+                    mensaje: respuestaAsig.mensaje
+                })
+            }
+            else {
+                const respuesta = respuestaAsig.respuesta.filter(filtro => filtro.responsable === responsable);
                 //console.log(nuevarespuesta);
                 res.status(200).json({
                     respuesta
@@ -1603,6 +1642,7 @@ app.post('/insertarTiempo', (req, res) => {
     })
 
 })
+/*EVIDENCIAS*/
 app.post('/guardarevidencia', (req, res) => {
     const fecha = moment().format("YYYY-MM-DD");
     const hora = moment().format('LTS');
@@ -1776,6 +1816,8 @@ app.get('/asigactivimes', verificar_Token, (req, res) => {
 app.get('/controlmes', (req, res) => {
     const idactividad = req.query.id;
     const mes = req.query.mes;
+    const kilos = req.query.kilos;
+    console.log(kilos);
     mostControl_mes(idactividad, mes, function (error, respuesta) {
         if (error) {
             console.log(error)
@@ -1787,11 +1829,11 @@ app.get('/controlmes', (req, res) => {
             //console.log("Controlmes ",respuesta.respuesta);
             const responsables1 = respuesta.respuesta.map((datos) => [datos.responsables]);
             const responsables = responsables1.flat();
-            console.log(responsables);
+            //console.log(responsables);
 
             let nombre = [];
             responsables.forEach((filtro) => { const separado = filtro.split(' '); nombre.push(separado[0]); })
-            console.log(nombre);
+            //console.log(nombre);
 
             const tiempo1 = respuesta.respuesta.map((datos) => [datos.tiempo_total]);
             const tiempo = tiempo1.flat();
@@ -1807,8 +1849,81 @@ app.get('/controlmes', (req, res) => {
     })
 }
 )
-
 /* Fin hoja de grafica/grafica */
+
+
+/* INSERTAR ACTIVIDADES AUTOMATICAMENTE*/
+//fechacreacion, responsable, fechainicio, empresa, idactividad, status, timeControl, kgControl, motivo, numpersonas, eficacia, eficienciasig
+async function asignacionaut() {
+    const fecha = moment().format("YYYY-MM-DD");
+    const kg = 0;
+    const numpersonas = 0;
+    const eficacia = 0;
+    const eficienciasig = 0;
+    const status = "INICIAR"
+    const timecontrol = 0;
+
+    mostActividiarias(function (error, respuesta) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuestaAsig.mensaje
+            })
+        }
+        else {
+            //console.log(respuesta.respuesta);
+            const datosneed = respuesta.respuesta.map((filtro) => ({
+                id: filtro.idactividades,
+                empresa: filtro.ubicacion,
+                nombre: filtro.responsableact
+            }));
+
+            const activiasignar = datosneed.flat();
+            console.log(activiasignar.length);
+            activiasignar.forEach((datos, index) => {
+                insertarAsigactivi(fecha, datos.nombre, fecha, datos.empresa, datos.id, status, timecontrol, kg, numpersonas, eficacia, eficienciasig, function (error, respuesta) {
+                    if (error) {
+                        console.log(error)
+                        res.status(404).json({
+                            mensaje: respuesta.mensaje
+                        })
+                    }
+                    else {
+                        io.emit('escuchando', respuesta.mensaje);
+                        console.log("Datos guardados", index);
+                        /* res.status(200).json({
+                            mensaje: respuesta.mensaje
+                        }) */
+                    }
+
+                })
+            })
+            //console.log(arraynadatos);
+        }
+    })
+}
+app.get('/actividadesaut', (req, res) => {
+    asignacionaut();
+});
+// Tarea programada para ejecutarse todos los días a la hora que le indiques
+const job = schedule.scheduleJob('24 12 * * *', function () {
+    console.log('¡La tarea diaria se ejecutó a las 10:47 AM UTC!');
+    asignacionaut();
+});
+/* Estructura de los *:
+*    *    *    *    *    *
+┬    ┬    ┬    ┬    ┬    ┬
+│    │    │    │    │    │
+│    │    │    │    │    └ day of week (0 - 7) (0 or 7 is Sun)
+│    │    │    │    └───── month (1 - 12)
+│    │    │    └────────── day of month (1 - 31)
+│    │    └─────────────── hour (0 - 23)
+│    └──────────────────── minute (0 - 59)
+└───────────────────────── second (0 - 59, OPTIONAL)
+ */
+
+/* FIN DE INSERTAR ACTIVIDADES AUTOMATICAMENTE*/
+
 
 
 app.listen(port, () => {
