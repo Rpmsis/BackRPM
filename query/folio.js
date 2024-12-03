@@ -1,6 +1,6 @@
 const mysql = require('../database/index');
-const moment = require('moment');
-const fecha = moment().format("DDMMYY");
+//const moment = require('moment');
+//const fecha = moment().format("DDMMYY");
 var folio = "";
 /* Verifico la fecha del ultimo folio y la comparo con la actual
 fechaAct= 0 => fecha+01
@@ -12,7 +12,7 @@ ultimosdatos+1;
 fecha+01
 
 */
-async function mostFolio(callback) {
+async function mostFolio(fecha, callback) {
     mysql.query(`select folioActivo from activosfijos order by idActfijos desc limit 1`, function (error, respuesta) {
         if (error) {
             console.log(error)

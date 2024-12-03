@@ -8,7 +8,8 @@ const fileUpload = require('express-fileupload');
 const fs = require('fs');
 const path = require('path');
 const jwt = require('jsonwebtoken');
-
+//Lector de huella HID
+const HID = require('node-hid');
 
 const cargar_archivo = require('./query/archivos_file');
 const actualizar_archivo = require('./query/actualizar_archivos');
@@ -121,6 +122,7 @@ const editEficacia = require('./query/actualizarEficaciaasignacion');
 const editAsistencia = require('./query/actualizarAsistenciastatus');
 const editEstatusmenu = require('./query/actualizarestatusmenu');
 const editPermisomenu = require('./query/actualizarPermisomenu');
+const editCompra = require('./query/actualizarCompra');
 
 const elim = require('./query/eliminar');
 const elimUsuarioprov = require('./query/eliminarUsuarioprov');
@@ -141,6 +143,16 @@ const io = require("socket.io")(3003, {
         methods: ["GET", "POST"]
     }
 });
+
+
+// Lista los dispositivos HID conectados
+/* const devices = HID.devices();
+
+console.log(devices); */
+
+
+
+
 /* ZKHLIB asistencias */
 const ZKHLIB = require("zkh-lib");
 let obj = new ZKHLIB("192.168.1.82", 4370, 5200, 5000);
@@ -1240,15 +1252,15 @@ app.get('/Menusemana', verificar_Token, (req, res) => {
         }
         else {
             //console.log(respuesta.respuesta);
-            const nsemana1= respuesta.respuesta.find((filtro) => filtro.estatus==="ACTIVO");
+            const nsemana1 = respuesta.respuesta.find((filtro) => filtro.estatus === "ACTIVO");
             var nsemana = "";
-            if(nsemana1){
-                nsemana= nsemana1.numsemana;
+            if (nsemana1) {
+                nsemana = nsemana1.numsemana;
             }
-            else{
-                nsemana= "NA";
+            else {
+                nsemana = "NA";
             }
-            
+
             mostPermisos(function (error, respuestaPermisos) {
                 if (error) {
                     console.log(error)
@@ -1258,11 +1270,11 @@ app.get('/Menusemana', verificar_Token, (req, res) => {
                 }
                 else {
                     //console.log(respuestaPermisos.respuesta);
-                    const permisomenu1= respuestaPermisos.respuesta.find((filtro) => filtro.Id_Permisos === responsable);
+                    const permisomenu1 = respuestaPermisos.respuesta.find((filtro) => filtro.Id_Permisos === responsable);
 
                     const permisomenu = permisomenu1.Form_comida;
                     console.log(permisomenu);
-                    
+
                     res.status(200).json({
                         respuesta,
                         nsemana,
@@ -1303,7 +1315,7 @@ app.get('/Semanamenu', (req, res) => {
         }
         else {
             //console.log(respuesta.respuesta);
-            const encargado= "RPMhzte2e4rlfd1p8s3";
+            const encargado = "RPMhzte2e4rlfd1p8s3";
             mostPermisos(function (error, respuestaPermisos) {
                 if (error) {
                     console.log(error)
@@ -1313,12 +1325,12 @@ app.get('/Semanamenu', (req, res) => {
                 }
                 else {
                     //console.log(respuestaPermisos.respuesta);
-                    const datospermiso= respuestaPermisos.respuesta.find((filtro) => filtro.Id_Permisos===encargado);
+                    const datospermiso = respuestaPermisos.respuesta.find((filtro) => filtro.Id_Permisos === encargado);
                     const permiso = datospermiso.Form_comida;
                     res.status(200).json({
                         respuesta,
                         permiso
-                    }) 
+                    })
                 }
                 //console.log(respuesta);
             })
@@ -2297,13 +2309,13 @@ app.get('/tableromantt/:mes', (req, res) => {
             })
         }
         else {
-            const confechacompromiso= respuesta.respuesta.length;
+            const confechacompromiso = respuesta.respuesta.length;
             //console.log(confechacompromiso);
 
 
-            let atendidos1= [];
+            let atendidos1 = [];
             respuesta.respuesta.forEach((datos) => {
-                if(datos.Fecha_Atencion<=datos.Fecha_Compromiso){
+                if (datos.Fecha_Atencion <= datos.Fecha_Compromiso) {
                     atendidos1.push(datos);
                 }
             })
@@ -2484,8 +2496,10 @@ app.post('/insertarInsumos', (req, res) => {
 
 })
 app.post('/insertarMante', (req, res) => {
-    console.log(req.body);
-    Folio(function (error, respuesta) {
+    //console.log(req.body);
+    const fecha = moment().format("YYYY-MM-DD");
+    const fechafolio = moment().format("DDMMYY");
+    Folio(fechafolio, function (error, respuesta) {
         if (error) {
             console.log(error);
             res.status(500).json({
@@ -2494,12 +2508,12 @@ app.post('/insertarMante', (req, res) => {
         } else {
             // Una vez que tenemos el folio, procedemos con la inserción
             const folio = respuesta.folio;
-            console.log(folio)
+            //console.log(folio)
             const tipo = req.body.tipoAct;
-            console.log("Tipo del activo", req.body.tipoAct);
+            //console.log("Tipo del activo", req.body.tipoAct);
             const noaplica = "NA";
             if (tipo) {
-                if (tipo === "MONTACARGAS" || tipo === "MAQUINARIA" || tipo === "VEHÍCULOS" || tipo === "HERRAMIENTA") {
+                if (tipo === "MONTACARGAS" || tipo === "EQUIPOS DE PRODUCCION" || tipo === "VEHÍCULOS" || tipo === "HERRAMIENTA") {
                     if (tipo === "MONTACARGAS") {
                         /* folioMant, falta, fabricacion, tipoAct,  modelo, capacidad, clasificacion, nmotor, tipocontmate, especificacion, marca, descripadi,descripgen,idubicacion, */
                         if (req.body.folioActivo && fecha && noaplica && req.body.tipoAct && req.body.modelo && req.body.capacidad && req.body.clasificacion && noaplica && noaplica && noaplica && noaplica && noaplica && noaplica) {
@@ -2525,7 +2539,7 @@ app.post('/insertarMante', (req, res) => {
                         }
                     }
                     else {
-                        if (tipo === "MAQUINARIA") {
+                        if (tipo === "EQUIPOS DE PRODUCCION") {
                             if (req.body.folioActivo) {
                                 if (fecha && noaplica && req.body.tipoAct && req.body.modelo && req.body.capacidad && req.body.clasificacion && noaplica && noaplica && noaplica && noaplica && noaplica && noaplica && noaplica) {
                                     inserMante(req.body.folioActivo, fecha, noaplica, req.body.tipoAct, req.body.modelo, req.body.capacidad, req.body.clasificacion, noaplica, noaplica, noaplica, noaplica, noaplica, req.body.descripgen, req.body.idubicacion, function (errorMante, respuestaMante) {
@@ -2570,8 +2584,6 @@ app.post('/insertarMante', (req, res) => {
                                                         /* respuestaMante: respuestaMante,
                                                         respuestaInser: respuestaInser */
                                                     });
-
-                                                    console.log("RESPUESTA", respuestaMante.mensaje)
                                                 }
                                             });
                                         }
@@ -2660,8 +2672,6 @@ app.post('/insertarMante', (req, res) => {
                                                 /* respuestaMante: respuestaMante,
                                                 respuestaInser: respuestaInser */
                                             });
-
-                                            console.log("RESPUESTA", respuestaMante.mensaje)
                                         }
                                     });
                                 }
@@ -2677,7 +2687,7 @@ app.post('/insertarMante', (req, res) => {
 
                     }
                     else {
-                        if (tipo === "EQUIPOS DE CONTENCIÓN" || tipo === "EQUIPOS PARA MANEJO DE MATERIALES") {
+                        if (tipo === "EQUIPOS DE CONTENCIÓN") {
                             if (folio && fecha && req.body.fabricacion && req.body.tipoAct && noaplica && req.body.capacidad && req.body.clasificacion && noaplica && req.body.tipocontmate && req.body.espeficicacion && noaplica && noaplica && req.body.descripgen && req.body.idubicacion) {
                                 inserMante(folio, fecha, req.body.fabricacion, req.body.tipoAct, noaplica, req.body.capacidad, req.body.clasificacion, noaplica, req.body.tipocontmate, req.body.espeficicacion, noaplica, noaplica, req.body.descripgen, req.body.idubicacion, function (errorMante, respuestaMante) {
                                     if (errorMante) {
@@ -3144,6 +3154,7 @@ app.post('/insertarAsigactividad', verificar_Token, (req, res) => {
     })
 })
 app.post('/insertarCompra', (req, res) => {
+    console.log(req.body);
     mostConsumible(function (error, respuesta) {
         if (error) {
             console.log(error)
@@ -5244,6 +5255,153 @@ app.put('/actualizarestatusmenuFalse', verificar_Token, (req, res) => {
         });
     }
 
+})
+app.put('/actualizarcompra', (req, res) => {
+    console.log(req.body);
+    if (req.body.cantidad && req.body.cantidad > 0 && req.body.idconsumibles && req.body.idcompras) {
+        mostConsumible(function (error, respuesta) {
+            if (error) {
+                console.log(error)
+                res.status(404).json({
+                    mensaje: respuesta.mensaje
+                })
+            }
+            else {
+                //console.log(respuesta.respuesta);
+                const datos = respuesta.respuesta.find((filtro) => filtro.folioActivo === req.body.idconsumibles);
+                const idconsumible = datos.idconsumibles;
+                const codigobarras = datos.codigobarras;
+                const ultimacantidad = datos.cantidad;
+                /* console.log("Ultima cantidad = ", ultimacantidad);
+                console.log("ID del consumible = ", idconsumible);
+                console.log("Codigo de barras = ", codigobarras); */
+                mostCompra(req.body.idconsumibles, function (error, respuesta) {
+                    if (error) {
+                        console.log(error)
+                        res.status(404).json({
+                            mensaje: respuesta.mensaje
+                        })
+                    }
+                    else {
+                        //console.log(respuesta.respuesta);
+                        const datos= respuesta.respuesta.findIndex((filtro) => filtro.idcompras===req.body.idcompras);
+                        console.log(datos);
+                        if (datos >= 1) {
+                            const ultimovalorinventario = respuesta.respuesta[(respuesta.respuesta.length - 2)].valorinventario;
+                            //console.log("Ultimo valor de inventario= ", ultimovalorinventario);
+                            const compramodificar = respuesta.respuesta.find(filtro => filtro.idcompras === req.body.idcompras);
+                            const cantidadmodificar = compramodificar.cantidad;
+                            //console.log("Cantidad a modificar= ", cantidadmodificar);
+                            //console.log("Costo total = ", compramodificar.costototal);
+
+                            const preciounitario1 = compramodificar.costototal / parseInt(req.body.cantidad);
+                            //console.log("Precio unitario con todos los decimales: ",preciounitario1);
+                            const preciounitario = Math.round((preciounitario1 + Number.EPSILON) * 100) / 100;
+                            //console.log("Precio unitario con dos decimales: ", preciounitario);
+
+                            const existencias = (ultimacantidad - cantidadmodificar) + parseInt(req.body.cantidad);
+                            //console.log("Existencias totales: ", existencias);
+
+                            const valorinventario1 = (((ultimacantidad - cantidadmodificar) * ultimovalorinventario) + compramodificar.costototal) / existencias;
+                            const valorinventario = Math.round((valorinventario1 + Number.EPSILON) * 100) / 100;
+                            //console.log("Valor inventario con dos decimales: ", valorinventario);
+
+                            editConsu(idconsumible, existencias, valorinventario, codigobarras, function (error, respuesta) {
+                                if (error) {
+                                    console.log(error)
+                                    res.status(404).json({
+                                        mensaje: respuesta.mensaje
+                                    })
+                                }
+                                else {
+                                    //io.emit('escuchando', respuesta);
+                                    //id,cantidad,preciounitario,valorinventario,
+                                    editCompra(req.body.idcompras, req.body.cantidad, preciounitario,valorinventario, function (error, respuesta) {
+                                        if (error) {
+                                            console.log(error)
+                                            res.status(404).json({
+                                                mensaje: respuesta.mensaje
+                                            })
+                                        }
+                                        else {
+                                            //io.emit('escuchando', respuesta);
+                                            res.status(200).json({
+                                                mensaje: respuesta.mensaje
+                                            })
+                                        }
+                                        //console.log(respuesta);
+                                    })
+                                }
+                                //console.log(respuesta);
+                            })
+
+                        }
+                        else {
+                            //console.log("no es mayor a 1");
+                            const ultimovalorinventario = 0;
+                            //console.log("Ultimo valor de inventario= ", ultimovalorinventario);
+                            const compramodificar = respuesta.respuesta.find(filtro => filtro.idcompras === req.body.idcompras);
+                            const cantidadmodificar = compramodificar.cantidad;
+                            //console.log("Cantidad a modificar= ", cantidadmodificar);
+                            //console.log("Costo total = ", compramodificar.costototal);
+
+                            const preciounitario1 = compramodificar.costototal / parseInt(req.body.cantidad);
+                            //console.log("Precio unitario con todos los decimales: ",preciounitario1);
+                            const preciounitario = Math.round((preciounitario1 + Number.EPSILON) * 100) / 100;
+                            //console.log("Precio unitario con dos decimales: ", preciounitario);
+
+                            const existencias = (ultimacantidad - cantidadmodificar) + parseInt(req.body.cantidad);
+                            //console.log("Existencias totales: ", existencias);
+
+                            const valorinventario1 = (((ultimacantidad - cantidadmodificar) * ultimovalorinventario) + compramodificar.costototal) / existencias;
+                            const valorinventario = Math.round((valorinventario1 + Number.EPSILON) * 100) / 100;
+                            //console.log("Valor inventario con dos decimales: ", valorinventario);
+
+                            editConsu(idconsumible, existencias, valorinventario, codigobarras, function (error, respuesta) {
+                                if (error) {
+                                    console.log(error)
+                                    res.status(404).json({
+                                        mensaje: respuesta.mensaje
+                                    })
+                                }
+                                else {
+                                    //io.emit('escuchando', respuesta);
+                                    //id,cantidad,preciounitario,valorinventario,
+                                    console.log("algo pasa");
+                                    editCompra(req.body.idcompras, req.body.cantidad, preciounitario, valorinventario, function (error, respuesta) {
+                                        if (error) {
+                                            console.log(error)
+                                            res.status(404).json({
+                                                mensaje: respuesta.mensaje
+                                            })
+                                        }
+                                        else {
+                                            //io.emit('escuchando', respuesta);
+                                            res.status(200).json({
+                                                mensaje: respuesta.mensaje
+                                            })
+                                        }
+                                        //console.log(respuesta);
+                                    })
+                                }
+                                //console.log(respuesta);
+                            })
+                        }
+
+
+                    }
+                })
+
+            }
+
+        })
+    }
+    else {
+        console.log("Existen datos vacíos");
+        res.status(400).json({
+            mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
+        });
+    }
 })
 /* Fin de actualizar */
 

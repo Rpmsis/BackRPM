@@ -1691,7 +1691,7 @@ app.get('/asignadasmes/:empresa', verificar_Token, (req, res) => {
     const usuario = req.usuario;
     const responsable = usuario.nombre;
     //console.log(responsable);
-    //console.log("asignadasmes",req.params.empresa);
+    console.log("asignadasmes",req.params.empresa);
     mostActasignadasmes(responsable, req.params.empresa, function (error, respuesta) {
         if (error) {
             console.log(error)
@@ -1700,7 +1700,7 @@ app.get('/asignadasmes/:empresa', verificar_Token, (req, res) => {
             })
         }
         else {
-            //console.log(respuesta.respuesta);
+            console.log(respuesta.respuesta);
             const masignadas = respuesta.respuesta.map((filtro) => [
                 filtro.mes
             ]);
@@ -1714,7 +1714,7 @@ app.get('/asignadasmes/:empresa', verificar_Token, (req, res) => {
                 const mesnombre = moment().month(mesnum).format('MMMM');
                 mes.push(mesnombre);
             });
-            //console.log(mes);
+            console.log(mes);
 
 
             const casignadas = respuesta.respuesta.map((filtro) => [
@@ -1722,7 +1722,7 @@ app.get('/asignadasmes/:empresa', verificar_Token, (req, res) => {
             ]);
             //console.log(casignadas);
             const asignados = casignadas.flat();
-            //console.log(asignados);
+            console.log(asignados);
 
             res.status(200).json({
                 asignados,
@@ -1813,12 +1813,16 @@ app.get('/asigactivimes', verificar_Token, (req, res) => {
     })
 }
 )
-app.get('/controlmes', (req, res) => {
+app.get('/controlmes', verificar_Token, (req, res) => {
+    /* responsable,idactividad,mes, */
+    const usuario = req.usuario;
+    const responsable = usuario.nombre;
+
     const idactividad = req.query.id;
     const mes = req.query.mes;
-    const kilos = req.query.kilos;
-    console.log(kilos);
-    mostControl_mes(idactividad, mes, function (error, respuesta) {
+    //const kilos = req.query.kilos;
+    //console.log(kilos);
+    mostAsigactivi_mes(responsable, idactividad, mes, function (error, respuesta) {
         if (error) {
             console.log(error)
             res.status(404).json({
@@ -1826,23 +1830,47 @@ app.get('/controlmes', (req, res) => {
             })
         }
         else {
-            //console.log("Controlmes ",respuesta.respuesta);
-            const responsables1 = respuesta.respuesta.map((datos) => [datos.responsables]);
-            const responsables = responsables1.flat();
-            //console.log(responsables);
-
-            let nombre = [];
-            responsables.forEach((filtro) => { const separado = filtro.split(' '); nombre.push(separado[0]); })
-            //console.log(nombre);
-
-            const tiempo1 = respuesta.respuesta.map((datos) => [datos.tiempo_total]);
-            const tiempo = tiempo1.flat();
-            //console.log(tiempo);
-
-            res.status(200).json({
-                responsables,
-                tiempo,
-                nombre
+            //console.log(respuesta.respuesta);
+            let kilos = respuesta.respuesta[0].kg_total;
+            let tiempo = respuesta.respuesta[0].tiempo_total;
+            console.log(kilos, tiempo);
+            const kgmin= kilos/tiempo;
+            console.log(kgmin);
+            mostControl_mes(idactividad, mes, function (error, respuesta) {
+                if (error) {
+                    console.log(error)
+                    res.status(404).json({
+                        mensaje: respuesta.mensaje
+                    })
+                }
+                else {
+                    //console.log("Controlmes ",respuesta.respuesta);
+                    const responsables1 = respuesta.respuesta.map((datos) => [datos.responsables]);
+                    const responsables = responsables1.flat();
+                    //console.log(responsables);
+        
+                    let nombre = [];
+                    responsables.forEach((filtro) => { const separado = filtro.split(' '); nombre.push(separado[0]); })
+                    //console.log(nombre);
+        
+                    const tiempo1 = respuesta.respuesta.map((datos) => [datos.tiempo_total]);
+                    const tiempo = tiempo1.flat();
+                    console.log(tiempo);
+                    let kilos= [];
+                    tiempo.forEach((dato) =>{
+                        const kg = Math.round(((dato*kgmin) + Number.EPSILON) * 100) / 100;
+                        kilos.push(kg);
+                    });
+                    console.log(kilos);
+        
+                    res.status(200).json({
+                        responsables,
+                        tiempo,
+                        kilos,
+                        nombre
+                    })
+                }
+                //console.log(respuesta);
             })
         }
         //console.log(respuesta);
@@ -1906,7 +1934,7 @@ app.get('/actividadesaut', (req, res) => {
     asignacionaut();
 });
 // Tarea programada para ejecutarse todos los días a la hora que le indiques
-const job = schedule.scheduleJob('30 00 * * *', function () {
+schedule.scheduleJob('08 08 * * *', function () {
     console.log('¡La tarea diaria se ejecutó a las 10:47 AM UTC!');
     asignacionaut();
 });
