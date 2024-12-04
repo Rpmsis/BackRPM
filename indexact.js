@@ -6,6 +6,7 @@ const fs = require('fs');
 const path = require('path');
 const jwt = require('jsonwebtoken');
 const schedule = require('node-schedule');
+const Fido2Lib = require('fido2-lib');
 
 //Hoja de actforaneas
 const mostubi = require('./actividades/mostUbi');
@@ -92,6 +93,8 @@ const io = require("socket.io")(3004, {
     }
 });
 
+// Inicialización de Fido2Lib
+const fido2 = new Fido2Lib.Fido2Lib();
 
 
 /* Hoja de actForaneas */
@@ -1691,7 +1694,7 @@ app.get('/asignadasmes/:empresa', verificar_Token, (req, res) => {
     const usuario = req.usuario;
     const responsable = usuario.nombre;
     //console.log(responsable);
-    console.log("asignadasmes",req.params.empresa);
+    console.log("asignadasmes", req.params.empresa);
     mostActasignadasmes(responsable, req.params.empresa, function (error, respuesta) {
         if (error) {
             console.log(error)
@@ -1834,7 +1837,7 @@ app.get('/controlmes', verificar_Token, (req, res) => {
             let kilos = respuesta.respuesta[0].kg_total;
             let tiempo = respuesta.respuesta[0].tiempo_total;
             console.log(kilos, tiempo);
-            const kgmin= kilos/tiempo;
+            const kgmin = kilos / tiempo;
             console.log(kgmin);
             mostControl_mes(idactividad, mes, function (error, respuesta) {
                 if (error) {
@@ -1848,21 +1851,21 @@ app.get('/controlmes', verificar_Token, (req, res) => {
                     const responsables1 = respuesta.respuesta.map((datos) => [datos.responsables]);
                     const responsables = responsables1.flat();
                     //console.log(responsables);
-        
+
                     let nombre = [];
                     responsables.forEach((filtro) => { const separado = filtro.split(' '); nombre.push(separado[0]); })
                     //console.log(nombre);
-        
+
                     const tiempo1 = respuesta.respuesta.map((datos) => [datos.tiempo_total]);
                     const tiempo = tiempo1.flat();
                     console.log(tiempo);
-                    let kilos= [];
-                    tiempo.forEach((dato) =>{
-                        const kg = Math.round(((dato*kgmin) + Number.EPSILON) * 100) / 100;
+                    let kilos = [];
+                    tiempo.forEach((dato) => {
+                        const kg = Math.round(((dato * kgmin) + Number.EPSILON) * 100) / 100;
                         kilos.push(kg);
                     });
                     console.log(kilos);
-        
+
                     res.status(200).json({
                         responsables,
                         tiempo,
@@ -1952,6 +1955,39 @@ schedule.scheduleJob('08 08 * * *', function () {
 
 /* FIN DE INSERTAR ACTIVIDADES AUTOMATICAMENTE*/
 
+
+
+/* Implementar registro y reconocimiento de huellas (navegador a dispositivo)*/
+let currentChallenge = null;
+let userData = {}; // Aquí almacenamos datos de los usuarios y sus credenciales
+
+// Ruta para generar el desafío de registro
+app.post('/registerBegin', (req, res) => {
+    const user = { id: "usuario123", name: "Usuario", displayName: "Usuario Test" };
+
+    // Generar un desafío para el registro
+    const challenge = fido2.attestationOptions();
+    currentChallenge = challenge; // Guardamos el desafío para la validación posterior
+
+    res.json(challenge); // Enviamos el desafío al cliente para que lo use en la API WebAuthn
+});
+
+// Ruta para registrar las credenciales del usuario
+app.post('/registerComplete', async (req, res) => {
+    const attestationResponse = req.body;
+    console.log(attestationResponse);
+
+    try {
+        const result = await fido2.attestationResult(attestationResponse, currentChallenge);
+        // Guardamos las credenciales del usuario para futuras autenticaciones
+        userData[user.id] = result;
+        res.json({ status: 'ok', result });
+    } catch (error) {
+        res.status(400).json({ error: error.message });
+    }
+});
+
+/* FIN de Implementar registro y reconocimiento de huellas (navegador a dispositivo)   */
 
 
 app.listen(port, () => {
