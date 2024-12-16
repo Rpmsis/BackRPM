@@ -6,6 +6,7 @@ const axios = require('axios');
 const moment = require('moment');
 const fileUpload = require('express-fileupload');
 const fs = require('fs');
+const https = require('https');
 const path = require('path');
 const jwt = require('jsonwebtoken');
 //Lector de huella HID
@@ -124,10 +125,13 @@ const editAsistencia = require('./query/actualizarAsistenciastatus');
 const editEstatusmenu = require('./query/actualizarestatusmenu');
 const editPermisomenu = require('./query/actualizarPermisomenu');
 const editCompra = require('./query/actualizarCompra');
+const editProveedor = require('./query/actualizarProveedor');
+
 
 const elim = require('./query/eliminar');
-const elimUsuarioprov = require('./query/eliminarUsuarioprov');
 
+const privateKey = fs.readFileSync(path.resolve(__dirname, 'server.key'), 'utf8');
+const certificate = fs.readFileSync(path.resolve(__dirname, 'mi_certificado.crt'), 'utf8');
 
 const verificar_Token = require('./middleware/Valida_Token');
 const app = express()
@@ -872,8 +876,11 @@ app.get('/folioconsumible', (req, res) => {
     })
 }
 )
-app.get('/consumibles', (req, res) => {
-    mostConsumible(function (error, respuesta) {
+//MOSTRAR EL STOCK DE TODAS LAS SUCURSALES
+app.get('/consumibles/:sucursal', (req, res) => {
+    //console.log(req.params.sucursal);
+    const sucursal = req.params.sucursal;
+    mostConsumible(function (error, respuestaconsumibles) {
 
         if (error) {
             console.log(error)
@@ -882,6 +889,112 @@ app.get('/consumibles', (req, res) => {
             })
         }
         else {
+            let respuesta = [];
+            //console.log(respuestaconsumibles.respuesta);
+            if (sucursal === "CANOA") {
+                respuesta = respuestaconsumibles.respuesta.map((datos) => {
+                    return {
+                        idconsumibles: datos.idconsumibles,
+                        folioActivo: datos.folioActivo,
+                        fecha: datos.fecha,
+                        unidadmedida: datos.unidadmedida,
+                        cantidad: datos.cantidad,
+                        costo: datos.costo,
+                        tipo: datos.tipo,
+                        descripcion: datos.descripcion,
+                        codigobarras: datos.codigobarras,
+                        minimo: datos.minimo,
+                        cantidad: datos.cantidad,
+                        costo: datos.costo
+
+                    }
+                })
+            }
+            else {
+                if (sucursal === "SAN LUIS POTOSI") {
+                    respuesta = respuestaconsumibles.respuesta.map((datos) => {
+                        return {
+                            idconsumibles: datos.idconsumibles,
+                            folioActivo: datos.folioActivo,
+                            fecha: datos.fecha,
+                            unidadmedida: datos.unidadmedida,
+                            cantidad: datos.cantidad,
+                            costo: datos.costo,
+                            tipo: datos.tipo,
+                            descripcion: datos.descripcion,
+                            codigobarras: datos.codigobarras,
+                            minimo: datos.minimo,
+                            cantidad: datos.cantidadslp,
+                            costo: datos.costoslp
+
+                        }
+                    })
+                }
+                else {
+                    if (sucursal === "QUERETARO") {
+                        respuesta = respuestaconsumibles.respuesta.map((datos) => {
+                            return {
+                                idconsumibles: datos.idconsumibles,
+                                folioActivo: datos.folioActivo,
+                                fecha: datos.fecha,
+                                unidadmedida: datos.unidadmedida,
+                                cantidad: datos.cantidad,
+                                costo: datos.costo,
+                                tipo: datos.tipo,
+                                descripcion: datos.descripcion,
+                                codigobarras: datos.codigobarras,
+                                minimo: datos.minimo,
+                                cantidad: datos.cantidadqro,
+                                costo: datos.costoqro
+
+                            }
+                        })
+                    }
+                    else {
+                        if (sucursal === "19 NTE") {
+                            respuesta = respuestaconsumibles.respuesta.map((datos) => {
+                                return {
+                                    idconsumibles: datos.idconsumibles,
+                                    folioActivo: datos.folioActivo,
+                                    fecha: datos.fecha,
+                                    unidadmedida: datos.unidadmedida,
+                                    cantidad: datos.cantidad,
+                                    costo: datos.costo,
+                                    tipo: datos.tipo,
+                                    descripcion: datos.descripcion,
+                                    codigobarras: datos.codigobarras,
+                                    minimo: datos.minimo,
+                                    cantidad: datos.cantidad19nt,
+                                    costo: datos.costo19nt
+
+                                }
+                            })
+                        }
+                        else {
+                            if (sucursal === "VALSEQUILLO") {
+                                respuesta = respuestaconsumibles.respuesta.map((datos) => {
+                                    return {
+                                        idconsumibles: datos.idconsumibles,
+                                        folioActivo: datos.folioActivo,
+                                        fecha: datos.fecha,
+                                        unidadmedida: datos.unidadmedida,
+                                        cantidad: datos.cantidad,
+                                        costo: datos.costo,
+                                        tipo: datos.tipo,
+                                        descripcion: datos.descripcion,
+                                        codigobarras: datos.codigobarras,
+                                        minimo: datos.minimo,
+                                        cantidad: datos.cantidadvsq,
+                                        costo: datos.costovsq
+
+                                    }
+                                })
+                            }
+                        }
+                    }
+                }
+            }
+            //console.log(respuesta);
             res.status(200).json({
                 respuesta
             })
@@ -1016,10 +1129,12 @@ app.get('/movimientos', (req, res) => {
         //console.log(respuesta);
     })
 })
+//Mostrar las comparas dependiendo de la sucursal.
 app.get('/compras', (req, res) => {
     const compra = req.query.compra;
+    const sucursal = req.query.sucursal;
     //console.log(compra);
-    mostCompra(compra, function (error, respuesta) {
+    mostCompra(compra, function (error, respuestaCompra) {
 
         if (error) {
             console.log(error)
@@ -1028,6 +1143,9 @@ app.get('/compras', (req, res) => {
             })
         }
         else {
+            //console.log("compras: ",respuestaCompra.respuesta);
+            //console.log(sucursal);
+            const respuesta = respuestaCompra.respuesta.filter(filtro => filtro.sucursal === sucursal);
             res.status(200).json({
                 respuesta
             })
@@ -1687,8 +1805,7 @@ app.get('/idinsumos/:id', async (req, res) => {
 )
 //MODIFICAR LA INSERCIÓN DE PRESTAMO PARA MOSTRAR PRESTAMOS VENCIDOS
 app.get('/vigenciaprestamo', (req, res) => {
-    const fechavigencia = moment(fecha).subtract(7, 'days').format('YYYY-MM-DD');
-    console.log(fechavigencia);
+    const fecha = moment().format("YYYY-MM-DD");
     mostVigenciaprestamos(fecha, function (error, respuesta) {
         if (error) {
             console.log(error)
@@ -2338,8 +2455,11 @@ app.get('/tableromantt/:mes', (req, res) => {
         //console.log(respuesta);
     })
 })
-app.get('/verificarcompras', (req, res) => {
-    mostVerificarcompras(function (error, respuesta) {
+//VERIFICAR LA SUCURSAL A LA CUAL PUEDE VERIFICAR
+app.get('/verificarcompras', verificar_Token, (req, res) => {
+    const usuario = req.usuario;
+    //console.log(usuario);
+    mostAltas(function (error, respuesta) {
         if (error) {
             console.log(error)
             res.status(404).json({
@@ -2347,12 +2467,28 @@ app.get('/verificarcompras', (req, res) => {
             })
         }
         else {
-            res.status(200).json({
-                respuesta
+            const verificador = respuesta.respuesta.find(filtro => filtro.idCheck === usuario.id);
+            const sucursal = verificador.Sucursal;
+            console.log(verificador.Sucursal);
+            mostVerificarcompras(function (error, respuestaVerificarcompras) {
+                if (error) {
+                    console.log(error)
+                    res.status(404).json({
+                        mensaje: respuesta.mensaje
+                    })
+                }
+                else {
+                    const respuesta = respuestaVerificarcompras.respuesta.filter((datos) => datos.sucursal === sucursal);
+                    res.status(200).json({
+                        respuesta
+                    })
+                }
+                //console.log(respuesta);
             })
         }
         //console.log(respuesta);
     })
+
 })
 /* Fin de mostrar */
 
@@ -2989,16 +3125,22 @@ app.post('/insertarConsumibles', (req, res) => {
     })
 
 })
+//INSERTAR PROVEEDOR DESDE CANTABILIDAD 12/14/2024
 app.post('/insertarProveedor', (req, res) => {
-    const foliorpm = "FOLIORPM";
-    if (req.body.idusuarioprov && foliorpm && fecha && req.body.nombre && req.body.email && req.body.movil && req.body.tel && req.body.rsocial && req.body.rfc &&
+    const fecha = moment().format("YYYY-MM-DD");
+    /* fecha, nombre, `email`, `movil`, `tel`, `rsocial`, `rfc`, 
+    `rfiscal`, `cfdi`, `fpago`, `calle`, `next`, `colonia`, `ninten`, `municipio`, 
+    `ciudad`, `cpostal`, `cnombre`, `cemail`, `cmovil`, `ctel`, `beneficiario`, `nombanco`, 
+    `clabe`, `cuenta`, `refpago`, `credito`, `cdias`, `identifi`, `curp` */
+
+    if (fecha && req.body.nombre && req.body.email && req.body.movil && req.body.tel && req.body.rsocial && req.body.rfc &&
         req.body.rfiscal && req.body.cfdi && req.body.fpago && req.body.calle && req.body.next && req.body.colonia && req.body.ninten && req.body.municipio &&
         req.body.ciudad && req.body.cpostal && req.body.cnombre && req.body.cemail && req.body.cmovil && req.body.ctel && req.body.beneficiario && req.body.nombanco &&
-        req.body.clabe && req.body.cuenta && req.body.refpago && req.body.credito) {
-        insertarProveedor(foliorpm, fecha, req.body.nombre, req.body.email, req.body.movil, req.body.tel, req.body.rsocial, req.body.rfc,
+        req.body.clabe && req.body.cuenta && req.body.refpago && req.body.credito && req.body.curp) {
+        insertarProveedor(fecha, req.body.nombre, req.body.email, req.body.movil, req.body.tel, req.body.rsocial, req.body.rfc,
             req.body.rfiscal, req.body.cfdi, req.body.fpago, req.body.calle, req.body.next, req.body.colonia, req.body.ninten, req.body.municipio,
             req.body.ciudad, req.body.cpostal, req.body.cnombre, req.body.cemail, req.body.cmovil, req.body.ctel, req.body.beneficiario, req.body.nombanco,
-            req.body.clabe, req.body.cuenta, req.body.refpago, req.body.credito, req.body.cdias, function (error, respuesta) {
+            req.body.clabe, req.body.cuenta, req.body.refpago, req.body.credito, req.body.cdias, req.body.identifi, req.body.curp, function (error, respuesta) {
 
                 if (error) {
                     console.log(error)
@@ -3007,20 +3149,8 @@ app.post('/insertarProveedor', (req, res) => {
                     })
                 }
                 else {
-                    elimUsuarioprov(req.body.idusuarioprov, function (error, respuesta) {
-
-                        if (error) {
-                            console.log(error)
-                            res.status(404).json({
-                                mensaje: respuesta.mensaje
-                            })
-                        }
-                        else {
-                            res.status(200).json({
-                                mensaje: respuesta.mensaje
-                            })
-                        }
-                        console.log(respuesta);
+                    res.status(200).json({
+                        mensaje: respuesta.mensaje
                     })
                 }
                 //console.log(respuesta);
@@ -3174,12 +3304,12 @@ app.post('/insertarAsigactividad', verificar_Token, (req, res) => {
         //console.log(respuesta);
     })
 })
-//GUARDA LA COMPRA SIN ALTERAR EL CONTEO GLOBAL, 2024-12-04
+//GUARDA LA COMPRA SIN ALTERAR EL CONTEO GLOBAL, 2024-12-04 *** GUARDA LA SUCURSAL QUE ESTA COMPRADOM LOS ACTIVOS
 app.post('/insertarCompra', (req, res) => {
-    //console.log(req.body);
+    console.log(req.body);
     const fecha = moment().format("YYYY-MM-DD");
     const valorinventario = 0;
-    if (req.body.idconsumibles && req.body.folioActivo && fecha && req.body.proveedor && req.body.cantidad && req.body.costo && req.body.oc && req.body.descrip) {
+    if (req.body.idconsumibles && req.body.folioActivo && fecha && req.body.proveedor && req.body.cantidad && req.body.costo && req.body.oc && req.body.descrip && req.body.sucursal) {
         // cantidad, preciounitario, costototal, valorinventario, oc
         const preciounitario1 = parseFloat(req.body.costo) / parseInt(req.body.cantidad);
         //console.log("Precio unitario con todos los decimales: ",preciounitario1);
@@ -3187,7 +3317,7 @@ app.post('/insertarCompra', (req, res) => {
         //console.log("Precio unitario con dos decimales: ", preciounitario);
 
         if (req.body.codigobarras) {
-            insertarCompra(req.body.folioActivo, fecha, req.body.proveedor, req.body.cantidad, preciounitario, req.body.costo, valorinventario, req.body.oc, req.body.codigobarras, req.body.descrip, function (error, respuesta) {
+            insertarCompra(req.body.folioActivo, fecha, req.body.proveedor, req.body.cantidad, preciounitario, req.body.costo, valorinventario, req.body.oc, req.body.codigobarras, req.body.descrip, req.body.sucursal, function (error, respuesta) {
                 if (error) {
                     console.log(error)
                     res.status(404).json({
@@ -3205,7 +3335,7 @@ app.post('/insertarCompra', (req, res) => {
             })
         }
         else {
-            insertarCompra(req.body.folioActivo, fecha, req.body.proveedor, req.body.cantidad, preciounitario, req.body.costo, valorinventario, req.body.oc, req.body.folioActivo, req.body.descrip, function (error, respuesta) {
+            insertarCompra(req.body.folioActivo, fecha, req.body.proveedor, req.body.cantidad, preciounitario, req.body.costo, valorinventario, req.body.oc, req.body.folioActivo, req.body.descrip, req.body.sucursal, function (error, respuesta) {
                 if (error) {
                     console.log(error)
                     res.status(404).json({
@@ -4021,6 +4151,62 @@ app.post('/insertarAsistencia', (req, res) => {
         console.log("Existen datos vacíos");
         res.status(400).json({
             mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
+        });
+    }
+})
+//CAMBIOS DEL 14/12/2024
+app.post('/insertarProveedorinsumos', (req, res) => {
+    console.log(req.body);
+    const fecha = moment().format("YYYY-MM-DD");
+    const rfc = "NA";
+    const rfiscal = "NA";
+    const cfdi = "NA";
+    const fpago = "NA";
+    const calle = "NA";
+    const next = "NA";
+    const colonia = "NA";
+    const ninten = "NA";
+    const municipio = "NA";
+    const ciudad = "NA";
+    const cpostal = 0;
+    const cnombre = "NA";
+    const cemail = "NA";
+    const cmovil = "NA";
+    const ctel = "NA";
+    const beneficiario = "NA";
+    const nombanco = "NA";
+    const clabe = "NA";
+    const cuenta = "NA";
+    const refpago = "NA";
+    const credito = "NA";
+    const cdias = 0;
+    const identifi = "NA";
+    const curp = "NA";
+
+    if (req.body.rsocial) {
+        insertarProveedor(fecha, req.body.nombre, req.body.email, req.body.movil, req.body.tel, req.body.rsocial, rfc,
+            rfiscal, cfdi, fpago, calle, next, colonia, ninten, municipio,
+            ciudad, cpostal, cnombre, cemail, cmovil, ctel, beneficiario, nombanco,
+            clabe, cuenta, refpago, credito, cdias, identifi, curp, function (error, respuesta) {
+
+                if (error) {
+                    console.log(error)
+                    res.status(404).json({
+                        mensaje: respuesta.mensaje
+                    })
+                }
+                else {
+                    console.log(respuesta);
+                    res.status(200).json({
+                        mensaje: respuesta.mensaje
+                    })
+                }
+                //console.log(respuesta);
+            })
+    } else {
+        //console.log("Existen datos vacíos");
+        res.status(400).json({
+            mensaje: "Existen datos vacíos"
         });
     }
 })
@@ -5318,7 +5504,8 @@ app.put('/actualizarcompra', (req, res) => {
     //console.log(req.body);
     const estatus = "true";
     const motivo = "";
-    const validado= "false";
+    const validado = "false";
+    let costotal = 0;
     if (req.body.cantidad && req.body.cantidad > 0 && req.body.idconsumibles && req.body.idcompras) {
         mostCompra(req.body.idconsumibles, function (error, respuesta) {
             if (error) {
@@ -5330,7 +5517,7 @@ app.put('/actualizarcompra', (req, res) => {
             else {
                 //console.log(respuesta.respuesta);
                 const datos = respuesta.respuesta.findIndex((filtro) => filtro.idcompras === req.body.idcompras);
-                //console.log(datos);
+                console.log(datos);
                 if (datos >= 1) {
                     const valorinventario = 0;
                     //console.log("Ultimo valor de inventario= ", ultimovalorinventario);
@@ -5338,12 +5525,15 @@ app.put('/actualizarcompra', (req, res) => {
                     //console.log("Cantidad a modificar= ", cantidadmodificar);
                     //console.log("Costo total = ", compramodificar.costototal);
 
-                    const preciounitario1 = compramodificar.costototal / parseInt(req.body.cantidad);
+                    const costodecimal = req.body.cantidad * compramodificar.preciounitario;
+                    costotal = Math.round((costodecimal + Number.EPSILON) * 100) / 100;
+
+                    const preciounitario1 = costotal / parseInt(req.body.cantidad);
                     //console.log("Precio unitario con todos los decimales: ",preciounitario1);
                     const preciounitario = Math.round((preciounitario1 + Number.EPSILON) * 100) / 100;
                     //console.log("Precio unitario con dos decimales: ", preciounitario);
 
-                    editCompra(req.body.idcompras, req.body.cantidad, preciounitario, valorinventario, estatus, motivo, validado, function (error, respuesta) {
+                    editCompra(req.body.idcompras, req.body.cantidad, preciounitario, costotal, valorinventario, estatus, motivo, validado, function (error, respuesta) {
                         if (error) {
                             console.log(error)
                             res.status(404).json({
@@ -5368,12 +5558,15 @@ app.put('/actualizarcompra', (req, res) => {
                     //console.log("Cantidad a modificar= ", cantidadmodificar);
                     //console.log("Costo total = ", compramodificar.costototal);
 
+                    const costodecimal = req.body.cantidad * compramodificar.preciounitario;
+                    costotal = Math.round((costodecimal + Number.EPSILON) * 100) / 100;
+
                     const preciounitario1 = compramodificar.costototal / parseInt(req.body.cantidad);
                     //console.log("Precio unitario con todos los decimales: ",preciounitario1);
                     const preciounitario = Math.round((preciounitario1 + Number.EPSILON) * 100) / 100;
                     //console.log("Precio unitario con dos decimales: ", preciounitario);
 
-                    editCompra(req.body.idcompras, req.body.cantidad, preciounitario, valorinventario, estatus, motivo, validado, function (error, respuesta) {
+                    editCompra(req.body.idcompras, req.body.cantidad, preciounitario, costotal, valorinventario, estatus, motivo, validado, function (error, respuesta) {
                         if (error) {
                             console.log(error)
                             res.status(404).json({
@@ -5418,8 +5611,8 @@ app.put('/eliminarcompra', (req, res) => {
                 const datos = respuesta.respuesta.find((filtro) => filtro.idcompras === req.body.idcompras);
                 //console.log(datos);
                 const estatus = "false";
-                const validado= "false";
-                editCompra(req.body.idcompras, datos.cantidad, datos.preciounitario, datos.valorinventario, estatus, req.body.motivo, validado, function (error, respuesta) {
+                const validado = "false";
+                editCompra(req.body.idcompras, datos.cantidad, datos.preciounitario,datos.costototal, datos.valorinventario, estatus, req.body.motivo, validado, function (error, respuesta) {
                     if (error) {
                         console.log(error)
                         res.status(404).json({
@@ -5447,11 +5640,44 @@ app.put('/eliminarcompra', (req, res) => {
         });
     }
 })
+app.put('/actualizarproveedor', (req, res) => {
+    const verificado = "true";
+    console.log(req.body);
+    /* id,nombre, email, movil, tel, rsocial, rfc,
+        rfiscal, cfdi, fpago, calle, next, colonia, ninten, municipio, 
+        ciudad, cpostal, cnombre, cemail, cmovil, ctel, beneficiario, nombanco, 
+        clabe, cuenta, refpago, credito, cdias, identifi, curp, */
+    if (req.body.idproveedor) {
+        editProveedor(req.body.idproveedor, req.body.nombre, req.body.email, req.body.movil, req.body.tel, req.body.rsocial, req.body.rfc,
+            req.body.rfiscal, req.body.cfdi, req.body.fpago, req.body.calle, req.body.next, req.body.colonia, req.body.ninten, req.body.municipio,
+            req.body.ciudad, req.body.cpostal, req.body.cnombre, req.body.cemail, req.body.cmovil, req.body.ctel, req.body.beneficiario, req.body.nombanco,
+            req.body.clabe, req.body.cuenta, req.body.refpago, req.body.credito, req.body.cdias, req.body.identifi, req.body.curp, verificado, function (error, respuesta) {
+                if (error) {
+                    console.log(error)
+                    res.status(404).json({
+                        mensaje: respuesta.mensaje
+                    })
+                }
+                else {
+                    res.status(200).json({
+                        mensaje: respuesta.mensaje
+                    })
+                }
+                //console.log(respuesta);
+            })
+    }
+    else {
+        console.log("Existen datos vacíos");
+        res.status(400).json({
+            mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
+        });
+    }
+})
 
 async function editcompraglobal(consumible, compra) {
     if (consumible && compra) {
         console.log(consumible, compra);
-        const validado= "true";
+        const validado = "true";
         mostConsumible(function (error, respuesta) {
             if (error) {
                 console.log(error)
@@ -5463,11 +5689,8 @@ async function editcompraglobal(consumible, compra) {
                 //console.log(respuesta.respuesta);
                 const datos = respuesta.respuesta.find((filtro) => filtro.folioActivo === consumible);
                 const idconsumible = datos.idconsumibles;
-                const ultimacantidad = datos.cantidad;
-                const ultimovalorinventario = datos.costo;
-                console.log("Ultima cantidad = ", ultimacantidad);
                 console.log("ID del consumible = ", idconsumible);
-                console.log("Ultima valor inventario = ", ultimovalorinventario);
+                console.log("Todos los datos", datos);
 
                 mostCompra(consumible, function (error, respuesta) {
                     if (error) {
@@ -5477,17 +5700,131 @@ async function editcompraglobal(consumible, compra) {
                         })
                     }
                     else {
-                        //console.log(respuesta.respuesta);
                         const datoscompra = respuesta.respuesta.find((filtro) => filtro.idcompras === compra);
-                        console.log(datoscompra);
-                        const existencias = ultimacantidad + parseInt(datoscompra.cantidad);
-                        console.log("Existencias totales: ", existencias);
-                        console.log("Costo total de la compra actual: ", parseFloat(datoscompra.costototal));
-                        const valorinventario1 = ((ultimacantidad * ultimovalorinventario) + parseFloat(datoscompra.costototal)) / existencias;
-                        const valorinventario = Math.round((valorinventario1 + Number.EPSILON) * 100) / 100;
-                        console.log("Valor inventario con todos los decimales: ", valorinventario);
+                        //console.log(datoscompra);
 
-                        editConsu(idconsumible, existencias, valorinventario, datoscompra.codigobarras, function (error, respuesta) {
+                        let ultimacantidad = 0;
+                        let ultimovalorinventario = 0;
+                        let cancanoa = 0;
+                        let costocanoa = 0;
+                        let canslp = 0;
+                        let costoslp = 0;
+                        let canqro = 0;
+                        let costoqro = 0;
+                        let can19nt = 0;
+                        let costo19nt = 0;
+                        let canvsq = 0;
+                        let costovsq = 0;
+                        let valorinventario = 0;
+                        switch (datoscompra.sucursal) {
+                            case "CANOA":
+                                ultimacantidad = datos.cantidad;
+                                ultimovalorinventario = datos.costo;
+
+                                cancanoa = ultimacantidad + parseInt(datoscompra.cantidad);
+                                //console.log("Costo total de la compra actual: ", parseFloat(datoscompra.costototal));
+                                const valorinventario1 = ((ultimacantidad * ultimovalorinventario) + parseFloat(datoscompra.costototal)) / cancanoa;
+                                costocanoa = Math.round((valorinventario1 + Number.EPSILON) * 100) / 100;
+                                valorinventario = costocanoa;
+                                //console.log("Valor inventario con todos los decimales: ", valorinventario);
+                                canslp = datos.cantidadslp;
+                                costoslp = datos.costoslp;
+                                canqro = datos.cantidadqro;
+                                costoqro = datos.costoqro;
+                                can19nt = datos.cantidad19nt;
+                                costo19nt = datos.costo19nt;
+                                canvsq = datos.cantidadvsq;
+                                costovsq = datos.costovsq;
+                                break;
+                            case "SAN LUIS POTOSI":
+                                ultimacantidad = datos.cantidadslp;
+                                ultimovalorinventario = datos.costoslp;
+
+                                canslp = ultimacantidad + parseInt(datoscompra.cantidad);
+                                //console.log("Existencias totales: ", existencias);
+                                //console.log("Costo total de la compra actual: ", parseFloat(datoscompra.costototal));
+                                const valorinventario2 = ((ultimacantidad * ultimovalorinventario) + parseFloat(datoscompra.costototal)) / canslp;
+                                costoslp  = Math.round((valorinventario2 + Number.EPSILON) * 100) / 100;
+                                valorinventario = costoslp;
+                                //console.log("Valor inventario con todos los decimales: ", valorinventario);
+                                cancanoa = datos.cantidad;
+                                costocanoa = datos.costo;
+                                canqro = datos.cantidadqro;
+                                costoqro = datos.costoqro;
+                                can19nt = datos.cantidad19nt;
+                                costo19nt = datos.costo19nt;
+                                canvsq = datos.cantidadvsq;
+                                costovsq = datos.costovsq;
+                                break;
+                            case "QUERETARO":
+                                ultimacantidad = datos.cantidadqro;
+                                ultimovalorinventario = datos.costoqro;
+
+                                canqro = ultimacantidad + parseInt(datoscompra.cantidad);
+                                //console.log("Existencias totales: ", existencias);
+                                //console.log("Costo total de la compra actual: ", parseFloat(datoscompra.costototal));
+                                const valorinventario3 = ((ultimacantidad * ultimovalorinventario) + parseFloat(datoscompra.costototal)) / canqro;
+                                costoqro  = Math.round((valorinventario3 + Number.EPSILON) * 100) / 100;
+                                valorinventario = costoqro;
+                                //console.log("Valor inventario con todos los decimales: ", valorinventario);
+                                cancanoa = datos.cantidad;
+                                costocanoa = datos.costo;
+                                canslp = datos.cantidadslp;
+                                costoslp = datos.costoslp;
+                                can19nt = datos.cantidad19nt;
+                                costo19nt = datos.costo19nt;
+                                canvsq = datos.cantidadvsq;
+                                costovsq = datos.costovsq;
+                                break;
+                            case "19 NTE":
+                                ultimacantidad = datos.cantidad19nt;
+                                ultimovalorinventario = datos.costo19nt;
+
+                                can19nt = ultimacantidad + parseInt(datoscompra.cantidad);
+                                //console.log("Costo total de la compra actual: ", parseFloat(datoscompra.costototal));
+                                const valorinventario4 = ((ultimacantidad * ultimovalorinventario) + parseFloat(datoscompra.costototal)) / can19nt;
+                                costo19nt  = Math.round((valorinventario4 + Number.EPSILON) * 100) / 100;
+                                valorinventario = costo19nt;
+                                //console.log("Valor inventario con todos los decimales: ", valorinventario);
+                                cancanoa = datos.cantidad;
+                                costocanoa = datos.costo;
+                                canslp = datos.cantidadslp;
+                                costoslp = datos.costoslp;
+                                canqro = datos.cantidadqro;
+                                costoqro = datos.costoqro;
+                                canvsq = datos.cantidadvsq;
+                                costovsq = datos.costovsq;
+                                break;
+                            case "VALSEQUILLO":
+                                ultimacantidad = datos.cantidadvsq;
+                                ultimovalorinventario = datos.costovsq;
+
+                                canvsq = ultimacantidad + parseInt(datoscompra.cantidad);
+                                //console.log("Existencias totales: ", existencias);
+                                //console.log("Costo total de la compra actual: ", parseFloat(datoscompra.costototal));
+                                const valorinventario5 = ((ultimacantidad * ultimovalorinventario) + parseFloat(datoscompra.costototal)) / canvsq;
+                                costovsq  = Math.round((valorinventario5 + Number.EPSILON) * 100) / 100;
+                                valorinventario = costovsq;
+                                //console.log("Valor inventario con todos los decimales: ", valorinventario);
+                                cancanoa = datos.cantidad;
+                                costocanoa = datos.costo;
+                                canslp = datos.cantidadslp;
+                                costoslp = datos.costoslp;
+                                canqro = datos.cantidadqro;
+                                costoqro = datos.costoqro;
+                                can19nt = datos.cantidad19nt;
+                                costo19nt = datos.costo19nt;
+                                break;
+                        }
+
+                        console.log("Ultima cantidad = ", ultimacantidad);
+                        console.log("Ultima valor inventario = ", ultimovalorinventario);
+
+
+
+                        //id, cantidad, costo, codigobarras, cantidadslp, costoslp, cantidadqro, costoqro, cantidadvsq, costovsq, cantidad19nt, costo19nt
+
+                        editConsu(idconsumible, cancanoa, costocanoa, datoscompra.codigobarras, canslp, costoslp, canqro, costoqro, canvsq, costovsq, can19nt, costo19nt, function (error, respuesta) {
                             if (error) {
                                 console.log(error)
                                 res.status(404).json({
@@ -5496,7 +5833,7 @@ async function editcompraglobal(consumible, compra) {
                             }
                             else {
                                 //io.emit('escuchando', respuesta);
-                                editCompra(compra, datoscompra.cantidad, datoscompra.preciounitario, valorinventario, datoscompra.estatus,datoscompra.motivo,validado, function (error, respuesta) {
+                                editCompra(compra, datoscompra.cantidad, datoscompra.preciounitario,datoscompra.costototal, valorinventario, datoscompra.estatus, datoscompra.motivo, validado, function (error, respuesta) {
                                     if (error) {
                                         console.log(error)
                                         res.status(404).json({
@@ -5512,103 +5849,6 @@ async function editcompraglobal(consumible, compra) {
                             }
                             //console.log(respuesta);
                         })
-
-                        /* if (datos >= 1) {
-                            const ultimovalorinventario = respuesta.respuesta[(respuesta.respuesta.length - 2)].valorinventario;
-                            //console.log("Ultimo valor de inventario= ", ultimovalorinventario);
-                            const compramodificar = respuesta.respuesta.find(filtro => filtro.idcompras === compra);
-                            const cantidadmodificar = compramodificar.cantidad;
-                            //console.log("Cantidad a modificar= ", cantidadmodificar);
-                            //console.log("Costo total = ", compramodificar.costototal);
-
-                            const preciounitario1 = compramodificar.costototal / parseInt(req.body.cantidad);
-                            //console.log("Precio unitario con todos los decimales: ",preciounitario1);
-                            const preciounitario = Math.round((preciounitario1 + Number.EPSILON) * 100) / 100;
-                            //console.log("Precio unitario con dos decimales: ", preciounitario);
-
-                            const existencias = (ultimacantidad - cantidadmodificar) + parseInt(req.body.cantidad);
-                            //console.log("Existencias totales: ", existencias);
-
-                            const valorinventario1 = (((ultimacantidad - cantidadmodificar) * ultimovalorinventario) + compramodificar.costototal) / existencias;
-                            const valorinventario = Math.round((valorinventario1 + Number.EPSILON) * 100) / 100;
-                            //console.log("Valor inventario con dos decimales: ", valorinventario);
-
-                            editConsu(idconsumible, existencias, valorinventario, codigobarras, function (error, respuesta) {
-                                if (error) {
-                                    console.log(error)
-                                    res.status(404).json({
-                                        mensaje: respuesta.mensaje
-                                    })
-                                }
-                                else {
-                                    //io.emit('escuchando', respuesta);
-                                    //id,cantidad,preciounitario,valorinventario,
-                                    editCompra(req.body.idcompras, req.body.cantidad, preciounitario, valorinventario, function (error, respuesta) {
-                                        if (error) {
-                                            console.log(error)
-                                            res.status(404).json({
-                                                mensaje: respuesta.mensaje
-                                            })
-                                        }
-                                        else {
-                                            io.emit('verificado', consumible);
-                                            
-                                        }
-                                        //console.log(respuesta);
-                                    })
-                                }
-                                //console.log(respuesta);
-                            })
-
-                        }
-                        else {
-                            //console.log("no es mayor a 1");
-                            const ultimovalorinventario = 0;
-                            //console.log("Ultimo valor de inventario= ", ultimovalorinventario);
-                            const compramodificar = respuesta.respuesta.find(filtro => filtro.idcompras === req.body.idcompras);
-                            const cantidadmodificar = compramodificar.cantidad;
-                            //console.log("Cantidad a modificar= ", cantidadmodificar);
-                            //console.log("Costo total = ", compramodificar.costototal);
-
-                            const preciounitario1 = compramodificar.costototal / parseInt(req.body.cantidad);
-                            //console.log("Precio unitario con todos los decimales: ",preciounitario1);
-                            const preciounitario = Math.round((preciounitario1 + Number.EPSILON) * 100) / 100;
-                            //console.log("Precio unitario con dos decimales: ", preciounitario);
-
-                            const existencias = (ultimacantidad - cantidadmodificar) + parseInt(req.body.cantidad);
-                            //console.log("Existencias totales: ", existencias);
-
-                            const valorinventario1 = (((ultimacantidad - cantidadmodificar) * ultimovalorinventario) + compramodificar.costototal) / existencias;
-                            const valorinventario = Math.round((valorinventario1 + Number.EPSILON) * 100) / 100;
-                            //console.log("Valor inventario con dos decimales: ", valorinventario);
-
-                            editConsu(idconsumible, existencias, valorinventario, codigobarras, function (error, respuesta) {
-                                if (error) {
-                                    console.log(error)
-                                    res.status(404).json({
-                                        mensaje: respuesta.mensaje
-                                    })
-                                }
-                                else {
-                                    //io.emit('escuchando', respuesta);
-                                    //id,cantidad,preciounitario,valorinventario,
-                                    console.log("algo pasa");
-                                    editCompra(req.body.idcompras, req.body.cantidad, preciounitario, valorinventario, function (error, respuesta) {
-                                        if (error) {
-                                            console.log(error)
-                                            res.status(404).json({
-                                                mensaje: respuesta.mensaje
-                                            })
-                                        }
-                                        else {
-                                            io.emit('verificado', consumible);
-                                        }
-                                        //console.log(respuesta);
-                                    })
-                                }
-                                //console.log(respuesta);
-                            })
-                        } */
                     }
                 })
 
@@ -5627,155 +5867,6 @@ app.put('/actualizarcompraglobal', (req, res) => {
     //console.log(req.body.idconsumibles, req.body.idcompras);
     editcompraglobal(req.body.idconsumibles, req.body.idcompras);
 })
-
-/* app.put('/actualizarcompra', (req, res) => {
-    console.log(req.body);
-    if (req.body.cantidad && req.body.cantidad > 0 && req.body.idconsumibles && req.body.idcompras) {
-        mostConsumible(function (error, respuesta) {
-            if (error) {
-                console.log(error)
-                res.status(404).json({
-                    mensaje: respuesta.mensaje
-                })
-            }
-            else {
-                //console.log(respuesta.respuesta);
-                const datos = respuesta.respuesta.find((filtro) => filtro.folioActivo === req.body.idconsumibles);
-                const idconsumible = datos.idconsumibles;
-                const codigobarras = datos.codigobarras;
-                const ultimacantidad = datos.cantidad;
-                //console.log("Ultima cantidad = ", ultimacantidad);
-                //console.log("ID del consumible = ", idconsumible);
-                //console.log("Codigo de barras = ", codigobarras);
-                mostCompra(req.body.idconsumibles, function (error, respuesta) {
-                    if (error) {
-                        console.log(error)
-                        res.status(404).json({
-                            mensaje: respuesta.mensaje
-                        })
-                    }
-                    else {
-                        //console.log(respuesta.respuesta);
-                        const datos = respuesta.respuesta.findIndex((filtro) => filtro.idcompras === req.body.idcompras);
-                        console.log(datos);
-                        if (datos >= 1) {
-                            const ultimovalorinventario = respuesta.respuesta[(respuesta.respuesta.length - 2)].valorinventario;
-                            //console.log("Ultimo valor de inventario= ", ultimovalorinventario);
-                            const compramodificar = respuesta.respuesta.find(filtro => filtro.idcompras === req.body.idcompras);
-                            const cantidadmodificar = compramodificar.cantidad;
-                            //console.log("Cantidad a modificar= ", cantidadmodificar);
-                            //console.log("Costo total = ", compramodificar.costototal);
-
-                            const preciounitario1 = compramodificar.costototal / parseInt(req.body.cantidad);
-                            //console.log("Precio unitario con todos los decimales: ",preciounitario1);
-                            const preciounitario = Math.round((preciounitario1 + Number.EPSILON) * 100) / 100;
-                            //console.log("Precio unitario con dos decimales: ", preciounitario);
-
-                            const existencias = (ultimacantidad - cantidadmodificar) + parseInt(req.body.cantidad);
-                            //console.log("Existencias totales: ", existencias);
-
-                            const valorinventario1 = (((ultimacantidad - cantidadmodificar) * ultimovalorinventario) + compramodificar.costototal) / existencias;
-                            const valorinventario = Math.round((valorinventario1 + Number.EPSILON) * 100) / 100;
-                            //console.log("Valor inventario con dos decimales: ", valorinventario);
-
-                            editConsu(idconsumible, existencias, valorinventario, codigobarras, function (error, respuesta) {
-                                if (error) {
-                                    console.log(error)
-                                    res.status(404).json({
-                                        mensaje: respuesta.mensaje
-                                    })
-                                }
-                                else {
-                                    //io.emit('escuchando', respuesta);
-                                    //id,cantidad,preciounitario,valorinventario,
-                                    editCompra(req.body.idcompras, req.body.cantidad, preciounitario, valorinventario, function (error, respuesta) {
-                                        if (error) {
-                                            console.log(error)
-                                            res.status(404).json({
-                                                mensaje: respuesta.mensaje
-                                            })
-                                        }
-                                        else {
-                                            //io.emit('escuchando', respuesta);
-                                            res.status(200).json({
-                                                mensaje: respuesta.mensaje
-                                            })
-                                        }
-                                        //console.log(respuesta);
-                                    })
-                                }
-                                //console.log(respuesta);
-                            })
-
-                        }
-                        else {
-                            //console.log("no es mayor a 1");
-                            const ultimovalorinventario = 0;
-                            //console.log("Ultimo valor de inventario= ", ultimovalorinventario);
-                            const compramodificar = respuesta.respuesta.find(filtro => filtro.idcompras === req.body.idcompras);
-                            const cantidadmodificar = compramodificar.cantidad;
-                            //console.log("Cantidad a modificar= ", cantidadmodificar);
-                            //console.log("Costo total = ", compramodificar.costototal);
-
-                            const preciounitario1 = compramodificar.costototal / parseInt(req.body.cantidad);
-                            //console.log("Precio unitario con todos los decimales: ",preciounitario1);
-                            const preciounitario = Math.round((preciounitario1 + Number.EPSILON) * 100) / 100;
-                            //console.log("Precio unitario con dos decimales: ", preciounitario);
-
-                            const existencias = (ultimacantidad - cantidadmodificar) + parseInt(req.body.cantidad);
-                            //console.log("Existencias totales: ", existencias);
-
-                            const valorinventario1 = (((ultimacantidad - cantidadmodificar) * ultimovalorinventario) + compramodificar.costototal) / existencias;
-                            const valorinventario = Math.round((valorinventario1 + Number.EPSILON) * 100) / 100;
-                            //console.log("Valor inventario con dos decimales: ", valorinventario);
-
-                            editConsu(idconsumible, existencias, valorinventario, codigobarras, function (error, respuesta) {
-                                if (error) {
-                                    console.log(error)
-                                    res.status(404).json({
-                                        mensaje: respuesta.mensaje
-                                    })
-                                }
-                                else {
-                                    //io.emit('escuchando', respuesta);
-                                    //id,cantidad,preciounitario,valorinventario,
-                                    console.log("algo pasa");
-                                    editCompra(req.body.idcompras, req.body.cantidad, preciounitario, valorinventario, function (error, respuesta) {
-                                        if (error) {
-                                            console.log(error)
-                                            res.status(404).json({
-                                                mensaje: respuesta.mensaje
-                                            })
-                                        }
-                                        else {
-                                            //io.emit('escuchando', respuesta);
-                                            res.status(200).json({
-                                                mensaje: respuesta.mensaje
-                                            })
-                                        }
-                                        //console.log(respuesta);
-                                    })
-                                }
-                                //console.log(respuesta);
-                            })
-                        }
-
-
-                    }
-                })
-
-            }
-
-        })
-    }
-    else {
-        console.log("Existen datos vacíos");
-        res.status(400).json({
-            mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
-        });
-    }
-}) */
-/* Fin de actualizar */
 
 
 
@@ -5831,6 +5922,14 @@ io.on('connection', (socket) => {
 /* Fin de explicacion de socket -------------------------- */
 
 
+/* https.createServer({
+    key: privateKey,
+    cert: certificate
+}, app).listen(port, () => {
+    console.log(`Port => ${port}`);
+    console.log(`Fecha => ${fecha}`);
+    console.log(`Servidor HTTPS corriendo en https://192.168.1.97:${port}`);
+}); */
 
 app.listen(port, () => {
     console.log(`Port => ${port}`)

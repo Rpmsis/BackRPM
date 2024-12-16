@@ -1,7 +1,7 @@
 const mysql = require('../database/index');
 
 function mostrar (callback){
-    mysql.query(`Select * from usuarioprov`, function(error,respuesta){
+    mysql.query(`Select * from proveedores where verificado="false"`, function(error,respuesta){
         
         if(error){
             callback(null,{

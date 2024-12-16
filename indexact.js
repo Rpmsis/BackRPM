@@ -7,6 +7,8 @@ const path = require('path');
 const jwt = require('jsonwebtoken');
 const schedule = require('node-schedule');
 const Fido2Lib = require('fido2-lib');
+const faceapi = require('face-api.js');
+const canvas = require('canvas');
 
 //Hoja de actforaneas
 const mostubi = require('./actividades/mostUbi');
@@ -78,7 +80,6 @@ const mostControl_mes = require('./actividades/mostChartcontrol_mes');
 const mostActividiarias = require('./actividades/mostActividiarias');
 /* FIN DE INSERTAR ACTIVIDADES AUTOMATICAMENTE*/
 
-
 const verificar_Token = require('./middleware/Valida_Token');
 const app = express()
 const port = 3005
@@ -96,6 +97,15 @@ const io = require("socket.io")(3004, {
 // Inicialización de Fido2Lib
 const fido2 = new Fido2Lib.Fido2Lib();
 
+// Ruta de los modelos
+const MODEL_PATH = path.join(__dirname, 'models');
+// Cargar los modelos
+async function loadModels() {
+    await faceapi.nets.ssdMobilenetv1.loadFromDisk(MODEL_PATH);
+    await faceapi.nets.faceLandmark68Net.loadFromDisk(MODEL_PATH);
+    await faceapi.nets.faceRecognitionNet.loadFromDisk(MODEL_PATH);
+    console.log('Modelos cargados');
+}
 
 /* Hoja de actForaneas */
 /* MODIFICADO PARA PERMISO DE ING. CHRISTIAN */
@@ -755,9 +765,15 @@ app.get('/Controlasignados/:id', (req, res) => {
             })
             // Convertir el objeto a un array
             const result = Object.values(uniqueControls);
+
+            const cuantosterminados =  result.filter(filtro => filtro.estatusC==="TERMINADO")
             //console.log(result);
+
+
             res.status(200).json({
-                result
+                result: result,
+                terminadas: cuantosterminados.length,
+
             })
         }
         //console.log(respuesta);
@@ -916,7 +932,7 @@ app.get('/buscar_Supervisor/:id', async (req, res) => {
                                     })
                                 }
                                 else {
-                                    //console.log("Actividades asignadas: ", respuestaActividades);
+                                    console.log("Actividades asignadas: ", respuestaActividades.respuesta.length);
                                     mostIdusuarioPMateriales(supervisor.Ubicacion, function (error, respuestaMateriales) {
                                         if (error) {
                                             console.log(error)
@@ -928,7 +944,8 @@ app.get('/buscar_Supervisor/:id', async (req, res) => {
                                             //console.log(respuesta.respuesta);
                                             res.status(200).json({
                                                 actividades: respuestaActividades,
-                                                responsables: respuestaMateriales
+                                                responsables: respuestaMateriales,
+                                                asignadas: respuestaActividades.respuesta.length
                                             })
                                         }
                                         //console.log(respuesta);
@@ -1957,39 +1974,45 @@ schedule.scheduleJob('08 08 * * *', function () {
 
 
 
-/* Implementar registro y reconocimiento de huellas (navegador a dispositivo)*/
-let currentChallenge = null;
-let userData = {}; // Aquí almacenamos datos de los usuarios y sus credenciales
-
-// Ruta para generar el desafío de registro
-app.post('/registerBegin', (req, res) => {
-    const user = { id: "usuario123", name: "Usuario", displayName: "Usuario Test" };
-
-    // Generar un desafío para el registro
-    const challenge = fido2.attestationOptions();
-    currentChallenge = challenge; // Guardamos el desafío para la validación posterior
-
-    res.json(challenge); // Enviamos el desafío al cliente para que lo use en la API WebAuthn
-});
-
-// Ruta para registrar las credenciales del usuario
-app.post('/registerComplete', async (req, res) => {
-    const attestationResponse = req.body;
-    console.log(attestationResponse);
-
+/* Comparar rasgos faciales*/
+app.get('/reconocedorfacial', async (req, res) => {
     try {
-        const result = await fido2.attestationResult(attestationResponse, currentChallenge);
-        // Guardamos las credenciales del usuario para futuras autenticaciones
-        userData[user.id] = result;
-        res.json({ status: 'ok', result });
-    } catch (error) {
-        res.status(400).json({ error: error.message });
+        // Asegúrate de que la ruta de la imagen esté correcta
+        const imagePath = path.join(__dirname, 'fotoperfil', '1725903679349-fotoperfil.PNG');
+
+        // Cargar la imagen con canvas
+        const img = await canvas.loadImage(imagePath);
+        console.log("img= ",img instanceof canvas.Image);
+
+        // Crear un lienzo (HTMLCanvasElement) a partir de la imagen cargada
+        const imgCanvas = canvas.createCanvas(img.width, img.height);
+        const ctx = imgCanvas.getContext('2d');
+        ctx.drawImage(img, 0, 0);
+        console.log("imgCanvas=  ",imgCanvas instanceof canvas.Canvas);
+
+        const detections = await faceapi
+            .detectAllFaces(imgCanvas)
+            .withFaceLandmarks()
+            .withFaceDescriptors();
+        
+            console.log("detections=>   ", detections);
+        /* // Detectar rostros en la imagen del lienzo
+        const detections = await faceapi.detectAllFaces(imgCanvas)
+            .withFaceLandmarks()
+            .withFaceDescriptors();
+
+        // Enviar detecciones al cliente
+        res.json(detections); */
+    } catch (err) {
+        console.error('Error al procesar la imagen:', err);
+        res.status(500).send('Error en la detección de rostros');
     }
 });
 
-/* FIN de Implementar registro y reconocimiento de huellas (navegador a dispositivo)   */
+/* FIN de comparar rasgos faciales*/
 
 
 app.listen(port, () => {
+    //loadModels();
     console.log(`Port => ${port}`);
 })
