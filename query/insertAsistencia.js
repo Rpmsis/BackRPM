@@ -1,6 +1,6 @@
 const mysql = require('../database/index');
-function insertar (idusuario,timerecord,horainicio,horafin, estatus, motivo, callback){
-    mysql.query(`Insert into asistencia (idusuario, fecha, horainicio, horafin, estatus, motivo) values ("${idusuario}", "${timerecord}", "${horainicio}","${horafin}", "${estatus}", "${motivo}")`, function(error,respuesta){
+function insertar (idcheck,timerecord,horainicio,horafin, estatus, motivo, callback){
+    mysql.query(`Insert into asistencia (idcheck, fecha, horainicio, horafin, estatus, motivo) values ("${idcheck}", "${timerecord}", "${horainicio}","${horafin}", "${estatus}", "${motivo}")`, function(error,respuesta){
         
         if(error){
             callback(null,{
@@ -9,7 +9,7 @@ function insertar (idusuario,timerecord,horainicio,horafin, estatus, motivo, cal
         }
         else{
             callback(null,{
-                mensaje:  respuesta.protocol41//'Datos guardados con el id => ' + respuesta.protocol41
+                mensaje:  "Entrada registrada!"//'Datos guardados con el id => ' + respuesta.protocol41
             })
 
         }

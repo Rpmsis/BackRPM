@@ -11,6 +11,9 @@ const path = require('path');
 const jwt = require('jsonwebtoken');
 //Lector de huella HID
 const HID = require('node-hid');
+const faceapi = require('face-api.js');
+
+
 
 const cargar_archivo = require('./query/archivos_file');
 const actualizar_archivo = require('./query/actualizar_archivos');
@@ -71,6 +74,7 @@ const mostTodoasistencia = require('./query/mostTodoasistencia');
 const mostTablerologistica = require('./query/mosttablerologistica');
 const mostTableromantt = require('./mantenimiento/mostTableromantt');
 const mostVerificarcompras = require('./query/mostVerificarcompras');
+const mostTicketestatus = require('./tickets/mostTikets');
 
 const Folio = require('./query/folio');
 const Folioconsumible = require('./query/folioconsumible');
@@ -126,6 +130,7 @@ const editEstatusmenu = require('./query/actualizarestatusmenu');
 const editPermisomenu = require('./query/actualizarPermisomenu');
 const editCompra = require('./query/actualizarCompra');
 const editProveedor = require('./query/actualizarProveedor');
+const editUserasistencia = require('./reconocimientofa/editUser_asistencia');
 
 
 const elim = require('./query/eliminar');
@@ -148,6 +153,17 @@ const io = require("socket.io")(3003, {
         methods: ["GET", "POST"]
     }
 });
+
+
+// Ruta de los modelos
+const MODEL_PATH = path.join(__dirname, 'models');
+// Cargar los modelos
+async function loadModels() {
+    await faceapi.nets.ssdMobilenetv1.loadFromDisk(MODEL_PATH);
+    await faceapi.nets.faceLandmark68Net.loadFromDisk(MODEL_PATH);
+    await faceapi.nets.faceRecognitionNet.loadFromDisk(MODEL_PATH);
+    console.log('Modelos cargados');
+}
 
 
 // Lista los dispositivos HID conectados
@@ -2261,116 +2277,7 @@ app.get('/userasistencia', (req, res) => {
     })
 }
 )
-app.get('/asistencias', (req, res) => {
-    mostAsistencia(fecha, function (error, respuesta) {
-        if (error) {
-            console.log(error)
-            res.status(404).json({
-                mensaje: respuesta.mensaje
-            })
-        }
-        else {
-            res.status(200).json({
-                respuesta
-            })
-        }
-        //console.log(respuesta);
-    })
-}
-)
-app.get('/faltas', (req, res) => {
-    const dia = moment().format('dddd');
-    var diaes = "";
 
-    /* Guardar en español */
-    switch (dia) {
-        case "Monday":
-            diaes = "Lunes";
-            console.log(diaes);
-            break;
-        case "Tuesday":
-            diaes = "Martes";
-            console.log(diaes);
-            break;
-        case "Wednesday":
-            diaes = "Miercoles";
-            console.log(diaes);
-            break;
-        case "Thursday":
-            diaes = "Jueves";
-            console.log(diaes);
-            break;
-        case "Friday":
-            diaes = "Viernes";
-            console.log(diaes);
-            break;
-        case "Saturday":
-            diaes = "Sábado";
-            console.log(diaes);
-            break;
-        case "Sunday":
-            diaes = "Domingo";
-            console.log(diaes);
-            break;
-    }
-    mostFaltas(diaes, function (error, respuestaFaltas) {
-        if (error) {
-            console.log(error)
-            res.status(404).json({
-                mensaje: respuesta.mensaje
-            })
-        }
-        else {
-            //console.log("respuestaFaltas",respuestaFaltas.respuesta);
-            mostEventosbio(fecha, function (error, respuestaEventosbio) {
-                if (error) {
-                    console.log(error)
-                }
-                else {
-                    //console.log("respuestaEventosbio",respuestaEventosbio.respuesta);
-                    const respuesta = [];
-                    respuestaFaltas.respuesta.forEach((filtro) => {
-                        const verificar = respuestaEventosbio.respuesta.find((filtro2) => filtro2.idusuario === filtro.userid);
-                        //console.log("Verificando: ",verificar);
-                        if (verificar) {
-                            //console.log("ya se registro");
-                        }
-                        else {
-                            respuesta.push(filtro);
-                            //console.log(filtro.nombre, filtro.userid );
-                        }
-                    })
-
-                    //console.log(respuesta);
-
-                    res.status(200).json({
-                        respuesta
-                    })
-                }
-            })
-
-        }
-        //console.log(respuesta);
-    })
-}
-)
-app.get('/todoasistencia', (req, res) => {
-    mostTodoasistencia(function (error, respuesta) {
-        if (error) {
-            console.log(error)
-            res.status(404).json({
-                mensaje: respuesta.mensaje
-            })
-        }
-        else {
-            res.status(200).json({
-                respuesta
-            })
-        }
-        //console.log(respuesta);
-    })
-}
-)
 app.get('/tableroLogistica', (req, res) => {
     mostTablerologistica(function (error, respuesta) {
         if (error) {
@@ -2381,8 +2288,9 @@ app.get('/tableroLogistica', (req, res) => {
         }
         else {
             //console.log(respuesta.respuesta);
-            const deldiatotal = respuesta.respuesta.length;
-            //console.log("asignadas ", deldiatotal);
+            const deldiatotalSincanceladas = respuesta.respuesta.filter(datos => datos.Estatus != "CANCELADO");
+            const deldiatotal = deldiatotalSincanceladas.length
+            console.log("asignadas ", deldiatotal);
 
             const terminadas = respuesta.respuesta.filter((filtro) => filtro.Estatus === "TERMINADO");
             const terminadastotal = terminadas.length;
@@ -2490,6 +2398,7 @@ app.get('/verificarcompras', verificar_Token, (req, res) => {
     })
 
 })
+
 /* Fin de mostrar */
 
 /* Insertar */
@@ -4100,60 +4009,6 @@ app.post('/insertarSolicitudcomida', (req, res) => {
         });
     }
 })
-app.post('/insertarAsistencia', (req, res) => {
-    console.log(req.body);
-
-    //idusuario, fecha, horainicio, horafin, estatus, motivo
-    const horainicio = "00:00:00";
-    const horafin = "00:00:00";
-    if (req.body.userid && req.body.estatus) {
-        if (req.body.estatus === "JUSTIFICAR") {
-            if (req.body.motivo) {
-                const estatus = "JUSTIFICADO";
-                insertarAsistencia(req.body.userid, fecha, horainicio, horafin, estatus, req.body.motivo, (error, respuesta) => {
-                    if (error) {
-                        console.error('Error al insertar asistencia:', error.mensaje);
-                    } else {
-                        //console.log(respuesta);
-                        io.emit('escuchando', respuesta);
-                        res.status(200).json({
-                            respuesta
-                        });
-
-                    }
-                });
-            } else {
-                console.log("Existen datos vacíos");
-                res.status(400).json({
-                    mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
-                });
-            }
-        } else {
-            const motivo = "NA";
-            insertarAsistencia(req.body.userid, fecha, horainicio, horafin, req.body.estatus, motivo, (error, respuesta) => {
-                if (error) {
-                    console.error('Error al insertar asistencia:', error.mensaje);
-                } else {
-                    //console.log(respuesta);
-                    io.emit('escuchando', respuesta);
-                    res.status(200).json({
-                        respuesta
-                    });
-
-                }
-            });
-
-        }
-
-
-    }
-    else {
-        console.log("Existen datos vacíos");
-        res.status(400).json({
-            mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
-        });
-    }
-})
 //CAMBIOS DEL 14/12/2024
 app.post('/insertarProveedorinsumos', (req, res) => {
     console.log(req.body);
@@ -5314,59 +5169,6 @@ app.put('/actualizarFotoperfil', verificar_Token, (req, res) => {
         })
     }
 })
-app.put('/actualizarAsistencia', (req, res) => {
-    console.log(req.body);
-    const hora = moment().format('HH:mm:ss');
-    if (req.body.idasistencia && req.body.estatus && req.body.hora) {
-        if (req.body.estatus === "SALIR TEMPRANO") {
-            if (req.body.motivo) {
-                editAsistencia(req.body.idasistencia, hora, req.body.estatus, req.body.motivo, function (error, respuesta) {
-                    if (error) {
-                        console.log(error);
-                    }
-                    else {
-                        //console.log(respuesta);
-                        io.emit('escuchando', respuesta);
-                        res.status(200).json({
-                            respuesta
-                        });
-                    }
-                    //console.log(respuesta);
-                })
-            }
-            else {
-                //console.log("Existen datos vacíos");
-                res.status(400).json({
-                    mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
-                });
-
-            }
-        }
-        else {
-            const motivo = "NA";
-            editAsistencia(req.body.idasistencia, req.body.hora, req.body.estatus, motivo, function (error, respuesta) {
-                if (error) {
-                    console.log(error);
-                }
-                else {
-                    //console.log(respuesta);
-                    io.emit('escuchando', respuesta);
-                    res.status(200).json({
-                        respuesta
-                    });
-                }
-                //console.log(respuesta);
-            })
-        }
-    }
-    else {
-        //console.log("Existen datos vacíos");
-        res.status(400).json({
-            mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
-        });
-    }
-
-})
 app.put('/actualizarestatusmenutrue', verificar_Token, (req, res) => {
     const usuario = req.usuario;
     //console.log(usuario)
@@ -5612,7 +5414,7 @@ app.put('/eliminarcompra', (req, res) => {
                 //console.log(datos);
                 const estatus = "false";
                 const validado = "false";
-                editCompra(req.body.idcompras, datos.cantidad, datos.preciounitario,datos.costototal, datos.valorinventario, estatus, req.body.motivo, validado, function (error, respuesta) {
+                editCompra(req.body.idcompras, datos.cantidad, datos.preciounitario, datos.costototal, datos.valorinventario, estatus, req.body.motivo, validado, function (error, respuesta) {
                     if (error) {
                         console.log(error)
                         res.status(404).json({
@@ -5673,7 +5475,7 @@ app.put('/actualizarproveedor', (req, res) => {
         });
     }
 })
-
+//actualizado para 
 async function editcompraglobal(consumible, compra) {
     if (consumible && compra) {
         console.log(consumible, compra);
@@ -5744,7 +5546,7 @@ async function editcompraglobal(consumible, compra) {
                                 //console.log("Existencias totales: ", existencias);
                                 //console.log("Costo total de la compra actual: ", parseFloat(datoscompra.costototal));
                                 const valorinventario2 = ((ultimacantidad * ultimovalorinventario) + parseFloat(datoscompra.costototal)) / canslp;
-                                costoslp  = Math.round((valorinventario2 + Number.EPSILON) * 100) / 100;
+                                costoslp = Math.round((valorinventario2 + Number.EPSILON) * 100) / 100;
                                 valorinventario = costoslp;
                                 //console.log("Valor inventario con todos los decimales: ", valorinventario);
                                 cancanoa = datos.cantidad;
@@ -5764,7 +5566,7 @@ async function editcompraglobal(consumible, compra) {
                                 //console.log("Existencias totales: ", existencias);
                                 //console.log("Costo total de la compra actual: ", parseFloat(datoscompra.costototal));
                                 const valorinventario3 = ((ultimacantidad * ultimovalorinventario) + parseFloat(datoscompra.costototal)) / canqro;
-                                costoqro  = Math.round((valorinventario3 + Number.EPSILON) * 100) / 100;
+                                costoqro = Math.round((valorinventario3 + Number.EPSILON) * 100) / 100;
                                 valorinventario = costoqro;
                                 //console.log("Valor inventario con todos los decimales: ", valorinventario);
                                 cancanoa = datos.cantidad;
@@ -5783,7 +5585,7 @@ async function editcompraglobal(consumible, compra) {
                                 can19nt = ultimacantidad + parseInt(datoscompra.cantidad);
                                 //console.log("Costo total de la compra actual: ", parseFloat(datoscompra.costototal));
                                 const valorinventario4 = ((ultimacantidad * ultimovalorinventario) + parseFloat(datoscompra.costototal)) / can19nt;
-                                costo19nt  = Math.round((valorinventario4 + Number.EPSILON) * 100) / 100;
+                                costo19nt = Math.round((valorinventario4 + Number.EPSILON) * 100) / 100;
                                 valorinventario = costo19nt;
                                 //console.log("Valor inventario con todos los decimales: ", valorinventario);
                                 cancanoa = datos.cantidad;
@@ -5803,7 +5605,7 @@ async function editcompraglobal(consumible, compra) {
                                 //console.log("Existencias totales: ", existencias);
                                 //console.log("Costo total de la compra actual: ", parseFloat(datoscompra.costototal));
                                 const valorinventario5 = ((ultimacantidad * ultimovalorinventario) + parseFloat(datoscompra.costototal)) / canvsq;
-                                costovsq  = Math.round((valorinventario5 + Number.EPSILON) * 100) / 100;
+                                costovsq = Math.round((valorinventario5 + Number.EPSILON) * 100) / 100;
                                 valorinventario = costovsq;
                                 //console.log("Valor inventario con todos los decimales: ", valorinventario);
                                 cancanoa = datos.cantidad;
@@ -5833,7 +5635,7 @@ async function editcompraglobal(consumible, compra) {
                             }
                             else {
                                 //io.emit('escuchando', respuesta);
-                                editCompra(compra, datoscompra.cantidad, datoscompra.preciounitario,datoscompra.costototal, valorinventario, datoscompra.estatus, datoscompra.motivo, validado, function (error, respuesta) {
+                                editCompra(compra, datoscompra.cantidad, datoscompra.preciounitario, datoscompra.costototal, valorinventario, datoscompra.estatus, datoscompra.motivo, validado, function (error, respuesta) {
                                     if (error) {
                                         console.log(error)
                                         res.status(404).json({
@@ -5931,7 +5733,630 @@ io.on('connection', (socket) => {
     console.log(`Servidor HTTPS corriendo en https://192.168.1.97:${port}`);
 }); */
 
+
+//RECONOMIENTO FACIAL +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+/* HOJA DE user_registro */
+app.post('/registrarUserasistencia', (req, res) => {
+    //console.log(req.body);
+    //console.log(req.files);
+    if (!req.files || Object.keys(req.files).length === 0) {
+        // No se proporcionaron archivos
+        res.status(400).json({
+            mensaje: "Agrega una fotografia"
+        });
+    }
+    else {
+        actualizar_fotoperfil(req, res, (err, archivo) => {
+            if (err) {
+                console.log(err);
+                return res.status(500).send('Error al cargar el archivo');
+            }
+            else {
+                if (req.body.idcheck && req.body.horainicio && req.body.horafin && req.body.descanso && req.body.turno && req.body.descrip) {
+                    mostIdcheck(req.body.idcheck, function (error, respuesta) {
+                        if (error) {
+                            console.log(error)
+                            res.status(404).json({
+                                mensaje: respuesta.mensaje
+                            })
+                        }
+                        else {
+                            //console.log(respuesta);
+                            if (respuesta.respuesta && respuesta.respuesta.length > 0) {
+                                const nombre = respuesta.respuesta[0].NombreCompleto;
+                                //console.log(nombre);
+                                if (req.body.descanso.includes("Sábado") && req.body.descanso.includes("Domingo")) {
+                                    const horainicioMD = "NA";
+                                    const horafinMD = "NA";
+                                    //idcheck, nombre, horainicio, horafin, descanso, horainioMD, horafinMD,  turno,descrip,foto,
+                                    insertarUserasistencia(req.body.idcheck, nombre, req.body.horainicio, req.body.horafin, req.body.descanso, horainicioMD, horafinMD, req.body.turno, req.body.descrip, archivo, (error, respuesta) => {
+                                        if (error) {
+                                            console.error('Error al insertar asistencia:', error.mensaje);
+                                        } else {
+                                            console.log(respuesta);
+                                            io.emit('escuchando', respuesta);
+                                            return res.status(200).json({ respuesta });
+                                        }
+                                    });
+                                }
+                                else {
+                                    if (req.body.horainicioMD && req.body.horafinMD) {
+                                        //idcheck, nombre, horainicio, horafin, descanso, horainioMD, horafinMD,  turno,descrip,foto,
+                                        insertarUserasistencia(req.body.idcheck, nombre, req.body.horainicio, req.body.horafin, req.body.descanso, req.body.horainicioMD, req.body.horafinMD, req.body.turno, req.body.descrip, archivo, (error, respuesta) => {
+                                            if (error) {
+                                                console.error('Error al insertar asistencia:', error.mensaje);
+                                            } else {
+                                                console.log(respuesta);
+                                                io.emit('escuchando', respuesta);
+                                                return res.status(200).json({ respuesta });
+                                            }
+                                        });
+                                    }
+                                    else {
+                                        console.log("Existen datos vacíos");
+                                        res.status(400).json({
+                                            mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
+                                        });
+
+                                    }
+                                }
+                            }
+                            else {
+                                console.log("El usuario no existe");
+                                res.status(400).json({
+                                    mensaje: "El usuario no existe, verifique el ID"
+                                });
+                            }
+                        }
+                    })
+
+                }
+                else {
+                    console.log("Existen datos vacíos");
+                    res.status(400).json({
+                        mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
+                    });
+
+                }
+            }
+        })
+    }
+});
+
+
+/* HOJA DE reconocimiento-facil */
+app.post('/compararcaras', (req, res) => {
+    //console.log(req.body);
+    const fecha = moment().format("YYYY-MM-DD");
+    const hora = moment().format("HH:mm");
+    const horasave = moment().format('HH:mm:ss');
+    const diasemana = moment().format("dddd");
+    //console.log(req.query.foto);
+    let comparacion = "";
+    let fotoArray = req.body.captura.split(",").map((num) => parseFloat(num));
+    //console.log(fotoArray.length);
+    let fotoFloat32Array = new Float32Array(fotoArray);
+    //console.log(fotoFloat32Array);
+
+    mostUserasistencia(function (error, respuesta) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            //const solodescrip = respuesta.respuesta.map((datos) => ([datos.descrip]));
+            //console.log(solodescrip);
+            //console.log(respuesta.respuesta);
+            const rostroCoincidente = respuesta.respuesta.find((des) => {
+                //console.log(des.descrip);
+                if (des.descrip != null) {
+                    let fotosavearray = des.descrip.split(",").map((num) => parseFloat(num));
+                    //console.log(des.descrip);
+                    let saveFloat32Array = new Float32Array(fotosavearray);
+                    //console.log(saveFloat32Array);
+                    const distance = faceapi.euclideanDistance(saveFloat32Array, fotoFloat32Array);
+                    console.log(des.nombre + " " + distance);
+                    if (distance < 0.57) {
+                        console.log("Distancia entre rostros: ", distance);
+                        // Si la distancia es menor, devolvemos el nombre del rostro coincidente
+                        return true; // Esto detendrá la búsqueda
+                    }
+                }
+                return false;
+            })
+
+            if (rostroCoincidente) {
+                console.log("Rostro coincidente encontrado: ", rostroCoincidente.nombre);
+                comparacion = rostroCoincidente.nombre;
+                io.emit('capcomparacion', comparacion);
+                const resUsuarios = respuesta.respuesta;
+                //console.log("resUsuarios: ", resUsuarios);
+                const verificar = resUsuarios.find((filtro) => filtro.nombre === comparacion);
+                //console.log(verificar);
+                if (verificar) {
+                    //console.log(diasemana);
+                    mostEventosbio(fecha, function (error, respuesta) {
+                        if (error) {
+                            console.log(error)
+                        }
+                        else {
+                            const registrados = respuesta.respuesta.find(reg => reg.idcheck === verificar.idcheck);
+                            //console.log("registrados: ", registrados);
+                            //console.log(verificar.turno);
+                            if (registrados) {
+
+                                if (diasemana === "Saturday" || diasemana === "Sunday") {
+                                    //console.log("algo esta mal");
+                                    //console.log("HORA ENTRADA ", verificar.horaentrada);
+                                    //console.log("HORA SALIDA ", verificar.horasalida);
+
+                                    if (registrados.horasalidaMD != "NA") {
+                                        res.status(400).json({
+                                            mensaje: "Ya estás registrad@ en la lista de asistencia."
+                                        });
+                                    }
+                                    else {
+                                        if (hora >= verificar.horasalidaMD) {
+                                            const estatus = "ASISTENCIA";
+                                            const motivo = "NA";
+                                            //console.log("Estatus RETARDO");
+                                            editAsistencia(registrados.idasistencia, horasave, estatus, motivo, function (error, respuesta) {
+                                                if (error) {
+                                                    console.log(error);
+                                                }
+                                                else {
+                                                    //console.log(respuesta);
+                                                    io.emit('escuchando', respuesta);
+                                                    res.status(200).json({
+                                                        titulo: respuesta.mensaje,
+                                                        mensaje: comparacion
+                                                    });
+                                                }
+                                                //console.log(respuesta);
+                                            })
+                                        }
+                                        else {
+                                            res.status(400).json({
+                                                mensaje: "Espera tu hora de salida!!"
+                                            });
+                                        }
+                                    }
+                                } else {
+                                    if (registrados.horasalidaMD != "NA") {
+                                        res.status(400).json({
+                                            mensaje: "Ya estás registrad@ en la lista de asistencia."
+                                        });
+                                    }
+                                    else {
+                                        if (hora >= verificar.horasalida) {
+                                            const estatus = "ASISTENCIA";
+                                            const motivo = "NA";
+                                            //console.log("Estatus RETARDO");
+                                            editAsistencia(registrados.idasistencia, horasave, estatus, motivo, function (error, respuesta) {
+                                                if (error) {
+                                                    console.log(error);
+                                                }
+                                                else {
+                                                    //console.log(respuesta);
+                                                    io.emit('escuchando', respuesta);
+                                                    res.status(200).json({
+                                                        titulo: respuesta.mensaje,
+                                                        mensaje: comparacion
+                                                    });
+                                                }
+                                                //console.log(respuesta);
+                                            })
+                                        }
+                                        else {
+                                            res.status(400).json({
+                                                mensaje: "Espera tu hora de salida!!"
+                                            })
+                                        }
+                                    }
+                                }
+
+                            }
+                            else {
+                                if (diasemana === "Saturday" || diasemana === "Sunday") {
+                                    //console.log("algo esta mal");
+                                    //console.log("HORA ENTRADA ", verificar.horaentrada);
+                                    //console.log("HORA SALIDA ", verificar.horasalida);
+
+                                    if (hora > verificar.horaentradaMD) {
+                                        const estatus = "RETARDO";
+                                        const motivo = "NA";
+                                        const horafin = "NA";
+                                        //console.log("Estatus RETARDO");
+                                        insertarAsistencia(verificar.idcheck, fecha, hora, horafin, estatus, motivo, (error, respuesta) => {
+                                            if (error) {
+                                                console.error('Error al insertar asistencia:', error.mensaje);
+                                            } else {
+                                                //console.log(respuesta);
+                                                io.emit('escuchando', respuesta);
+                                                res.status(200).json({
+                                                    titulo: respuesta.mensaje,
+                                                    mensaje: comparacion
+                                                })
+
+                                            }
+                                        });
+                                    }
+                                    else {
+                                        const estatus = "ENTRADA";
+                                        const motivo = "NA";
+                                        const horafin = "NA";
+                                        //console.log("estatus ENTRADA");
+                                        insertarAsistencia(verificar.idcheck, fecha, hora, horafin, estatus, motivo, (error, respuesta) => {
+                                            if (error) {
+                                                console.error('Error al insertar asistencia:', error.mensaje);
+                                            } else {
+                                                //console.log(respuesta);
+                                                io.emit('escuchando', respuesta);
+                                                res.status(200).json({
+                                                    titulo: respuesta.mensaje,
+                                                    mensaje: comparacion
+                                                })
+
+                                            }
+                                        });
+                                    }
+                                } else {
+                                    if (hora > verificar.horaentrada) {
+                                        const estatus = "RETARDO";
+                                        const motivo = "NA";
+                                        const horafin = "NA";
+                                        //console.log("Estatus RETARDO");
+                                        insertarAsistencia(verificar.idcheck, fecha, horasave, horafin, estatus, motivo, (error, respuesta) => {
+                                            if (error) {
+                                                console.error('Error al insertar asistencia:', error.mensaje);
+                                            } else {
+                                                //console.log(respuesta);
+                                                io.emit('escuchando', respuesta);
+                                                res.status(200).json({
+                                                    titulo: respuesta.mensaje,
+                                                    mensaje: comparacion
+                                                })
+
+                                            }
+                                        });
+                                    }
+                                    else {
+                                        const estatus = "ENTRADA";
+                                        const motivo = "NA";
+                                        const horafin = "NA";
+                                        //console.log("estatus ENTRADA");
+                                        insertarAsistencia(verificar.idcheck, fecha, horasave, horafin, estatus, motivo, (error, respuesta) => {
+                                            if (error) {
+                                                console.error('Error al insertar asistencia:', error.mensaje);
+                                            } else {
+                                                //console.log(respuesta);
+                                                io.emit('escuchando', respuesta);
+                                                res.status(200).json({
+                                                    titulo: respuesta.mensaje,
+                                                    mensaje: comparacion
+                                                })
+
+                                            }
+                                        });
+                                    }
+                                }
+
+
+                            }
+                        }
+                    })
+                }
+                else {
+                    console.log("No esta registrado como usuario");
+                    res.status(400).json({
+                        mensaje: "No esta registrado como usuario"
+                    })
+
+                }
+            } else {
+                console.log("Los rostros no coinciden.");
+                const mensaje = "No tienes una postura correcta o no estas registrado!";
+                res.status(400).json({
+                    mensaje
+                })
+            }
+        }
+        //console.log(respuesta);
+    })
+})
+app.put('/edituserasistencia', (req, res) => {
+    //console.log(req.body);
+    if (!req.files || Object.keys(req.files).length === 0) {
+        // No se proporcionaron archivos
+        res.status(400).json({
+            mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
+        });
+    }
+    else {
+        if (req.body.id && req.body.descrip) {
+            actualizar_fotoperfil(req, res, (err, archivo) => {
+                if (err) {
+                    console.log(err);
+                    return res.status(500).send('Error al cargar el archivo');
+                } else {
+                    //console.log("Respuesta img guardadas ", archivo);
+                    //console.log("Respuesta descrip ", req.body.descrip);
+                    //console.log("Respuesta id", req.body.id);
+                    editUserasistencia(req.body.id, req.body.descrip, archivo, function (error, respuesta) {
+                        if (error) {
+                            console.log(error)
+                            res.status(404).json({
+                                mensaje: respuesta.mensaje
+                            })
+                        }
+                        else {
+                            res.status(200).json({
+                                mensaje: respuesta.mensaje
+                            })
+                        }
+                        //console.log(respuesta);
+                    })
+                }
+            })
+        }
+        else {
+            console.log("Existen datos vacíos");
+            res.status(400).json({
+                mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
+            });
+        }
+    }
+})
+
+/* HOJA DE asistencia*/
+app.get('/asistencias', (req, res) => {
+    const fecha = moment().format("YYYY-MM-DD");
+    mostAsistencia(fecha, function (error, respuesta) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            //console.log(respuesta);
+            res.status(200).json({
+                respuesta
+            })
+        }
+    })
+}
+)
+app.get('/faltas', (req, res) => {
+    const dia = moment().format('dddd');
+    var diaes = "";
+
+    /* Guardar en español */
+    switch (dia) {
+        case "Monday":
+            diaes = "Lunes";
+            //console.log(diaes);
+            break;
+        case "Tuesday":
+            diaes = "Martes";
+            //console.log(diaes);
+            break;
+        case "Wednesday":
+            diaes = "Miercoles";
+            //console.log(diaes);
+            break;
+        case "Thursday":
+            diaes = "Jueves";
+            //console.log(diaes);
+            break;
+        case "Friday":
+            diaes = "Viernes";
+            //console.log(diaes);
+            break;
+        case "Saturday":
+            diaes = "Sábado";
+            //console.log(diaes);
+            break;
+        case "Sunday":
+            diaes = "Domingo";
+            //console.log(diaes);
+            break;
+    }
+    mostFaltas(diaes, function (error, respuestaFaltas) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            //console.log("respuestaFaltas",respuestaFaltas.respuesta);
+            mostEventosbio(fecha, function (error, respuestaEventosbio) {
+                if (error) {
+                    console.log(error)
+                }
+                else {
+                    //console.log("respuestaEventosbio",respuestaEventosbio.respuesta);
+                    const respuesta = [];
+                    respuestaFaltas.respuesta.forEach((filtro) => {
+                        const verificar = respuestaEventosbio.respuesta.find((filtro2) => filtro2.idcheck === filtro.idcheck);
+                        //console.log("Verificando: ",verificar);
+                        if (verificar) {
+                            //console.log("ya se registro");
+                        }
+                        else {
+                            respuesta.push(filtro);
+                            //console.log(filtro.nombre, filtro.userid );
+                        }
+                    })
+
+                    //console.log(respuesta);
+
+                    res.status(200).json({
+                        respuesta
+                    })
+                }
+            })
+
+        }
+        //console.log(respuesta);
+    })
+}
+)
+app.put('/actualizarAsistencia', (req, res) => {
+    console.log(req.body);
+    const hora = moment().format('HH:mm:ss');
+    if (req.body.idasistencia && req.body.estatus && req.body.hora) {
+        if (req.body.estatus === "SALIR TEMPRANO") {
+            if (req.body.motivo) {
+                editAsistencia(req.body.idasistencia, hora, req.body.estatus, req.body.motivo, function (error, respuesta) {
+                    if (error) {
+                        console.log(error);
+                    }
+                    else {
+                        //console.log(respuesta);
+                        io.emit('escuchando', respuesta);
+                        res.status(200).json({
+                            respuesta
+                        });
+                    }
+                    //console.log(respuesta);
+                })
+            }
+            else {
+                //console.log("Existen datos vacíos");
+                res.status(400).json({
+                    mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
+                });
+
+            }
+        }
+        else {
+            const motivo = "NA";
+            editAsistencia(req.body.idasistencia, req.body.hora, req.body.estatus, motivo, function (error, respuesta) {
+                if (error) {
+                    console.log(error);
+                }
+                else {
+                    //console.log(respuesta);
+                    io.emit('escuchando', respuesta);
+                    res.status(200).json({
+                        respuesta
+                    });
+                }
+                //console.log(respuesta);
+            })
+        }
+    }
+    else {
+        //console.log("Existen datos vacíos");
+        res.status(400).json({
+            mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
+        });
+    }
+
+})
+app.post('/insertarAsistencia', (req, res) => {
+    console.log(req.body);
+
+    //idusuario, fecha, horainicio, horafin, estatus, motivo
+    const horainicio = "00:00:00";
+    const horafin = "00:00:00";
+    if (req.body.userid && req.body.estatus) {
+        if (req.body.estatus === "JUSTIFICAR") {
+            if (req.body.motivo) {
+                const estatus = "JUSTIFICADO";
+                insertarAsistencia(req.body.userid, fecha, horainicio, horafin, estatus, req.body.motivo, (error, respuesta) => {
+                    if (error) {
+                        console.error('Error al insertar asistencia:', error.mensaje);
+                    } else {
+                        //console.log(respuesta);
+                        io.emit('escuchando', respuesta);
+                        res.status(200).json({
+                            respuesta
+                        });
+
+                    }
+                });
+            } else {
+                console.log("Existen datos vacíos");
+                res.status(400).json({
+                    mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
+                });
+            }
+        } else {
+            const motivo = "NA";
+            insertarAsistencia(req.body.userid, fecha, horainicio, horafin, req.body.estatus, motivo, (error, respuesta) => {
+                if (error) {
+                    console.error('Error al insertar asistencia:', error.mensaje);
+                } else {
+                    //console.log(respuesta);
+                    io.emit('escuchando', respuesta);
+                    res.status(200).json({
+                        respuesta
+                    });
+
+                }
+            });
+
+        }
+
+
+    }
+    else {
+        console.log("Existen datos vacíos");
+        res.status(400).json({
+            mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
+        });
+    }
+})
+
+/* HOJA de todoasistencia */
+app.get('/todoasistencia', (req, res) => {
+    mostTodoasistencia(function (error, respuesta) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            res.status(200).json({
+                respuesta
+            })
+        }
+        //console.log(respuesta);
+    })
+}
+)
+
+//FIN RECONOMIENTO FACIAL +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+app.get('/vertickets', (req, res) => {
+    const estatus= "EN PROCESO";
+    mostTicketestatus(estatus, function (error, respuesta) {
+
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            res.status(200).json({
+                respuesta
+            })
+        }
+        //console.log(respuesta);
+    })
+}
+)
+
 app.listen(port, () => {
+    loadModels();
     console.log(`Port => ${port}`)
     console.log(`Fecha => ${fecha}`)
 })

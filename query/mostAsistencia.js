@@ -1,7 +1,7 @@
 const mysql = require('../database/index');
 
 function mostrar (fecha,callback){
-    mysql.query(`SELECT * FROM asistencia inner join user_asistencia on asistencia.idusuario= user_asistencia.userid where asistencia.fecha="${fecha}";`, function(error,respuesta){
+    mysql.query(`SELECT * FROM asistencia inner join user_asistencia on asistencia.idcheck= user_asistencia.idcheck where asistencia.fecha="${fecha}";`, function(error,respuesta){
         
         if(error){
             callback(null,{
