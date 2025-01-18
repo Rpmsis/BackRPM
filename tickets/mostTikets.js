@@ -1,7 +1,7 @@
-const mysql = require('../database/index');
+const mysql = require('../database/indexP');
 
 function mostrar(estatus, callback) {
-    mysql.query(`SELECT * FROM STEELPROP.Tickes where Estatus= "${estatus}";`, function (error, respuesta) {
+    mysql.query(`SELECT * FROM Tickes where Estatus= "${estatus}" && Area_Final= "TECNOLOGÍAS DE LA INFORMACIÓN";`, function (error, respuesta) {
 
         if (error) {
             callback(null, {

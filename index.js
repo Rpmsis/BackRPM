@@ -63,7 +63,7 @@ const mostVigenciaprestamos = require('./query/mostVigenciaprestamo');
 const mostMenulista = require('./query/mostMenulista');
 const mostNumpersonas = require('./query/mostAsigactivinumpersonas');
 const mostEficacia = require('./query/mostEficacia');
-const mostAltas = require('./query/mostAltas');
+const mostAltas = require('./query/mostAltas'); //APUNTA A PRODUCCION
 const mostComidasolicitada = require('./query/mostComidasolicitada');
 const mostPermisos = require('./query/mostPermisos');
 const mostAsistencia = require('./query/mostAsistencia');
@@ -75,6 +75,9 @@ const mostTablerologistica = require('./query/mosttablerologistica');
 const mostTableromantt = require('./mantenimiento/mostTableromantt');
 const mostVerificarcompras = require('./query/mostVerificarcompras');
 const mostTicketestatus = require('./tickets/mostTikets');
+const mostHvviajes = require('./hojasviajeras/mostHvviajes'); //APUNTA A PRODUCCION
+const mostRegistrofolio = require('./hojasviajeras/mostRegistrofolio');
+const cargar_adjunto = require('./hojasviajeras/guardaradjunto');
 
 const Folio = require('./query/folio');
 const Folioconsumible = require('./query/folioconsumible');
@@ -103,6 +106,8 @@ const insertarEntregaafi = require('./query/insertEntregaafi');
 const insertarComidossolicitadas = require('./query/insertComidassolicitadas');
 const insertarAsistencia = require('./query/insertAsistencia');
 const insertarUserasistencia = require('./query/insertUserasistencia');
+const insertarTicketrelacion = require('./tickets/insertticketrelacion');
+const insertarRegistrofolio = require('./hojasviajeras/insertRegistrofolio');
 
 const editPreg = require('./query/actualizarPreg');
 const editDesinsum = require('./query/actualizarDesinsum');
@@ -131,7 +136,7 @@ const editPermisomenu = require('./query/actualizarPermisomenu');
 const editCompra = require('./query/actualizarCompra');
 const editProveedor = require('./query/actualizarProveedor');
 const editUserasistencia = require('./reconocimientofa/editUser_asistencia');
-
+const editRevisarfolio = require('./hojasviajeras/actRevisarfolio');
 
 const elim = require('./query/eliminar');
 
@@ -1127,7 +1132,10 @@ app.get('/asignacion', verificar_Token, (req, res) => {
         //console.log(respuesta);
     })
 })
-app.get('/movimientos', (req, res) => {
+app.get('/movimientos', verificar_Token, (req, res) => {
+    const usuario = req.usuario;
+    //console.log(usuario)
+    const id = usuario.id;
     const cb = req.query.cb;
     mostMovimientos(cb, function (error, respuesta) {
 
@@ -1800,8 +1808,8 @@ app.get('/entregaAFI', (req, res) => {
 )
 app.get('/idinsumos/:id', async (req, res) => {
     var idactivo = req.params.id;
-    //console.log(idactivo);
-    mostInsumos(function (error, respuesta) {
+    console.log(idactivo);
+    mostInsumos(function (error, respuestaInsumos) {
         if (error) {
             console.log(error)
             res.status(404).json({
@@ -1809,11 +1817,18 @@ app.get('/idinsumos/:id', async (req, res) => {
             })
         }
         else {
-            const datosActivo = respuesta.respuesta.find(filtro => filtro.folioInsumos === idactivo);
-            console.log(datosActivo);
-            /* res.status(200).json({
-                respuesta
-            }) */
+            const respuesta = respuestaInsumos.respuesta.find(filtro => filtro.folioInsumos === idactivo);
+            console.log(respuesta);
+            if (respuesta) {
+                res.status(200).json({
+                    respuesta
+                })
+            }
+            else {
+                res.status(400).json({
+                    mensaje: "No existe un activo fijo con ese ID."
+                })
+            }
         }
         //console.log(respuesta);
     })
@@ -2501,8 +2516,10 @@ app.post('/insertarRes', (req, res) => {
         });
     }
 })
+//MODIFICADO PARA ENVIAR LA FECHA AL FOLIO CAMBIOS DEL 12-12-2024
 app.post('/insertarInsumos', (req, res) => {
-    Folio(function (error, respuesta) {
+    const fechafolio = moment().format("DDMMYY");
+    Folio(fechafolio, function (error, respuesta) {
         if (error) {
             console.log(error);
             res.status(500).json({
@@ -3872,10 +3889,11 @@ app.post('/insertarMenu', (req, res) => {
 })
 app.post('/insertarentregaAFI', (req, res) => {
     const estatus = "ENTREGADO";
-    if (req.body.folioActivo && fecha && req.body.idcheck) {
+    const fecha = moment().format("YYYY-MM-DD");
+    if (req.body.folioActivo && fecha) {
         //console.log(req.body);
-        mostIdcheck(req.body.idcheck, function (error, respuesta) {
 
+        mostInsumos(function (error, respuesta) {
             if (error) {
                 console.log(error)
                 res.status(404).json({
@@ -3883,38 +3901,29 @@ app.post('/insertarentregaAFI', (req, res) => {
                 })
             }
             else {
-                //console.log(respuesta.respuesta[0].Area);
-                const area = respuesta.respuesta[0].Area;
-                mostInsumos(function (error, respuesta) {
-
-                    if (error) {
-                        console.log(error)
-                        res.status(404).json({
-                            mensaje: respuesta.mensaje
-                        })
-                    }
-                    else {
-                        const activofijo = respuesta.respuesta.find(filtro => filtro.folioInsumos === req.body.folioActivo);
-                        //console.log(activofijo);
-                        if (activofijo) {
-                            mostEntregaafi(function (error, respuesta) {
-                                if (error) {
-                                    console.log(error)
-                                    res.status(404).json({
-                                        mensaje: respuesta.mensaje
-                                    })
-                                }
-                                else {
-                                    const entregado = respuesta.respuesta.find(filtro => filtro.folioActivo === req.body.folioActivo);
-                                    //console.log(entregado);
-                                    if (entregado) {
-                                        res.status(400).json({
-                                            mensaje: "El activo ya fue entregado."
-                                        });
-                                    }
-                                    else {
-                                        insertarEntregaafi(req.body.folioActivo, fecha, area, estatus, function (error, respuesta) {
-
+                const activofijo = respuesta.respuesta.find(filtro => filtro.folioInsumos === req.body.folioActivo);
+                console.log(activofijo.tipoAct);
+                if (activofijo) {
+                    mostEntregaafi(function (error, respuesta) {
+                        if (error) {
+                            console.log(error)
+                            res.status(404).json({
+                                mensaje: respuesta.mensaje
+                            })
+                        }
+                        else {
+                            const entregado = respuesta.respuesta.find(filtro => filtro.folioActivo === req.body.folioActivo);
+                            //console.log(entregado);
+                            if (entregado) {
+                                res.status(400).json({
+                                    mensaje: "El activo ya fue entregado."
+                                });
+                            }
+                            else {
+                                if (activofijo.tipoAct === "LLANTAS" || activofijo.tipoAct === "BATERIA") {
+                                    const area = "null"
+                                    if (req.body.utilitario) {
+                                        insertarEntregaafi(req.body.folioActivo, fecha, area, estatus, req.body.utilitario, function (error, respuesta) {
                                             if (error) {
                                                 console.log(error)
                                                 res.status(404).json({
@@ -3929,24 +3938,71 @@ app.post('/insertarentregaAFI', (req, res) => {
                                             //console.log(respuesta);
                                         })
                                     }
+                                    else {
+                                        console.log("Existen datos vacíos");
+                                        res.status(400).json({
+                                            mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
+                                        });
+                                    }
+                                }
+                                else {
+                                    if (req.body.idcheck) {
+                                        mostIdcheck(req.body.idcheck, function (error, respuesta) {
+                                            if (error) {
+                                                console.log(error)
+                                                res.status(404).json({
+                                                    mensaje: respuesta.mensaje
+                                                })
+                                            }
+                                            else {
+                                                //console.log(respuesta.respuesta[0].Area);
+                                                const area = respuesta.respuesta[0].Area;
+                                                const utilitario = "null";
+                                                insertarEntregaafi(req.body.folioActivo, fecha, area, estatus, utilitario, function (error, respuesta) {
+                                                    if (error) {
+                                                        console.log(error)
+                                                        res.status(404).json({
+                                                            mensaje: respuesta.mensaje
+                                                        })
+                                                    }
+                                                    else {
+                                                        res.status(200).json({
+                                                            mensaje: respuesta.mensaje
+                                                        })
+                                                    }
+                                                    //console.log(respuesta);
+                                                })
+                                            }
+                                        })
+                                    }
+                                    else {
+                                        console.log("Existen datos vacíos");
+                                        res.status(400).json({
+                                            mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
+                                        });
+                                    }
 
                                 }
-                                //console.log(respuesta);
-                            })
-                        }
-                        else {
-                            res.status(400).json({
-                                mensaje: "El activo no esta registrado."
-                            });
-                        }
 
-                    }
-                    //console.log(respuesta);
-                })
+                            }
+
+                        }
+                        //console.log(respuesta);
+                    })
+
+
+                }
+                else {
+                    res.status(400).json({
+                        mensaje: "El activo no esta registrado."
+                    });
+                }
 
             }
             //console.log(respuesta);
         })
+
+
 
     }
     else {
@@ -6335,8 +6391,10 @@ app.get('/todoasistencia', (req, res) => {
 
 //FIN RECONOMIENTO FACIAL +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
+
+//PROCESO DE RELACION DE TICKETS +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 app.get('/vertickets', (req, res) => {
-    const estatus= "EN PROCESO";
+    const estatus = "EN PROCESO";
     mostTicketestatus(estatus, function (error, respuesta) {
 
         if (error) {
@@ -6346,6 +6404,7 @@ app.get('/vertickets', (req, res) => {
             })
         }
         else {
+            //console.log(respuesta);
             res.status(200).json({
                 respuesta
             })
@@ -6354,6 +6413,363 @@ app.get('/vertickets', (req, res) => {
     })
 }
 )
+app.post('/ticketrelacion', (req, res) => {
+    console.log(req.body);
+    const fecha = moment().format("YYYY-MM-DD");
+
+    /* if (req.body.userid && req.body.estatus) {
+        //Creado_Por, Id_Creado, Area, Proceso_Interno, Fecha_Creada, Hora_Creada, Descripcion, Area_Final, Estatus, Folio_de_relacion,
+        insertarTicketrelacion(req.body.userid, fecha, horainicio, horafin, estatus, req.body.motivo, (error, respuesta) => {
+            if (error) {
+                console.error('Error al insertar asistencia:', error.mensaje);
+            } else {
+                //console.log(respuesta);
+                io.emit('escuchando', respuesta);
+                res.status(200).json({
+                    respuesta
+                });
+
+            }
+        });
+    }
+    else {
+        console.log("Existen datos vacíos");
+        res.status(400).json({
+            mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
+        });
+    } */
+})
+//PROCESO DE RELACION DE TICKETS +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+//HOJAS VIAJERAS ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+app.get('/vijeshv', verificar_Token, (req, res) => {
+    const usuario = req.usuario;
+    //console.log(usuario)
+    const id = usuario.id;
+    mostAltas(function (error, respuestaAltas) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            const sucursal = respuestaAltas.respuesta.find(datos => datos.idCheck === id).Sucursal;
+            //console.log(sucursal);
+            let sucursalfinal = "";
+            switch (sucursal) {
+                case "CANOA": sucursalfinal = "PUE"
+                    //console.log(sucursalfinal);
+                    break;
+                case "MORELOS": sucursalfinal = "MOR"
+                    //console.log(sucursalfinal);
+                    break;
+                case "AGUSCALIENTES": sucursalfinal = "AGS"
+                    //console.log(sucursalfinal);
+                    break;
+                case "SAN LUIS POTOSI": sucursalfinal = "SLP"
+                    //console.log(sucursalfinal);
+                    break;
+                case "QUERETARO": sucursalfinal = "QRO"
+                    //console.log(sucursalfinal);
+                    break;
+            }
+            mostRegistrofolio(function (error, respuestaRegistro) {
+                if (error) {
+                    console.log(error)
+                    res.status(404).json({
+                        mensaje: respuesta.mensaje
+                    })
+                }
+                else {
+                    const revisarsinfiltro = respuestaRegistro.respuesta.filter(datos => datos.fecha_revision === null && datos.estatus !=="cancelado");
+                    //console.log("revisarsinfiltro ",revisarsinfiltro);
+                    mostHvviajes(function (error, respuestaViajes) {
+                        if (error) {
+                            console.log(error)
+                            res.status(404).json({
+                                mensaje: respuesta.mensaje
+                            })
+                        }
+                        else {
+                            const viajes = respuestaViajes.respuesta.filter(viaje => viaje.UDN === sucursalfinal);
+                            //console.log("viajes ",viajes);
+
+                            const revisar = viajes.map(datos => {
+                                const foliosviaje = revisarsinfiltro.filter(servicio => servicio.idviajes === datos.id).map(servicio2 => ({ id: servicio2.idhojas_viajeras, folios: servicio2.folio }));
+                                if (foliosviaje && foliosviaje.length > 0) {
+                                    const folios = Object.values(foliosviaje);
+                                    return {
+                                        idviaje: datos.id,
+                                        origen: datos.Origen,
+                                        destino: datos.Destino,
+                                        fecha: datos.Fecha,
+                                        folioshv: folios,
+
+                                    }
+                                }
+                                return null;
+                            }).filter(item => item !== null);
+                            //console.log(revisar);
+
+                            const respuesta = viajes.map(datos => {
+                                const existe = respuestaRegistro.respuesta.find(datos2 => datos2.idviajes === datos.id && datos2.fecha_revision !== null && datos2.estatus !== "cancelado");
+                                if (existe) {
+                                    return null;
+                                }
+                                else {
+                                    return {
+                                        id: datos.id,
+                                        viaje: datos.id + " - " + datos.Origen + " - " + datos.Destino + " - " + datos.Fecha
+                                    }
+                                }
+                            }).filter(item => item !== null);
+
+                            //console.log(respuesta);
+
+                            res.status(200).json({
+                                respuesta,
+                                revisar
+                            })
+                        }
+                        //console.log(respuesta);
+                    })
+                }
+            })
+
+        }
+    })
+
+}
+)
+app.get('/foliohviajeras', verificar_Token, (req, res) => {
+    const usuario = req.usuario;
+    //console.log(usuario)
+    const id = usuario.id;
+    mostAltas(function (error, respuestaAltas) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            const sucursal = respuestaAltas.respuesta.find(datos => datos.idCheck === id).Sucursal;
+            //console.log(sucursal);
+            let sucursalfinal = "";
+            switch (sucursal) {
+                case "CANOA": sucursalfinal = "PUE"
+                    //console.log(sucursalfinal);
+                    break;
+                case "MORELOS": sucursalfinal = "MOR"
+                    //console.log(sucursalfinal);
+                    break;
+                case "AGUSCALIENTES": sucursalfinal = "AGS"
+                    //console.log(sucursalfinal);
+                    break;
+                case "SAN LUIS POTOSI": sucursalfinal = "SLP"
+                    //console.log(sucursalfinal);
+                    break;
+                case "QUERETARO": sucursalfinal = "QRO"
+                    //console.log(sucursalfinal);
+                    break;
+            }
+
+            mostHvviajes(function (error, respuestaViajes) {
+                if (error) {
+                    console.log(error)
+                    res.status(404).json({
+                        mensaje: respuesta.mensaje
+                    })
+                }
+                else {
+                    const viajes = respuestaViajes.respuesta.filter(viaje => viaje.UDN === sucursalfinal);
+                    //console.log("viajes ",viajes);
+
+                    mostRegistrofolio(function (error, respuestaRegistro) {
+                        if (error) {
+                            console.log(error)
+                            res.status(404).json({
+                                mensaje: respuesta.mensaje
+                            })
+                        }
+                        else {
+                            //console.log(respuestaRegistro);
+                            const respuesta = respuestaRegistro.respuesta.filter(datos2 => datos2.fecha_revision === null && datos2.estatus !== "cancelado").map(datos => {
+                                const existe = viajes.find(viaje => viaje.id === datos.idviajes);
+                                if (existe) {
+                                    // Limpia el sufijo ordinal de la fecha
+                                    let fechaFormateada = moment(datos.fecha_registro).format("YYYY-MM-DD");
+
+                                    return {
+                                        id: datos.idhojas_viajeras,
+                                        viaje: datos.idviajes,
+                                        folio: datos.folio,
+                                        fecha: fechaFormateada
+                                    }
+                                }
+                                return null;
+                            }).filter(item => item !== null);
+                            //console.log(respuesta);
+                            res.status(200).json({
+                                respuesta
+                            })
+                        }
+                        //console.log(respuesta);
+                    })
+                }
+            })
+        }
+    })
+}
+)
+app.post('/registrarfolio', (req, res) => {
+    //console.log(req.body);
+    const fecha = moment().format();
+    //console.log(fecha);
+
+
+    if (req.body.viaje && req.body.folio) {
+        //idviajes, folio, fecha_registro
+        insertarRegistrofolio(req.body.viaje, req.body.folio, fecha, (error, respuesta) => {
+            if (error) {
+                console.error('Error al insertar asistencia:', error.mensaje);
+                res.status(404).json({
+                    error
+                });
+
+            } else {
+                //console.log(respuesta);
+                io.emit('registrado', respuesta);
+                res.status(200).json({
+                    respuesta
+                });
+
+            }
+        });
+    }
+    else {
+        console.log("Existen datos vacíos");
+        res.status(400).json({
+            mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
+        });
+    }
+})
+
+app.put('/revisarFolio', (req, res) => {
+    const fecha = moment().format();
+    /* id, fecha, adjunto, */
+    if (!req.files || Object.keys(req.files).length === 0) {
+        console.log("Existen datos vacíos");
+        res.status(400).json({
+            mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
+        });
+    }
+    else {
+        console.log(req.body.id);
+        if (req.body.id) {
+            mostRegistrofolio(function (error, respuestaRegistro) {
+                if (error) {
+                    console.log(error)
+                    res.status(404).json({
+                        mensaje: respuesta.mensaje
+                    })
+                }
+                else {
+                    const id = parseInt(req.body.id);
+                    const registros = respuestaRegistro.respuesta.filter(datos => datos.idviajes === id);
+                    console.log(registros);
+                    const tamaño = registros.length - 1;
+                    cargar_adjunto(req, res, (err, archivo) => {
+                        if (err) {
+                            console.log(err);
+                            return res.status(500).send('Error al cargar el archivo');
+                        } else {
+                            console.log(archivo);
+                            const estatus = "true";
+                            registros.forEach((info, index) => {
+                                editRevisarfolio(info.idhojas_viajeras, fecha, archivo, estatus, function (error, respuesta) {
+                                    if (error) {
+                                        console.log(error)
+                                        res.status(404).json({
+                                            mensaje: respuesta.mensaje
+                                        })
+                                    }
+                                    else {
+                                        if (index === tamaño) {
+                                            io.emit('revisado', respuesta.mensaje);
+                                            res.status(200).json({
+                                                mensaje: respuesta.mensaje
+                                            })
+                                        }
+                                    }
+                                    console.log(respuesta);
+                                })
+                            })
+                        }
+                    })
+                }
+            })
+        }
+        else {
+            res.status(400).json({
+                mensaje: "Solicite ayuda del desarrollador."
+            });
+        }
+
+
+    }
+})
+app.put('/cancelarfolio', (req, res) => {
+    if (req.body.idviaje) {
+        mostRegistrofolio(function (error, respuestaRegistro) {
+            if (error) {
+                console.log(error)
+                res.status(404).json({
+                    mensaje: respuesta.mensaje
+                })
+            }
+            else {
+                const id = parseInt(req.body.idviaje);
+                const registros = respuestaRegistro.respuesta.filter(datos => datos.idviajes === id);
+                console.log(registros);
+                const tamaño = registros.length - 1;
+                const estatus = "cancelado";
+
+                registros.forEach((info, index) => {
+                    editRevisarfolio(info.idhojas_viajeras, info.fecha_registro, info.adjunto, estatus, function (error, respuesta) {
+                        if (error) {
+                            console.log(error)
+                            res.status(404).json({
+                                mensaje: respuesta.mensaje
+                            })
+                        }
+                        else {
+                            if (index === tamaño) {
+                                io.emit('registrado', respuesta.mensaje);
+                                res.status(200).json({
+                                    mensaje: respuesta.mensaje
+                                })
+                            }
+                        }
+                        console.log(respuesta);
+                    })
+                })
+            }
+        })
+    }
+    else {
+        res.status(400).json({
+            mensaje: "Solicite ayuda del desarrollador."
+        });
+    }
+})
+
+//FIN DE HOJAS VIAJERAS ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
+
+
+
 
 app.listen(port, () => {
     loadModels();

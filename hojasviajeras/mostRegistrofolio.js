@@ -1,8 +1,7 @@
 const mysql = require('../database/index');
 
-function mostrar ( callback){
-    /* && status != "TERMINADO" */
-    mysql.query(` select * from controlactivi; `, function(error,respuesta){
+function mostrar (callback){
+    mysql.query(`SELECT * FROM hojas_viajeras;`, function(error,respuesta){
         
         if(error){
             callback(null,{
@@ -14,8 +13,9 @@ function mostrar ( callback){
                 respuesta
             })
         }
-        //console.log("Qué sucede? " fecha, respuesta);
+        //console.log(respuesta);
     });
 
 }
 module.exports = mostrar
+

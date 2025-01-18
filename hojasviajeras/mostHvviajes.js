@@ -1,7 +1,7 @@
 const mysql = require('../database/indexP');
 
 function mostrar (callback){
-    mysql.query(`Select * from PDM`, function(error,respuesta){
+    mysql.query(`SELECT * FROM Viajes WHERE DATE(Fecha) >= CURDATE() - INTERVAL 2 DAY && Estatus != "CANCELADO";`, function(error,respuesta){
         
         if(error){
             callback(null,{
