@@ -22,6 +22,7 @@ const editActividades = require('./actividades/actualizarActividades');
 //Hoja actdiarias
 const mostStatusresponsable = require('./actividades/mostStatusresponsable'); //APUNTA A PRODUCCION (YA NOOOOOO 17-01)
 const mostEvidencias = require('./actividades/mostEvidencias');
+const mostControl = require('./actividades/mostControl');
 
 
 //Hoja de asignacion
@@ -34,7 +35,7 @@ const editAsignacion = require('./actividades/actualizarAsigactivi');
 /* MODIFICADO CAMBIOS DEL 2024-11-20 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
 const mostControlasignados = require('./actividades/mostControlasig');
 
-const mostIdusuario = require('./actividades/mostIdusuario');
+const mostIdusuario = require('./actividades/mostIdusuario'); //apunta a produccion
 const insertarControlactivi = require('./actividades/insertControlactivi');
 const mostNumpersonas = require('./actividades/mostAsigactivinumpersonas');
 const editNumpersonas = require('./actividades/actualizarNumpasignacion');
@@ -507,8 +508,22 @@ app.get('/actividiarias', verificar_Token, (req, res) => {
                     }
                     else {
                         //console.log(respuestaResponsable);
+
                         const responsables = respuestaResponsable.respuesta.filter((responsable) => responsable.fecha === fecha);
                         //console.log("responsables ",responsables);
+
+                        const ambosdatos = responsables.map((sujeto) => {
+                            const empresasujeto = asignadas.find((id) => id.idasigactivi === sujeto.idasigactivi);
+                            return {
+                                nombre: sujeto.responsables,
+                                empresa: empresasujeto.empresa
+                            }
+                        });
+
+                        const nomempresas = ambosdatos.map((datos => ([datos.empresa]))).flat();
+                        const uniempresas = [...new Set(nomempresas)];
+
+
                         const respuestacard = asignadas.map(datos => {
                             const responsablesid = responsables.filter((suejeto) => suejeto.idasigactivi === datos.idasigactivi).map((sujetofinal) => {
                                 const hrtrans = (sujetofinal.timestandar <= 9) ? 0 : (Math.floor(sujetofinal.timestandar / 60));
@@ -570,8 +585,8 @@ app.get('/actividiarias', verificar_Token, (req, res) => {
 
                         res.status(200).json({
                             asignadas,
-                            nuevoarray
-
+                            nuevoarray,
+                            uniempresas,
                         })
                     }
 
@@ -745,10 +760,15 @@ app.get('/globalstatus', verificar_Token, (req, res) => {
                     //console.log("total ", hhombretotal);
 
                     res.status(200).json({
+                        //asignaciones
                         deldiatotal,
+                        //terminadas
                         terminadastotal,
+                        //promedio
                         promediototal,
+                        //promedioasig
                         promedioasigtotal,
+                        //naves
                         hhombretotal
 
                     })
@@ -778,6 +798,398 @@ app.get('/evidencias', (req, res) => {
             })
         }
 
+    })
+}
+)
+
+app.get('/datoselect', verificar_Token, (req, res) => {
+    const fecha = moment().format("YYYY-MM-DD");
+    const dia = moment().format("dddd");
+    //console.log(dia);
+    const usuario = req.usuario;
+    //console.log(usuario)
+    const responsable = usuario.nombre;
+    const id = usuario.id;
+    const area = usuario.Area;
+
+    console.log(req.query);
+    const empresa = (req.query.empresa === 'null') ? "" : req.query.empresa;
+    const nombre = (req.query.nombre === 'null') ? "" : req.query.nombre;
+    //console.log(empresa);
+
+    /* Editar todo lo de globa estatus en esta consulta, sin dejar de lado la division por id */
+    mostPDM(function (error, respuestaPDM) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            //console.log(respuestaPDM.respuesta);
+
+            mostStatusresponsable(function (error, respuestaResponsable) {
+                if (error) {
+                    console.log(error)
+                    res.status(404).json({
+                        mensaje: respuesta.mensaje
+                    })
+                }
+                else {
+                    //console.log(respuestaResponsable);
+                    const responsables = respuestaResponsable.respuesta.filter((responsable) => responsable.fecha === fecha);
+                    //console.log("responsables ",responsables);
+
+                    mostAsignacion(function (error, respuestaAsig) {
+                        if (error) {
+                            console.log(error)
+                            res.status(404).json({
+                                mensaje: respuestaAsig.mensaje
+                            })
+                        }
+                        else {
+
+                            let deldia = {};
+                            if (id === "RPMhzte1p8rlfmmq44l" || id === "RPMhztezf1lfbjn5nt") {
+                                deldia = respuestaAsig.respuesta.filter(filtro => (filtro.responsable === "MIGUEL DE LA CRUZ PUEBLITA" || filtro.responsable === " CHRISTIAN ELEAZAR AGUILAR CABALLERO") && filtro.fechainicio === fecha);
+                            }
+                            else {
+                                deldia = respuestaAsig.respuesta.filter(filtro => filtro.responsable === responsable && filtro.fechainicio === fecha);
+                            }
+
+                            /* Por empresa, buscando los trabajadores y ... */
+                            if (empresa && nombre) {
+                                /* Calcular horas disponibles */
+
+                                //console.log(respuestaPDM.respuesta);
+                                const personalpdm = respuestaPDM.respuesta.filter(dato => dato.Area === area && dato.estatus === "true" && dato.Ubicacion === req.query.empresa && dato.Nombre === req.query.nombre).map(datos => ({ Ubicacion: datos.Ubicacion }));
+                                //console.log(personalpdm);
+
+                                const numpersonal = personalpdm.reduce((acc, { Ubicacion }) => {
+                                    if (acc[Ubicacion]) {
+                                        acc[Ubicacion] += 1;
+                                    } else {
+                                        acc[Ubicacion] = 1;
+                                    }
+                                    return acc;
+                                }, {});
+                                //console.log("personas: ", numpersonal);
+
+                                const valorhr = (dia === "Saturday" || dia === "Sunday") ? 4.5 : 8.5;
+                                //console.log(valorhr);
+
+                                const timedisponible = Object.entries(numpersonal).map(([ubicacion, personas]) => {
+                                    const hhdisponibles = (personas * valorhr);
+                                    const hhdmin = (hhdisponibles * 60);
+
+                                    const hrentero = Math.trunc(hhdisponibles);
+                                    const minreales = (hhdisponibles - hrentero) * 60;
+
+                                    return {
+                                        ubicacion: ubicacion,
+                                        personas: personas,
+                                        minutosreales: hhdmin,
+                                        horareal: hrentero,
+                                        minreal: minreales
+                                    }
+
+                                });
+
+                                /* MUESTRA EL LISTADO DE LOS TRABAJADORES NO EDITAR */
+                                const ambosdatos = responsables.map((sujeto) => {
+                                    const empresasujeto = deldia.find((id) => id.idasigactivi === sujeto.idasigactivi);
+                                    return {
+                                        nombre: sujeto.responsables,
+                                        empresa: empresasujeto.empresa
+                                    }
+                                });
+                                //console.log(ambosdatos);
+                                const nombreresponsable = ambosdatos.filter((datos => datos.empresa === req.query.empresa)).map((sujeto) => sujeto.nombre).flat();
+                                //console.log(nombreresponsable);
+                                /* Resultado #1 */
+                                const trabajadores = [...new Set(nombreresponsable)];
+                                /* FIN DE MUESTRA EL LISTADO DE LOS TRABAJADORES NO EDITAR */
+
+                                mostControl(function (error, respuestaControl) {
+                                    if (error) {
+                                        console.log(error)
+                                        res.status(404).json({
+                                            mensaje: respuesta.mensaje
+                                        })
+                                    }
+                                    else {
+                                        const deldiacontrol = respuestaControl.respuesta.filter((dcontrol) => dcontrol.fecha === fecha && dcontrol.responsables === req.query.nombre);
+                                        //console.log("deldiacontrol ", deldiacontrol);
+                                        /* Resultado #2 */
+                                        const deldiatotal = deldiacontrol.length;
+                                        //console.log("deldiatotal", deldiatotal);
+
+                                        const terminadas = deldiacontrol.filter((filtro) => filtro.status === "TERMINADO");
+                                        /* Resultado #3 */
+                                        const terminadastotal = terminadas.length;
+                                        //console.log("terminadas", terminadastotal);
+
+                                        const promedio1 = terminadas.reduce((acumulador, filtro) => {
+                                            return acumulador + filtro.eficienciacontrol;
+                                        }, 0);
+                                        const promedio = Math.round((promedio1 + Number.EPSILON) * 100) / 100;
+                                        const promediototal1 = promedio / terminadas.length;
+                                        /* Resultado #3 */
+                                        const promediototal = Math.round((promediototal1 + Number.EPSILON) * 100) / 100;
+                                        //console.log(promediototal);
+
+                                        const promedioasig = (terminadastotal * 100) / deldiatotal;
+                                        /* Resultado #4 */
+                                        const promedioasigtotal = Math.round((promedioasig + Number.EPSILON) * 100) / 100;
+                                        //console.log(promedioasigtotal);
+
+                                        //Calcular horas hombre utilizadas:
+                                        const controltiempo = deldiacontrol.map(datos => ({ tiempo: datos.timestandar }));
+                                        //console.log("controltiempo ",controltiempo);
+
+                                        const hhtranscurridas = controltiempo.reduce((acumulador, filtro) => {
+                                            return acumulador + filtro.tiempo;
+                                        }, 0);
+                                        //console.log("hhtranscurridas ", hhtranscurridas);
+
+                                        const hhombretotal = timedisponible.map(datos => {
+                                            const lodehoy = hhtranscurridas;
+
+                                            const hrrealfin = (datos.horareal <= 9) ? "0" + datos.horareal : datos.horareal;
+                                            const minrealfin = (datos.minreal <= 9) ? "0" + datos.minreal : datos.minreal;
+
+                                            if (lodehoy) {
+                                                //Calcular el restante en hora y minutos
+                                                const minutosRestantes = (hhtranscurridas > datos.minutosreales) ? 0 : (datos.minutosreales - hhtranscurridas);
+                                                const hrrestantes = (minutosRestantes != 0 && minutosRestantes < 59) ? 0 : Math.floor(minutosRestantes / 60);
+                                                const minrestantes = (minutosRestantes < 59) ? minutosRestantes : (minutosRestantes % 60);
+                                                const hrrestantesfin = (hrrestantes <= 9) ? "0" + hrrestantes : hrrestantes;
+                                                const minrestantesfin = (minrestantes <= 9) ? "0" + minrestantes : minrestantes;
+
+                                                //Calcular el tiempo transcurrido
+                                                const hrtrans = (hhtranscurridas <= 9) ? 0 : (Math.floor(hhtranscurridas / 60));
+                                                const mintrans = (hhtranscurridas <= 9) ? hhtranscurridas : (hhtranscurridas % 60);
+                                                const hrtransfin = (hrtrans <= 9) ? "0" + hrtrans : hrtrans;
+                                                const mintransfin = (mintrans <= 9) ? "0" + mintrans : mintrans;
+
+                                                //Promedio
+                                                const porcentaje = (hhtranscurridas * 100) / datos.minutosreales;
+                                                const porcentajetotal = Math.round((porcentaje + Number.EPSILON) * 100) / 100;
+
+                                                return {
+                                                    ubicacion: datos.ubicacion,
+                                                    personas: datos.personas,
+                                                    hrrestante: hrrestantesfin,
+                                                    minrestante: minrestantesfin,
+                                                    hrtranscurrido: hrtransfin,
+                                                    mintranscurrido: mintransfin,
+                                                    horareal: hrrealfin,
+                                                    minreal: minrealfin,
+                                                    porcentaje: porcentajetotal
+                                                };
+                                            }
+
+                                            return {
+                                                ubicacion: datos.ubicacion,
+                                                personas: datos.personas,
+                                                hrrestante: hrrealfin,
+                                                minrestante: minrealfin,
+                                                hrtranscurrido: "00",
+                                                mintranscurrido: "00",
+                                                horareal: hrrealfin,
+                                                minreal: minrealfin,
+                                                porcentaje: 0
+                                            };
+                                        }).filter(item => item !== null);
+
+                                        //console.log("hhombretotal ", hhombretotal);
+
+                                        res.status(200).json({
+                                            //Trabajadores
+                                            trabajadores,
+                                            //asignaciones
+                                            deldiatotal,
+                                            //terminadas
+                                            terminadastotal,
+                                            //promedio
+                                            promediototal,
+                                            //promedioasig
+                                            promedioasigtotal,
+                                            //naves
+                                            hhombretotal
+
+                                        })
+
+                                    }
+                                })
+                            }
+                            else {
+                                if (empresa) {
+                                    /* Calcular horas disponibles */
+
+                                    //console.log(respuestaPDM.respuesta);
+                                    const personalpdm = respuestaPDM.respuesta.filter(dato => dato.Area === area && dato.estatus === "true" && dato.Ubicacion === req.query.empresa).map(datos => ({ Ubicacion: datos.Ubicacion }));
+                                    //console.log(personalpdm);
+
+                                    const numpersonal = personalpdm.reduce((acc, { Ubicacion }) => {
+                                        if (acc[Ubicacion]) {
+                                            acc[Ubicacion] += 1;
+                                        } else {
+                                            acc[Ubicacion] = 1;
+                                        }
+                                        return acc;
+                                    }, {});
+                                    //console.log("personas: ", numpersonal);
+
+                                    const valorhr = (dia === "Saturday" || dia === "Sunday") ? 4.5 : 8.5;
+                                    //console.log(valorhr);
+
+                                    const timedisponible = Object.entries(numpersonal).map(([ubicacion, personas]) => {
+                                        const hhdisponibles = (personas * valorhr);
+                                        const hhdmin = (hhdisponibles * 60);
+
+                                        const hrentero = Math.trunc(hhdisponibles);
+                                        const minreales = (hhdisponibles - hrentero) * 60;
+
+                                        return {
+                                            ubicacion: ubicacion,
+                                            personas: personas,
+                                            minutosreales: hhdmin,
+                                            horareal: hrentero,
+                                            minreal: minreales
+                                        }
+
+                                    });
+
+                                    const ambosdatos = responsables.map((sujeto) => {
+                                        const empresasujeto = deldia.find((id) => id.idasigactivi === sujeto.idasigactivi);
+                                        return {
+                                            nombre: sujeto.responsables,
+                                            empresa: empresasujeto.empresa
+                                        }
+                                    });
+
+                                    const nombreresponsable = ambosdatos.filter((datos => datos.empresa === req.query.empresa)).map((sujeto) => sujeto.nombre).flat();
+                                    //console.log(nombreresponsable);
+                                    //RESULTADO1: TRABAJADORES OPERANDO
+                                    const trabajadores = [...new Set(nombreresponsable)];
+
+
+                                    //CALCULAR LAS CAJAS DE INFORMACION DE LA EMPRESA (CAMBIA EL CONCEPTO DE "deldia", por los datos obtenidos)
+                                    const deldiaempresa = deldia.filter((datos => datos.empresa === req.query.empresa));
+                                    //console.log("deldiaempresa", deldiaempresa);
+                                    const deldiatotal = deldiaempresa.length;
+                                    //console.log("deldiaempresa", deldiaempresa);
+
+                                    const terminadas = deldiaempresa.filter((filtro) => filtro.status === "TERMINADO");
+                                    const terminadastotal = terminadas.length;
+                                    //console.log("terminadas", terminadas.length);
+
+                                    const promedio1 = terminadas.reduce((acumulador, filtro) => {
+                                        return acumulador + filtro.eficienciasig;
+                                    }, 0);
+                                    const promedio = Math.round((promedio1 + Number.EPSILON) * 100) / 100;
+                                    const promediototal1 = promedio / terminadas.length
+                                    const promediototal = Math.round((promediototal1 + Number.EPSILON) * 100) / 100;
+                                    //console.log(promediototal);
+
+
+                                    const promedioasig = (terminadastotal * 100) / deldiatotal;
+                                    const promedioasigtotal = Math.round((promedioasig + Number.EPSILON) * 100) / 100;
+                                    //console.log(promedioasigtotal);
+
+
+                                    //Calcular horas hombre utilizadas:
+
+                                    const empresatempo = deldiaempresa.map(datos => ({ empresa: datos.empresa, tiempo: datos.timeControl }));
+                                    //console.log(empresatempo);
+
+                                    const Hhempresa = empresatempo.reduce((acc, { empresa, tiempo }) => {
+                                        if (acc[empresa]) {
+                                            acc[empresa] += tiempo;
+                                        } else {
+                                            acc[empresa] = tiempo;
+                                        }
+                                        return acc;
+                                    }, {});
+
+                                    const hhtranscurridas = Object.entries(Hhempresa).map(([empresa, tiempo]) => ({ empresa, tiempo }));
+                                    //console.log("hhtranscurridas ", hhtranscurridas);
+
+                                    const hhombretotal = timedisponible.map(datos => {
+                                        const lodehoy = hhtranscurridas.find(datos2 => datos2.empresa === datos.ubicacion);
+
+                                        const hrrealfin = (datos.horareal <= 9) ? "0" + datos.horareal : datos.horareal;
+                                        const minrealfin = (datos.minreal <= 9) ? "0" + datos.minreal : datos.minreal;
+
+                                        if (lodehoy) {
+                                            //Calcular el restante en hora y minutos
+                                            const minutosRestantes = (lodehoy.tiempo > datos.minutosreales) ? 0 : (datos.minutosreales - lodehoy.tiempo);
+                                            const hrrestantes = (minutosRestantes != 0 && minutosRestantes < 59) ? 0 : Math.floor(minutosRestantes / 60);
+                                            const minrestantes = (minutosRestantes < 59) ? minutosRestantes : (minutosRestantes % 60);
+                                            const hrrestantesfin = (hrrestantes <= 9) ? "0" + hrrestantes : hrrestantes;
+                                            const minrestantesfin = (minrestantes <= 9) ? "0" + minrestantes : minrestantes;
+
+                                            //Calcular el tiempo transcurrido
+                                            const hrtrans = (lodehoy.tiempo <= 9) ? 0 : (Math.floor(lodehoy.tiempo / 60));
+                                            const mintrans = (lodehoy.tiempo <= 9) ? lodehoy.tiempo : (lodehoy.tiempo % 60);
+                                            const hrtransfin = (hrtrans <= 9) ? "0" + hrtrans : hrtrans;
+                                            const mintransfin = (mintrans <= 9) ? "0" + mintrans : mintrans;
+
+                                            //Promedio
+                                            const porcentaje = (lodehoy.tiempo * 100) / datos.minutosreales;
+                                            const porcentajetotal = Math.round((porcentaje + Number.EPSILON) * 100) / 100;
+
+                                            return {
+                                                ubicacion: datos.ubicacion,
+                                                personas: datos.personas,
+                                                hrrestante: hrrestantesfin,
+                                                minrestante: minrestantesfin,
+                                                hrtranscurrido: hrtransfin,
+                                                mintranscurrido: mintransfin,
+                                                horareal: hrrealfin,
+                                                minreal: minrealfin,
+                                                porcentaje: porcentajetotal
+                                            };
+                                        }
+
+                                        return {
+                                            ubicacion: datos.ubicacion,
+                                            personas: datos.personas,
+                                            hrrestante: hrrealfin,
+                                            minrestante: minrealfin,
+                                            hrtranscurrido: "00",
+                                            mintranscurrido: "00",
+                                            horareal: hrrealfin,
+                                            minreal: minrealfin,
+                                            porcentaje: 0
+                                        };
+                                    }).filter(item => item !== null);
+
+                                    //console.log("total ", hhombretotal);
+
+                                    res.status(200).json({
+                                        //Trabajadores
+                                        trabajadores,
+                                        //asignaciones
+                                        deldiatotal,
+                                        //terminadas
+                                        terminadastotal,
+                                        //promedio
+                                        promediototal,
+                                        //promedioasig
+                                        promedioasigtotal,
+                                        //naves
+                                        hhombretotal
+
+                                    })
+                                }
+                            }
+                        }
+                    })
+                }
+            })
+        }
     })
 }
 )
@@ -929,7 +1341,6 @@ app.put('/actualizarAsig', (req, res) => {
 app.get('/Controlasignados/:id', (req, res) => {
     const fecha = moment().format("YYYY-MM-DD");
     var idcheck = req.params.id
-    console
     mostControlasignados(idcheck, fecha, function (error, respuesta) {
         if (error) {
             console.log(error)
@@ -963,6 +1374,7 @@ app.get('/Controlasignados/:id', (req, res) => {
         //console.log(respuesta);
     })
 })
+//SE AGREGAN MODIFICACIONES PDE MEJORA 21/01
 app.post('/insertarControl', (req, res) => {
     const fecha = moment().format("YYYY-MM-DD");
     if (req.body.idactividades && fecha && req.body.responsables && req.body.idasigactivi && req.body.idchecksupervisor) {
@@ -981,10 +1393,10 @@ app.post('/insertarControl', (req, res) => {
                 })
             }
             else {
-                console.log(req.body)
+                //console.log(req.body)
                 //console.log(respuesta.respuesta)
                 const datosFil = respuesta.respuesta.find((filtro) => filtro.idactividades === req.body.idactividades && filtro.responsables === req.body.responsables);
-                console.log(datosFil);
+                //console.log(datosFil);
                 if (datosFil) {
                     console.log("El responsable ya esta asignado en la actividad");
                     res.status(400).json({
@@ -1001,57 +1413,61 @@ app.post('/insertarControl', (req, res) => {
                             })
                         }
                         else {
-                            console.log(req.body.responsables);
+                            //console.log(req.body.responsables);
                             const searchidcheck = respuesta.respuesta.find(filtro => filtro.NombreCompleto === req.body.responsables);
-                            console.log(searchidcheck);
-                            const idcheck = searchidcheck.idCheck;
+                            //console.log(searchidcheck);
+                            if (searchidcheck) {
+                                const idcheck = searchidcheck.idCheck;
+                                //console.log(idcheck);
+                                insertarControlactivi(req.body.idactividades, fecha, req.body.responsables, timestandar, kg, lon, lat, status, req.body.idasigactivi, idcheck, req.body.idchecksupervisor, function (error, respuesta) {
+                                    if (error) {
+                                        console.log(error)
+                                        res.status(404).json({
+                                            mensaje: respuesta.mensaje
+                                        })
+                                    }
+                                    else {
+                                        io.emit('escuchando', respuesta.mensaje);
+                                        mostNumpersonas(req.body.idasigactivi, function (error, respuesta) {
+                                            if (error) {
+                                                console.log(error)
+                                                res.status(404).json({
+                                                    mensaje: respuesta.mensaje
+                                                })
+                                            }
+                                            else {
+                                                console.log(respuesta.respuesta[0].numpersonas);
+                                                const personastotales = respuesta.respuesta[0].numpersonas + 1;
+                                                console.log(personastotales);
+                                                editNumpersonas(req.body.idasigactivi, personastotales, function (error, respuesta) {
+                                                    if (error) {
+                                                        console.log(error)
+                                                        res.status(404).json({
+                                                            mensaje: respuesta.mensaje
+                                                        })
+                                                    }
+                                                    else {
+                                                        io.emit('escuchando', respuesta.mensaje);
+                                                        res.status(200).json({
+                                                            mensaje: respuesta.mensaje
+                                                        })
+                                                    }
+                                                    //console.log(respuesta);
+                                                })
+                                            }
+                                            //console.log(respuesta);
+                                        })
 
-                            console.log(idcheck);
-
-
-                            insertarControlactivi(req.body.idactividades, fecha, req.body.responsables, timestandar, kg, lon, lat, status, req.body.idasigactivi, idcheck, req.body.idchecksupervisor, function (error, respuesta) {
-                                if (error) {
-                                    console.log(error)
-                                    res.status(404).json({
-                                        mensaje: respuesta.mensaje
-                                    })
-                                }
-                                else {
-                                    io.emit('escuchando', respuesta.mensaje);
-                                    mostNumpersonas(req.body.idasigactivi, function (error, respuesta) {
-                                        if (error) {
-                                            console.log(error)
-                                            res.status(404).json({
-                                                mensaje: respuesta.mensaje
-                                            })
-                                        }
-                                        else {
-                                            console.log(respuesta.respuesta[0].numpersonas);
-                                            const personastotales = respuesta.respuesta[0].numpersonas + 1;
-                                            console.log(personastotales);
-                                            editNumpersonas(req.body.idasigactivi, personastotales, function (error, respuesta) {
-                                                if (error) {
-                                                    console.log(error)
-                                                    res.status(404).json({
-                                                        mensaje: respuesta.mensaje
-                                                    })
-                                                }
-                                                else {
-                                                    io.emit('escuchando', respuesta.mensaje);
-                                                    res.status(200).json({
-                                                        mensaje: respuesta.mensaje
-                                                    })
-                                                }
-                                                //console.log(respuesta);
-                                            })
-                                        }
-                                        //console.log(respuesta);
-                                    })
-
-                                }
-                                //console.log(respuesta);
-                            })
-
+                                    }
+                                    //console.log(respuesta);
+                                })
+                            }
+                            else {
+                                console.log("Solicite ayuda al equipo de desarrollo");
+                                res.status(400).json({
+                                    mensaje: "Solicite ayuda al equipo de desarrollo."
+                                });
+                            }
                         }
                         //console.log(respuesta);
                     })
@@ -1083,7 +1499,7 @@ app.get('/buscar_Supervisor/:id', async (req, res) => {
             //console.log(respuestaidCheck);
             if (respuestaidCheck.respuesta && respuestaidCheck.respuesta.length > 0) {
                 const responsable = respuestaidCheck.respuesta[0].NombreCompleto;
-                console.log(responsable);
+                //console.log(responsable);
 
                 mostPDM(function (error, respuesta) {
                     if (error) {
@@ -1117,7 +1533,7 @@ app.get('/buscar_Supervisor/:id', async (req, res) => {
                                     })
                                 }
                                 else {
-                                    console.log("Actividades asignadas: ", respuestaActividades.respuesta.length);
+                                    //console.log("Actividades asignadas: ", respuestaActividades.respuesta.length);
                                     mostIdusuarioPMateriales(supervisor.Ubicacion, function (error, respuestaMateriales) {
                                         if (error) {
                                             console.log(error)
@@ -2161,7 +2577,7 @@ async function asignacionaut() {
             }));
 
             const activiasignar = datosneed.flat();
-            console.log(activiasignar.length);
+            //console.log(activiasignar.length);
             activiasignar.forEach((datos, index) => {
                 insertarAsigactivi(fecha, datos.nombre, fecha, datos.empresa, datos.id, status, timecontrol, kg, numpersonas, eficacia, eficienciasig, function (error, respuesta) {
                     if (error) {
@@ -2172,7 +2588,7 @@ async function asignacionaut() {
                     }
                     else {
                         io.emit('escuchando', respuesta.mensaje);
-                        console.log("Datos guardados", index);
+                        //console.log("Datos guardados", index);
                         /* res.status(200).json({
                             mensaje: respuesta.mensaje
                         }) */
@@ -2188,7 +2604,7 @@ app.get('/actividadesaut', (req, res) => {
     asignacionaut();
 });
 // Tarea programada para ejecutarse todos los días a la hora que le indiques
-schedule.scheduleJob('08 08 * * *', function () {
+schedule.scheduleJob('11 08 * * *', function () {
     console.log('¡La tarea diaria se ejecutó a las 10:47 AM UTC!');
     asignacionaut();
 });
@@ -2492,7 +2908,7 @@ async function tiempo() {
 app.get('/tiempo', async (req, res) => {
     tiempo();
 })
-setInterval(tiempo, 1000);
+//setInterval(tiempo, 1000);
 
 
 

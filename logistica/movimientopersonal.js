@@ -1,7 +1,7 @@
 const mysql = require('../database/indexP');
 
 function mostrar (callback){
-    mysql.query(`SELECT  NombreCompleto, idCheck FROM Alta_Rh where Estatus="ACTIVO" && NombreCompleto != "ADMINISTRADOR ADMINISTRADOR ADMINISTRADOR"`, function(error,respuesta){
+    mysql.query(`SELECT * FROM Alta_Rh where Estatus = "ACTIVO" AND Nombre != "ADMINISTRADOR" AND Sexo="MASCULINO";`, function(error,respuesta){
         
         if(error){
             callback(null,{
@@ -18,3 +18,4 @@ function mostrar (callback){
 
 }
 module.exports = mostrar
+

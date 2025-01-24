@@ -76,7 +76,9 @@ const mostTableromantt = require('./mantenimiento/mostTableromantt');
 const mostVerificarcompras = require('./query/mostVerificarcompras');
 const mostTicketestatus = require('./tickets/mostTikets');
 const mostHvviajes = require('./hojasviajeras/mostHvviajes'); //APUNTA A PRODUCCION
-const mostRegistrofolio = require('./hojasviajeras/mostRegistrofolio');
+const mostRegistrofolio = require('./hojasviajeras/mostRegistrofolio'); 
+const mostAltarhmasculino = require('./logistica/movimientopersonal'); //APUNTA A PRODUCCION
+const mostPersonalogistica = require('./logistica/mostPersonal_logistica');
 const cargar_adjunto = require('./hojasviajeras/guardaradjunto');
 
 const Folio = require('./query/folio');
@@ -108,6 +110,7 @@ const insertarAsistencia = require('./query/insertAsistencia');
 const insertarUserasistencia = require('./query/insertUserasistencia');
 const insertarTicketrelacion = require('./tickets/insertticketrelacion');
 const insertarRegistrofolio = require('./hojasviajeras/insertRegistrofolio');
+const personalogistica = require('./logistica/insertPeronalogistica');
 
 const editPreg = require('./query/actualizarPreg');
 const editDesinsum = require('./query/actualizarDesinsum');
@@ -137,7 +140,7 @@ const editCompra = require('./query/actualizarCompra');
 const editProveedor = require('./query/actualizarProveedor');
 const editUserasistencia = require('./reconocimientofa/editUser_asistencia');
 const editRevisarfolio = require('./hojasviajeras/actRevisarfolio');
-
+const editPersonalogistica = require('./logistica/editPersonalogistica');
 const elim = require('./query/eliminar');
 
 const privateKey = fs.readFileSync(path.resolve(__dirname, 'server.key'), 'utf8');
@@ -5531,6 +5534,7 @@ app.put('/actualizarproveedor', (req, res) => {
         });
     }
 })
+
 //actualizado para 
 async function editcompraglobal(consumible, compra) {
     if (consumible && compra) {
@@ -6483,7 +6487,7 @@ app.get('/vijeshv', verificar_Token, (req, res) => {
                     })
                 }
                 else {
-                    const revisarsinfiltro = respuestaRegistro.respuesta.filter(datos => datos.fecha_revision === null && datos.estatus !=="cancelado");
+                    const revisarsinfiltro = respuestaRegistro.respuesta.filter(datos => datos.fecha_revision === null && datos.estatus !== "cancelado");
                     //console.log("revisarsinfiltro ",revisarsinfiltro);
                     mostHvviajes(function (error, respuestaViajes) {
                         if (error) {
@@ -6768,6 +6772,99 @@ app.put('/cancelarfolio', (req, res) => {
 
 //FIN DE HOJAS VIAJERAS ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ 
 
+
+
+//MOVIMIENTO DE PERSONAL LOGISTICA **********************************************************************
+app.get('/altarhlogistica', (req, res) => {
+    mostAltarhmasculino(function (error, respuestaAlta) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            //console.log(respuesta.respuesta);
+            const respuesta = respuestaAlta.respuesta.map((sujeto) => {
+                return{
+                    idAlta: sujeto.idAlta,
+                    Sexo: sujeto.Sexo,
+                    Sucursal: sujeto.Sucursal,
+                    Area: sujeto.Area,
+                    idCheck: sujeto.idCheck,
+                    Empresa: sujeto.Empresa,
+                    NombreCompleto: sujeto.NombreCompleto
+                }
+            })
+            res.status(200).json({
+                respuesta
+            })
+        }
+        //console.log(respuesta);
+    })
+}
+)
+app.get('/personalogistica', (req, res) => {
+    mostPersonalogistica(function (error, respuestaPersonal) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            //console.log(respuestaPersonal.respuesta);
+            const respuesta = respuestaPersonal.respuesta;
+            res.status(200).json({
+                respuesta
+            })
+        }
+        //console.log(respuesta);
+    })
+}
+)
+app.post('/operadorlog', (req, res) => {
+    const puesto= "OPERADOR DE CAMION DE CARGA";
+    //console.log(req.body);
+    personalogistica(req.body.nombre, puesto, function (error, respuestaPersonal) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            //console.log(respuestaPersonal);
+            const respuesta = respuestaPersonal.mensaje;
+            res.status(200).json({
+                respuesta
+            })
+        }
+        //console.log(respuesta);
+    })
+}
+)
+app.put('/editoperadorlog', (req, res) => {
+    //console.log(req.body);
+    editPersonalogistica(req.body.id, req.body.estatus, function (error, respuestaPersonal) {
+        if (error) {
+            console.log(error)
+            res.status(404).json({
+                mensaje: respuesta.mensaje
+            })
+        }
+        else {
+            //console.log(respuestaPersonal);
+            const respuesta = respuestaPersonal.mensaje;
+            res.status(200).json({
+                respuesta
+            })
+        }
+        //console.log(respuesta);
+    })
+}
+)
+//FIN DE MOVIMIENTO DE PERSONAL LOGISTICA ***************************************************************
 
 
 
