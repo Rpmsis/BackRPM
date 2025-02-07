@@ -1,7 +1,7 @@
-const mysql = require('../database/indexP');
+const mysql = require('../database/index');
 
-function mostrar (ubicacion,callback){
-    mysql.query(`SELECT * FROM PDM where Ubicacion = "${ubicacion}";`, function(error,respuesta){
+function mostrar (callback){
+    mysql.query(`SELECT * FROM asigactivi inner join actividades on asigactivi.idactividad = actividades.idactividades WHERE asigactivi.status != "INACTIVO";`, function(error,respuesta){
         
         if(error){
             callback(null,{

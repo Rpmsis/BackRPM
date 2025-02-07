@@ -1,7 +1,7 @@
 const mysql = require('../database/index');
 
-function actualizar (id, eficacia, eficiencia, estatus,  callback){
-    mysql.query(`Update asigactivi  set eficacia = '${eficacia}', eficienciasig = '${eficiencia}', individualkg = '${estatus}' WHERE idasigactivi = '${id}' `, function(error,respuesta){
+function actualizar (id, eficiencia,  callback){
+    mysql.query(`Update controlactivi  set eficienciacontrol = '${eficiencia}' WHERE idcontrolactivi = '${id}' `, function(error,respuesta){
         
         if(error){
             callback(null,{

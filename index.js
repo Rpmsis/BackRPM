@@ -76,7 +76,7 @@ const mostTableromantt = require('./mantenimiento/mostTableromantt');
 const mostVerificarcompras = require('./query/mostVerificarcompras');
 const mostTicketestatus = require('./tickets/mostTikets');
 const mostHvviajes = require('./hojasviajeras/mostHvviajes'); //APUNTA A PRODUCCION
-const mostRegistrofolio = require('./hojasviajeras/mostRegistrofolio'); 
+const mostRegistrofolio = require('./hojasviajeras/mostRegistrofolio');
 const mostAltarhmasculino = require('./logistica/movimientopersonal'); //APUNTA A PRODUCCION
 const mostPersonalogistica = require('./logistica/mostPersonal_logistica');
 const cargar_adjunto = require('./hojasviajeras/guardaradjunto');
@@ -5887,7 +5887,7 @@ app.post('/registrarUserasistencia', (req, res) => {
 
 /* HOJA DE reconocimiento-facil */
 app.post('/compararcaras', (req, res) => {
-    //console.log(req.body);
+    //console.log(req.body.idcheck);
     const fecha = moment().format("YYYY-MM-DD");
     const hora = moment().format("HH:mm");
     const horasave = moment().format('HH:mm:ss');
@@ -5896,8 +5896,8 @@ app.post('/compararcaras', (req, res) => {
     let comparacion = "";
     let fotoArray = req.body.captura.split(",").map((num) => parseFloat(num));
     //console.log(fotoArray.length);
-    let fotoFloat32Array = new Float32Array(fotoArray);
-    //console.log(fotoFloat32Array);
+    let fotoFloatasistencia = new Float32Array(fotoArray);
+    //console.log(fotoFloatasistencia);
 
     mostUserasistencia(function (error, respuesta) {
         if (error) {
@@ -5907,28 +5907,222 @@ app.post('/compararcaras', (req, res) => {
             })
         }
         else {
-            //const solodescrip = respuesta.respuesta.map((datos) => ([datos.descrip]));
-            //console.log(solodescrip);
-            //console.log(respuesta.respuesta);
-            const rostroCoincidente = respuesta.respuesta.find((des) => {
+            const verificar = respuesta.respuesta.find((des) => des.idcheck === req.body.idcheck);
+            //console.log(verificar);
+            if (verificar) {
+                //console.log(diasemana);
+                //console.log(verificar.descrip);
+                let fotosave = verificar.descrip.split(",").map((num) => parseFloat(num));
                 //console.log(des.descrip);
-                if (des.descrip != null) {
-                    let fotosavearray = des.descrip.split(",").map((num) => parseFloat(num));
+                let saveFloatArray = new Float32Array(fotosave);
+                //console.log(saveFloatArray);
+                const distance = faceapi.euclideanDistance(saveFloatArray, fotoFloatasistencia);
+                //console.log(verificar.nombre + " " + distance);
+                if (distance < 0.57) {
+                    //console.log("Distancia entre rostros: ", distance);
+                    mostEventosbio(fecha, function (error, respuesta) {
+                        if (error) {
+                            console.log(error)
+                        }
+                        else {
+                            const registrados = respuesta.respuesta.find(reg => reg.idcheck === req.body.idcheck);
+                            //console.log("registrados: ", registrados);
+                            //console.log(verificar.turno);
+                            if (registrados) {
+                                if (diasemana === "Saturday" || diasemana === "Sunday") {
+                                    //console.log("algo esta mal");
+                                    //console.log("HORA ENTRADA ", verificar.horaentrada);
+                                    //console.log("HORA SALIDA ", verificar.horasalida);
+
+                                    if (registrados.horasalidaMD != "NA") {
+                                        res.status(400).json({
+                                            mensaje: "Ya estás registrad@ en la lista de asistencia."
+                                        });
+                                    }
+                                    else {
+                                        if (hora >= verificar.horasalidaMD) {
+                                            const estatus = "ASISTENCIA";
+                                            const motivo = "NA";
+                                            //console.log("Estatus RETARDO");
+                                            editAsistencia(registrados.idasistencia, horasave, estatus, motivo, function (error, respuesta) {
+                                                if (error) {
+                                                    console.log(error);
+                                                }
+                                                else {
+                                                    //console.log(respuesta);
+                                                    io.emit('escuchando', respuesta);
+                                                    res.status(200).json({
+                                                        titulo: respuesta.mensaje,
+                                                        mensaje: comparacion
+                                                    });
+                                                }
+                                                //console.log(respuesta);
+                                            })
+                                        }
+                                        else {
+                                            res.status(400).json({
+                                                mensaje: "Espera tu hora de salida!!"
+                                            });
+                                        }
+                                    }
+                                } else {
+                                    if (registrados.horasalidaMD != "NA") {
+                                        res.status(400).json({
+                                            mensaje: "Ya estás registrad@ en la lista de asistencia."
+                                        });
+                                    }
+                                    else {
+                                        if (hora >= verificar.horasalida) {
+                                            const estatus = "ASISTENCIA";
+                                            const motivo = "NA";
+                                            //console.log("Estatus RETARDO");
+                                            editAsistencia(registrados.idasistencia, horasave, estatus, motivo, function (error, respuesta) {
+                                                if (error) {
+                                                    console.log(error);
+                                                }
+                                                else {
+                                                    //console.log(respuesta);
+                                                    io.emit('escuchando', respuesta);
+                                                    res.status(200).json({
+                                                        titulo: respuesta.mensaje,
+                                                        mensaje: comparacion
+                                                    });
+                                                }
+                                                //console.log(respuesta);
+                                            })
+                                        }
+                                        else {
+                                            res.status(400).json({
+                                                mensaje: "Espera tu hora de salida!!"
+                                            })
+                                        }
+                                    }
+                                }
+
+                            }
+                            else {
+                                if (diasemana === "Saturday" || diasemana === "Sunday") {
+                                    //console.log("algo esta mal");
+                                    //console.log("HORA ENTRADA ", verificar.horaentrada);
+                                    //console.log("HORA SALIDA ", verificar.horasalida);
+
+                                    if (hora > verificar.horaentradaMD) {
+                                        const estatus = "RETARDO";
+                                        const motivo = "NA";
+                                        const horafin = "NA";
+                                        //console.log("Estatus RETARDO");
+                                        insertarAsistencia(verificar.idcheck, fecha, hora, horafin, estatus, motivo, (error, respuesta) => {
+                                            if (error) {
+                                                console.error('Error al insertar asistencia:', error.mensaje);
+                                            } else {
+                                                //console.log(respuesta);
+                                                io.emit('escuchando', respuesta);
+                                                res.status(200).json({
+                                                    titulo: respuesta.mensaje,
+                                                    mensaje: comparacion
+                                                })
+
+                                            }
+                                        });
+                                    }
+                                    else {
+                                        const estatus = "ENTRADA";
+                                        const motivo = "NA";
+                                        const horafin = "NA";
+                                        //console.log("estatus ENTRADA");
+                                        insertarAsistencia(verificar.idcheck, fecha, hora, horafin, estatus, motivo, (error, respuesta) => {
+                                            if (error) {
+                                                console.error('Error al insertar asistencia:', error.mensaje);
+                                            } else {
+                                                //console.log(respuesta);
+                                                io.emit('escuchando', respuesta);
+                                                res.status(200).json({
+                                                    titulo: respuesta.mensaje,
+                                                    mensaje: comparacion
+                                                })
+
+                                            }
+                                        });
+                                    }
+                                } else {
+                                    if (hora > verificar.horaentrada) {
+                                        const estatus = "RETARDO";
+                                        const motivo = "NA";
+                                        const horafin = "NA";
+                                        //console.log("Estatus RETARDO");
+                                        insertarAsistencia(verificar.idcheck, fecha, horasave, horafin, estatus, motivo, (error, respuesta) => {
+                                            if (error) {
+                                                console.error('Error al insertar asistencia:', error.mensaje);
+                                            } else {
+                                                //console.log(respuesta);
+                                                io.emit('escuchando', respuesta);
+                                                res.status(200).json({
+                                                    titulo: respuesta.mensaje,
+                                                    mensaje: comparacion
+                                                })
+
+                                            }
+                                        });
+                                    }
+                                    else {
+                                        const estatus = "ENTRADA";
+                                        const motivo = "NA";
+                                        const horafin = "NA";
+                                        //console.log("estatus ENTRADA");
+                                        insertarAsistencia(verificar.idcheck, fecha, horasave, horafin, estatus, motivo, (error, respuesta) => {
+                                            if (error) {
+                                                console.error('Error al insertar asistencia:', error.mensaje);
+                                            } else {
+                                                //console.log(respuesta);
+                                                io.emit('escuchando', respuesta);
+                                                res.status(200).json({
+                                                    titulo: respuesta.mensaje,
+                                                    mensaje: comparacion
+                                                })
+
+                                            }
+                                        });
+                                    }
+                                }
+
+
+                            }
+                        }
+                    })
+                } else {
+                    console.log("Los rostros no coinciden.");
+                    const mensaje = "Mira a la cámara con la cara descubierta!";
+                    res.status(400).json({
+                        mensaje
+                    });
+                }
+            }
+            else {
+                console.log("No esta registrado como usuario");
+                res.status(400).json({
+                    mensaje: "No esta registrado como usuario"
+                })
+            }
+
+
+
+            /* const rostroCoincidente = existeRegistro
+            if (des.idcheck === req.body.idcheck) {
+                    let fotosave = des.descrip.split(",").map((num) => parseFloat(num));
                     //console.log(des.descrip);
-                    let saveFloat32Array = new Float32Array(fotosavearray);
-                    //console.log(saveFloat32Array);
-                    const distance = faceapi.euclideanDistance(saveFloat32Array, fotoFloat32Array);
-                    console.log(des.nombre + " " + distance);
+                    let saveFloatArray = new Float32Array(fotosave);
+                    //console.log(saveFloatArray);
+                    const distance = faceapi.euclideanDistance(saveFloatArray, fotoFloatasistencia);
+                    //console.log(des.nombre + " " + distance);
                     if (distance < 0.57) {
-                        console.log("Distancia entre rostros: ", distance);
+                        //console.log("Distancia entre rostros: ", distance);
                         // Si la distancia es menor, devolvemos el nombre del rostro coincidente
                         return true; // Esto detendrá la búsqueda
                     }
+                    return "distancia";
                 }
-                return false;
-            })
-
-            if (rostroCoincidente) {
+                return "sinregistro"; */
+            /* if (rostroCoincidente) {
                 console.log("Rostro coincidente encontrado: ", rostroCoincidente.nombre);
                 comparacion = rostroCoincidente.nombre;
                 io.emit('capcomparacion', comparacion);
@@ -5943,7 +6137,7 @@ app.post('/compararcaras', (req, res) => {
                             console.log(error)
                         }
                         else {
-                            const registrados = respuesta.respuesta.find(reg => reg.idcheck === verificar.idcheck);
+                            const registrados = respuesta.respuesta.find(reg => reg.idcheck === req.body.idcheck);
                             //console.log("registrados: ", registrados);
                             //console.log(verificar.turno);
                             if (registrados) {
@@ -6118,11 +6312,11 @@ app.post('/compararcaras', (req, res) => {
                 }
             } else {
                 console.log("Los rostros no coinciden.");
-                const mensaje = "No tienes una postura correcta o no estas registrado!";
+                const mensaje = "No estas registrado!";
                 res.status(400).json({
                     mensaje
                 })
-            }
+            } */
         }
         //console.log(respuesta);
     })
@@ -6170,6 +6364,7 @@ app.put('/edituserasistencia', (req, res) => {
         }
     }
 })
+/* FIN DE HOJA DE reconocimiento-facil */
 
 /* HOJA DE asistencia*/
 app.get('/asistencias', (req, res) => {
@@ -6632,8 +6827,6 @@ app.post('/registrarfolio', (req, res) => {
     //console.log(req.body);
     const fecha = moment().format();
     //console.log(fecha);
-
-
     if (req.body.viaje && req.body.folio) {
         //idviajes, folio, fecha_registro
         insertarRegistrofolio(req.body.viaje, req.body.folio, fecha, (error, respuesta) => {
@@ -6726,46 +6919,53 @@ app.put('/revisarFolio', (req, res) => {
     }
 })
 app.put('/cancelarfolio', (req, res) => {
-    if (req.body.idviaje) {
-        mostRegistrofolio(function (error, respuestaRegistro) {
-            if (error) {
-                console.log(error)
-                res.status(404).json({
-                    mensaje: respuesta.mensaje
-                })
-            }
-            else {
-                const id = parseInt(req.body.idviaje);
-                const registros = respuestaRegistro.respuesta.filter(datos => datos.idviajes === id);
-                console.log(registros);
-                const tamaño = registros.length - 1;
-                const estatus = "cancelado";
+    if (req.body.idcheck === "RPMhzte1cvzlfbq5gul") {
+        if (req.body.idviaje) {
+            mostRegistrofolio(function (error, respuestaRegistro) {
+                if (error) {
+                    console.log(error)
+                    res.status(404).json({
+                        mensaje: respuesta.mensaje
+                    })
+                }
+                else {
+                    const id = parseInt(req.body.idviaje);
+                    const registros = respuestaRegistro.respuesta.filter(datos => datos.idviajes === id);
+                    console.log(registros);
+                    const tamaño = registros.length - 1;
+                    const estatus = "cancelado";
 
-                registros.forEach((info, index) => {
-                    editRevisarfolio(info.idhojas_viajeras, info.fecha_registro, info.adjunto, estatus, function (error, respuesta) {
-                        if (error) {
-                            console.log(error)
-                            res.status(404).json({
-                                mensaje: respuesta.mensaje
-                            })
-                        }
-                        else {
-                            if (index === tamaño) {
-                                io.emit('registrado', respuesta.mensaje);
-                                res.status(200).json({
+                    registros.forEach((info, index) => {
+                        editRevisarfolio(info.idhojas_viajeras, info.fecha_registro, info.adjunto, estatus, function (error, respuesta) {
+                            if (error) {
+                                console.log(error)
+                                res.status(404).json({
                                     mensaje: respuesta.mensaje
                                 })
                             }
-                        }
-                        console.log(respuesta);
+                            else {
+                                if (index === tamaño) {
+                                    io.emit('registrado', respuesta.mensaje);
+                                    res.status(200).json({
+                                        mensaje: respuesta.mensaje
+                                    })
+                                }
+                            }
+                            console.log(respuesta);
+                        })
                     })
-                })
-            }
-        })
+                }
+            })
+        }
+        else{
+            res.status(400).json({
+                mensaje: "Solicite ayuda del desarrollador."
+            });
+        }
     }
     else {
         res.status(400).json({
-            mensaje: "Solicite ayuda del desarrollador."
+            mensaje: "Solo personal autorizado."
         });
     }
 })
@@ -6786,7 +6986,7 @@ app.get('/altarhlogistica', (req, res) => {
         else {
             //console.log(respuesta.respuesta);
             const respuesta = respuestaAlta.respuesta.map((sujeto) => {
-                return{
+                return {
                     idAlta: sujeto.idAlta,
                     Sexo: sujeto.Sexo,
                     Sucursal: sujeto.Sucursal,
@@ -6824,7 +7024,7 @@ app.get('/personalogistica', (req, res) => {
 }
 )
 app.post('/operadorlog', (req, res) => {
-    const puesto= "OPERADOR DE CAMION DE CARGA";
+    const puesto = "OPERADOR DE CAMION DE CARGA";
     //console.log(req.body);
     personalogistica(req.body.nombre, puesto, function (error, respuestaPersonal) {
         if (error) {

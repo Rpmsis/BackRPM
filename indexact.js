@@ -20,29 +20,28 @@ const editActividades = require('./actividades/actualizarActividades');
 
 
 //Hoja actdiarias
-const mostStatusresponsable = require('./actividades/mostStatusresponsable'); //APUNTA A PRODUCCION (YA NOOOOOO 17-01)
+const mostStatusresponsable = require('./actividades/mostStatusresponsable'); //APUNTA A PRODUCCION (31/ene/2025))
 const mostEvidencias = require('./actividades/mostEvidencias');
 const mostControl = require('./actividades/mostControl');
 
 
 //Hoja de asignacion
 /* MODIFICADO PARA PERMISO DE ING. CHRISTIAN */
-const mostAsignacion = require('./actividades/mostAsignactivi'); //APUNTA A PRODUCCION (YA NOOOOOO 17-01)
+const mostAsignacion = require('./actividades/mostAsignactivi'); //APUNTA A PRODUCCION (31/ene/2025))
 const insertarAsigactivi = require('./actividades/insertAsigactivi');
 const editAsignacion = require('./actividades/actualizarAsigactivi');
 
 //Hoja de control
 /* MODIFICADO CAMBIOS DEL 2024-11-20 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
-const mostControlasignados = require('./actividades/mostControlasig');
-
-const mostIdusuario = require('./actividades/mostIdusuario'); //apunta a produccion
+//const mostControlasignados = require('./actividades/mostControlasig'); (ELIMINADO PORQUE YA NO SE UTILIZA  29-01-2025)
+const mostIdusuario = require('./actividades/mostIdusuario'); //APUNTA A PRODUCCION
 const insertarControlactivi = require('./actividades/insertControlactivi');
 const mostNumpersonas = require('./actividades/mostAsigactivinumpersonas');
 const editNumpersonas = require('./actividades/actualizarNumpasignacion');
 const mostIdcheck = require('./actividades/mostIdcheck');
 const mostPDM = require('./actividades/mostPDM'); //APUNTA A PRODUCCION
 const mostControlactivi = require('./actividades/mostControlactivi');
-const mostIdusuarioPMateriales = require('./actividades/mostIdusuarioPMateriales');
+const mostIdusuarioPMateriales = require('./actividades/mostIdusuarioPMateriales'); //APUNTA A PRODUCCION
 
 
 //Hoja de editeficienciakg
@@ -68,6 +67,7 @@ const archivo_evidencias = require('./actividades/archivo_evidencias');
 const insertarEvidencia = require('./actividades/insertEvidencia');
 /* MODIFICADO CAMBIOS DEL 2024-11-20 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ */
 const mostVerificarstatus = require('./actividades/mostControlverificarstatus');
+const editEficienciacontrol = require('./actividades/actualizarEficienciacontrol');
 
 //Hoja pdm
 const editpdm = require('./actividades/actualizarpdm'); //APUNTA A PRODUCCION
@@ -77,6 +77,9 @@ const mostActasignadasmes = require('./actividades/mostChartasignadas');
 const mostActterminadasmes = require('./actividades/mostChartterminadas');
 const mostAsigactivi_mes = require('./actividades/mostChartasigactivi_mes');
 const mostControl_mes = require('./actividades/mostChartcontrol_mes');
+
+//Hoja de eficacia
+const mostAsignacioneficacia = require('./actividades/mostAsignacioneficacia');
 
 
 /* INSERTAR ACTIVIDADES AUTOMATICAMENTE*/
@@ -89,6 +92,7 @@ const editCambiartime = require('./tiempo/cambiartime');
 /* Fin cronometro en controlactivi */
 
 const verificar_Token = require('./middleware/Valida_Token');
+const { errorMonitor } = require('events');
 const app = express()
 const port = 3005
 app.use(express.json());
@@ -168,9 +172,13 @@ app.get('/ubicacion', verificar_Token, (req, res) => {
 }
 )
 
-
-app.get('/actividades', (req, res) => {
-    mostActif(function (error, respuesta) {
+/* MODIFICADO PARA MOSTRAR SOLO LOS DATOS DEL RESPONSABLE */
+app.get('/actividades', verificar_Token, (req, res) => {
+    const usuario = req.usuario;
+    //console.log(usuario)
+    const nombre = usuario.nombre;
+    console.log(nombre);
+    mostActif(function (error, respuestaActif) {
         if (error) {
             console.log(error)
             res.status(404).json({
@@ -178,6 +186,8 @@ app.get('/actividades', (req, res) => {
             })
         }
         else {
+            //console.log(respuestaActif);
+            const respuesta = respuestaActif.respuesta.filter((nom) => nom.responsableact === nombre);
             res.status(200).json({
                 respuesta
             })
@@ -204,7 +214,7 @@ app.get('/material', (req, res) => {
     })
 }
 )
-/* MODIFICADO PARA ACTIVIDADES PERIODICAS */
+/* MODIFICADO PARA ACTIVIDADES PERIODICAS Y KGDECISION*/
 app.post('/insertarActif', verificar_Token, (req, res) => {
     const usuario = req.usuario;
     //console.log(usuario)
@@ -430,8 +440,8 @@ app.post('/insertarMaterial', (req, res) => {
 /* MODIFICADO PARA ACTIVIDADES PERIODICAS */
 app.put('/editactividad', (req, res) => {
     console.log(req.body)
-    if (req.body.idactividades && req.body.periodo) {
-        editActividades(req.body.idactividades, req.body.periodo, function (error, respuesta) {
+    if (req.body.idactividades && req.body.periodo && req.body.kgdecision) {
+        editActividades(req.body.idactividades, req.body.periodo, req.body.kgdecision, function (error, respuesta) {
 
             if (error) {
                 console.log(error)
@@ -469,36 +479,101 @@ app.get('/actividiarias', verificar_Token, (req, res) => {
     const responsable = usuario.nombre;
     //console.log(responsable);
     const id = usuario.id;
-    //console.log(responsable);
-    if (id === "RPMhzte1p8rlfmmq44l" || id === "RPMhztezf1lfbjn5nt") {
-        mostAsignacion(function (error, respuestaAsig) {
-            if (error) {
-                console.log(error)
-                res.status(404).json({
-                    mensaje: respuestaAsig.mensaje
-                })
-            }
-            else {
-                const respuesta = respuestaAsig.respuesta.filter(filtro => (filtro.responsable === "MIGUEL DE LA CRUZ PUEBLITA" || filtro.responsable === " CHRISTIAN ELEAZAR AGUILAR CABALLERO") && filtro.fechainicio === fecha);
-                //console.log(respuesta);
-                res.status(200).json({
-                    respuesta
-                })
-            }
-            //console.log(respuesta);
-        })
-    }
-    else {
-        mostAsignacion(function (error, respuestaAsig) {
-            if (error) {
-                console.log(error)
-                res.status(404).json({
-                    mensaje: respuestaAsig.mensaje
-                })
-            }
-            else {
-                const asignadas = respuestaAsig.respuesta.filter(filtro => filtro.responsable === responsable && filtro.fechainicio === fecha);
+    console.log(responsable);
 
+    if (id === "RPM4bo70oo55jli0ooihf") {
+        mostAsignacion(function (error, respuestaAsig) {
+            if (error) {
+                console.log(error)
+                res.status(404).json({
+                    mensaje: respuestaAsig.mensaje
+                })
+            }
+            else {
+                //const asignadas = respuestaAsig.respuesta.filter(filtro => filtro.responsable === responsable && filtro.fechainicio === fecha);
+                //console.log(asignadas);
+
+                const asignadas = respuestaAsig.respuesta.map((asigactivi) => {
+                    if (asigactivi.kg > 0 && asigactivi.kgControl === 0) {
+                        return {
+                            idasigactivi: asigactivi.idasigactivi,
+                            fechainicio: asigactivi.fechainicio,
+                            empresa: asigactivi.empresa,
+                            status: asigactivi.status,
+                            timeControl: asigactivi.timeControl,
+                            kgControl: asigactivi.kgControl,
+                            numpersonas: asigactivi.numpersonas,
+                            eficienciasig: asigactivi.eficienciasig,
+                            actividad: asigactivi.actividad,
+                            idactividades: asigactivi.idactividades,
+                            kgactividades: asigactivi.kg
+                        };
+                    }
+                    else {
+                        if (asigactivi.fechainicio === fecha) {
+                            return {
+                                idasigactivi: asigactivi.idasigactivi,
+                                fechainicio: asigactivi.fechainicio,
+                                empresa: asigactivi.empresa,
+                                status: asigactivi.status,
+                                timeControl: asigactivi.timeControl,
+                                kgControl: asigactivi.kgControl,
+                                numpersonas: asigactivi.numpersonas,
+                                eficienciasig: asigactivi.eficienciasig,
+                                actividad: asigactivi.actividad,
+                                idactividades: asigactivi.idactividades,
+                                kgactividades: asigactivi.kg
+                            };
+                        }
+                    }
+                }).filter((items) => items);
+                //console.log("asignadas ", asignadas);
+
+                /* Mostrar actddiarias por actividad siempre y cuando la actividad no tenga kilos, sumando lo existente con lo nuevo, sin afectar registros */
+                const nuevosdatos = asignadas.map((idactivi) => {
+                    return idactivi.idactividades
+                });
+                const uniactividadesid = [...new Set(nuevosdatos)];
+                //console.log(uniactividadesid);
+                const asignadasnuevo = [];
+                uniactividadesid.forEach((element) => {
+                    //console.log(element);
+                    const existe = asignadas.filter((asignaciones) => asignaciones.idactividades === element).reduce((acumulador, valor) => {
+                        acumulador.timeControl += valor.timeControl;
+                        acumulador.numpersonas += valor.numpersonas;
+
+                        acumulador.idasigactivi = valor.idasigactivi;
+                        acumulador.fechainicio = valor.fechainicio;
+                        acumulador.empresa = valor.empresa;
+                        acumulador.status = valor.status;
+                        acumulador.kgControl = valor.kgControl;
+                        acumulador.actividad = valor.actividad;
+                        acumulador.eficienciasig = valor.eficienciasig;
+                        acumulador.idasigactiviarray.push(valor.idasigactivi);
+                        acumulador.kgactividades = valor.kgactividades;
+
+                        return acumulador;
+                    }, {
+                        timeControl: 0,
+                        numpersonas: 0,
+                        idasigactivi: null,
+                        fechainicio: '',
+                        empresa: '',
+                        status: '',
+                        kgControl: 0,
+                        actividad: '',
+                        eficienciasig: 0,
+                        idasigactiviarray: [],
+                        kgactividades: ''
+                    });
+                    asignadasnuevo.push(existe)
+
+                });
+                //console.log("asignadasnuevo ", asignadasnuevo);
+
+
+
+                /* Fin de mostrar actddiarias por actividad siempre y cuando la actividad no tenga kilos, sumando lo existente con lo nuevo, sin afectar registros*/
                 mostStatusresponsable(function (error, respuestaResponsable) {
                     if (error) {
                         console.log(error)
@@ -524,21 +599,49 @@ app.get('/actividiarias', verificar_Token, (req, res) => {
                         const uniempresas = [...new Set(nomempresas)];
 
 
-                        const respuestacard = asignadas.map(datos => {
-                            const responsablesid = responsables.filter((suejeto) => suejeto.idasigactivi === datos.idasigactivi).map((sujetofinal) => {
-                                const hrtrans = (sujetofinal.timestandar <= 9) ? 0 : (Math.floor(sujetofinal.timestandar / 60));
-                                const mintrans = (sujetofinal.timestandar <= 9) ? sujetofinal.timestandar : (sujetofinal.timestandar % 60);
-                                const hrtransfin = (hrtrans <= 9) ? "0" + hrtrans : hrtrans;
-                                const mintransfin = (mintrans <= 9) ? "0" + mintrans : mintrans;
+                        const respuestacard = asignadasnuevo.map(datos => {
+                            const responsablesid1 = [];
+                            datos.idasigactiviarray.forEach((idasig) => {
+                                //console.log("idasig ", idasig);
+                                const existencias = respuestaResponsable.respuesta.filter((sujeto) => sujeto.idasigactivi === idasig).map((sujetofinal) => {
+                                    const hrtrans = (sujetofinal.timestandar <= 9) ? 0 : (Math.floor(sujetofinal.timestandar / 60));
+                                    const mintrans = (sujetofinal.timestandar <= 9) ? sujetofinal.timestandar : (sujetofinal.timestandar % 60);
+                                    const hrtransfin = (hrtrans <= 9) ? "0" + hrtrans : hrtrans;
+                                    const mintransfin = (mintrans <= 9) ? "0" + mintrans : mintrans;
 
-                                return {
-                                    nombre: sujetofinal.responsables,
-                                    tiempo: hrtransfin + ":" + mintransfin,
-                                    estatus: sujetofinal.status
+                                    return {
+                                        nombre: sujetofinal.responsables,
+                                        tiempo: hrtransfin + ":" + mintransfin,
+                                        estatus: sujetofinal.status,
+                                        kg: sujetofinal.kg,
+                                        eficiencia: sujetofinal.eficienciacontrol
 
+                                    }
+                                });
+                                //console.log("existencias ", existencias);
+                                responsablesid1.push(existencias);
+
+                            });
+                            const responsablesid = responsablesid1.flat();
+                            //console.log("responsablesid ", responsablesid);
+
+                            const ordenadoresponsables = [];
+                            // Definir el orden de los estatus
+                            const ordenEstatus = ["INICIAR", "EN PAUSA", "EN PROCESO", "TERMINADO"];
+
+                            // Ordenar los datos antes de agregar a nuevocontrol
+                            responsablesid.forEach((datos) => {
+                                // Agregar los datos al arreglo, ordenados por el estatus
+                                const estatusIndex = ordenEstatus.indexOf(datos.estatus);
+                                if (estatusIndex !== -1) {
+                                    ordenadoresponsables.push({ ...datos, estatusIndex });
                                 }
                             });
-                            //console.log("responsablesid ", responsablesid);
+
+                            ordenadoresponsables.sort((a, b) => a.estatusIndex - b.estatusIndex).forEach((datos) => {
+                                delete datos.estatusIndex;
+                            });
+                            //console.log("Ordenado: ", ordenadoresponsables);
 
                             //Calcular el tiempo transcurrido en asignadas
                             const hrtrans = (datos.timeControl <= 9) ? 0 : (Math.floor(datos.timeControl / 60));
@@ -548,6 +651,7 @@ app.get('/actividiarias', verificar_Token, (req, res) => {
 
                             return {
                                 Id: datos.idasigactivi,
+                                fecha: datos.fechainicio,
                                 Empresa: datos.empresa,
                                 Actividad: datos.actividad,
                                 TiempoTranscurrido: hrtransfin + ":" + mintransfin,
@@ -555,7 +659,233 @@ app.get('/actividiarias', verificar_Token, (req, res) => {
                                 Eficiencia: datos.eficienciasig + "%",
                                 Estatus: datos.status,
                                 Responsables: datos.numpersonas,
-                                asignados: responsablesid
+                                asignados: ordenadoresponsables,
+                                kgactividades: datos.kgactividades
+
+                            }
+                        });
+                        //console.log("respuestacard ", respuestacard);
+
+                        const nuevoarray = [];
+                        // Definir el orden de los estatus
+                        const ordenEstatus = ["INICIAR", "EN PAUSA", "EN PROCESO", "TERMINADO"];
+
+                        // Ordenar los datos antes de agregar a nuevocontrol
+                        respuestacard.forEach((datos) => {
+                            // Agregar los datos al arreglo, ordenados por el estatus
+                            const estatusIndex = ordenEstatus.indexOf(datos.Estatus);
+                            if (estatusIndex !== -1) {
+                                nuevoarray.push({ ...datos, estatusIndex });
+                            }
+                        })
+
+                        nuevoarray.sort((a, b) => a.estatusIndex - b.estatusIndex).forEach((datos) => {
+                            delete datos.estatusIndex;
+                        });
+
+
+                        //console.log("Ordenado: ", nuevoarray);
+
+                        //console.log("Sin ordenar: ", respuestacard);
+
+                        res.status(200).json({
+                            asignadas,
+                            nuevoarray,
+                            uniempresas,
+                        })
+                    }
+
+                });
+
+            }
+            //console.log(respuesta);
+        })
+    }
+    else {
+        mostAsignacion(function (error, respuestaAsig) {
+            if (error) {
+                console.log(error)
+                res.status(404).json({
+                    mensaje: respuestaAsig.mensaje
+                })
+            }
+            else {
+                //const asignadas = respuestaAsig.respuesta.filter(filtro => filtro.responsable === responsable && filtro.fechainicio === fecha);
+                //console.log(asignadas);
+
+                const asignadas = respuestaAsig.respuesta.filter(filtro => filtro.responsable === responsable).map((asigactivi) => {
+                    if (asigactivi.kg > 0 && asigactivi.kgControl === 0) {
+                        return {
+                            idasigactivi: asigactivi.idasigactivi,
+                            fechainicio: asigactivi.fechainicio,
+                            empresa: asigactivi.empresa,
+                            status: asigactivi.status,
+                            timeControl: asigactivi.timeControl,
+                            kgControl: asigactivi.kgControl,
+                            numpersonas: asigactivi.numpersonas,
+                            eficienciasig: asigactivi.eficienciasig,
+                            actividad: asigactivi.actividad,
+                            idactividades: asigactivi.idactividades,
+                            kgactividades: asigactivi.kg
+                        };
+                    }
+                    else {
+                        if (asigactivi.fechainicio === fecha) {
+                            return {
+                                idasigactivi: asigactivi.idasigactivi,
+                                fechainicio: asigactivi.fechainicio,
+                                empresa: asigactivi.empresa,
+                                status: asigactivi.status,
+                                timeControl: asigactivi.timeControl,
+                                kgControl: asigactivi.kgControl,
+                                numpersonas: asigactivi.numpersonas,
+                                eficienciasig: asigactivi.eficienciasig,
+                                actividad: asigactivi.actividad,
+                                idactividades: asigactivi.idactividades,
+                                kgactividades: asigactivi.kg
+                            };
+                        }
+                    }
+                }).filter((items) => items);
+                //console.log("asignadas ", asignadas);
+
+                /* Mostrar actddiarias por actividad siempre y cuando la actividad no tenga kilos, sumando lo existente con lo nuevo, sin afectar registros */
+                const nuevosdatos = asignadas.map((idactivi) => {
+                    return idactivi.idactividades
+                });
+                const uniactividadesid = [...new Set(nuevosdatos)];
+                //console.log(uniactividadesid);
+                const asignadasnuevo = [];
+                uniactividadesid.forEach((element) => {
+                    //console.log(element);
+                    const existe = asignadas.filter((asignaciones) => asignaciones.idactividades === element).reduce((acumulador, valor) => {
+                        acumulador.timeControl += valor.timeControl;
+                        acumulador.numpersonas += valor.numpersonas;
+
+                        acumulador.idasigactivi = valor.idasigactivi;
+                        acumulador.fechainicio = valor.fechainicio;
+                        acumulador.empresa = valor.empresa;
+                        acumulador.status = valor.status;
+                        acumulador.kgControl = valor.kgControl;
+                        acumulador.actividad = valor.actividad;
+                        acumulador.eficienciasig = valor.eficienciasig;
+                        acumulador.idasigactiviarray.push(valor.idasigactivi);
+                        acumulador.kgactividades = valor.kgactividades
+
+                        return acumulador;
+                    }, {
+                        timeControl: 0,
+                        numpersonas: 0,
+                        idasigactivi: null,
+                        fechainicio: '',
+                        empresa: '',
+                        status: '',
+                        kgControl: 0,
+                        actividad: '',
+                        eficienciasig: 0,
+                        idasigactiviarray: [],
+                        kgactividades: ''
+                    });
+                    asignadasnuevo.push(existe)
+
+                });
+                //console.log("asignadasnuevo ", asignadasnuevo);
+
+
+
+                /* Fin de mostrar actddiarias por actividad siempre y cuando la actividad no tenga kilos, sumando lo existente con lo nuevo, sin afectar registros*/
+                mostStatusresponsable(function (error, respuestaResponsable) {
+                    if (error) {
+                        console.log(error)
+                        res.status(404).json({
+                            mensaje: respuesta.mensaje
+                        })
+                    }
+                    else {
+                        //console.log(respuestaResponsable);
+
+                        const responsables = respuestaResponsable.respuesta.filter((responsable) => responsable.fecha === fecha);
+                        console.log("responsables ", responsables);
+
+                        const ambosdatos = responsables.map((sujeto) => {
+                            const empresasujeto = asignadas.find((id) => id.idasigactivi === sujeto.idasigactivi);
+                            if (empresasujeto) {
+                                return {
+                                    nombre: sujeto.responsables,
+                                    empresa: empresasujeto.empresa
+                                }
+                            }
+                            return null;
+                        });
+                        //console.log(ambosdatos);
+                        var uniempresas = [];
+                        if (ambosdatos === null) {
+                            const nomempresas = ambosdatos.map((datos => ([datos.empresa]))).flat();
+                            uniempresas = [...new Set(nomempresas)];
+                        }
+
+                        const respuestacard = asignadasnuevo.map(datos => {
+                            const responsablesid1 = [];
+                            datos.idasigactiviarray.forEach((idasig) => {
+                                //console.log("idasig ", idasig);
+                                const existencias = respuestaResponsable.respuesta.filter((sujeto) => sujeto.idasigactivi === idasig).map((sujetofinal) => {
+                                    const hrtrans = (sujetofinal.timestandar <= 9) ? 0 : (Math.floor(sujetofinal.timestandar / 60));
+                                    const mintrans = (sujetofinal.timestandar <= 9) ? sujetofinal.timestandar : (sujetofinal.timestandar % 60);
+                                    const hrtransfin = (hrtrans <= 9) ? "0" + hrtrans : hrtrans;
+                                    const mintransfin = (mintrans <= 9) ? "0" + mintrans : mintrans;
+
+                                    return {
+                                        nombre: sujetofinal.responsables,
+                                        tiempo: hrtransfin + ":" + mintransfin,
+                                        estatus: sujetofinal.status,
+                                        kg: sujetofinal.kg,
+                                        eficiencia: sujetofinal.eficienciacontrol
+
+                                    }
+                                });
+                                //console.log("existencias ", existencias);
+                                responsablesid1.push(existencias);
+
+                            });
+                            const responsablesid = responsablesid1.flat();
+                            //console.log("responsablesid ", responsablesid);
+
+                            const ordenadoresponsables = [];
+                            // Definir el orden de los estatus
+                            const ordenEstatus = ["INICIAR", "EN PAUSA", "EN PROCESO", "TERMINADO"];
+
+                            // Ordenar los datos antes de agregar a nuevocontrol
+                            responsablesid.forEach((datos) => {
+                                // Agregar los datos al arreglo, ordenados por el estatus
+                                const estatusIndex = ordenEstatus.indexOf(datos.estatus);
+                                if (estatusIndex !== -1) {
+                                    ordenadoresponsables.push({ ...datos, estatusIndex });
+                                }
+                            });
+
+                            ordenadoresponsables.sort((a, b) => a.estatusIndex - b.estatusIndex).forEach((datos) => {
+                                delete datos.estatusIndex;
+                            });
+                            //console.log("Ordenado: ", ordenadoresponsables);
+
+                            //Calcular el tiempo transcurrido en asignadas
+                            const hrtrans = (datos.timeControl <= 9) ? 0 : (Math.floor(datos.timeControl / 60));
+                            const mintrans = (datos.timeControl <= 9) ? datos.timeControl : (datos.timeControl % 60);
+                            const hrtransfin = (hrtrans <= 9) ? "0" + hrtrans : hrtrans;
+                            const mintransfin = (mintrans <= 9) ? "0" + mintrans : mintrans;
+
+                            return {
+                                Id: datos.idasigactivi,
+                                fecha: datos.fechainicio,
+                                Empresa: datos.empresa,
+                                Actividad: datos.actividad,
+                                TiempoTranscurrido: hrtransfin + ":" + mintransfin,
+                                KgRealizados: datos.kgControl + "kg",
+                                Eficiencia: datos.eficienciasig + "%",
+                                Estatus: datos.status,
+                                Responsables: datos.numpersonas,
+                                asignados: ordenadoresponsables,
+                                kgactividades: datos.kgactividades
 
                             }
                         });
@@ -609,174 +939,341 @@ app.get('/globalstatus', verificar_Token, (req, res) => {
     const id = usuario.id;
     const area = usuario.Area;
     //console.log(usuario);
-    mostPDM(function (error, respuestaPDM) {
-        if (error) {
-            console.log(error)
-            res.status(404).json({
-                mensaje: respuesta.mensaje
-            })
-        }
-        else {
-            /* Calcular horas disponibles */
+    if (id === "RPM4bo70oo55jli0ooihf") {
+        mostPDM(function (error, respuestaPDM) {
+            if (error) {
+                console.log(error)
+                res.status(404).json({
+                    mensaje: respuesta.mensaje
+                })
+            }
+            else {
+                /* Calcular horas disponibles */
 
-            //console.log(respuestaPDM.respuesta);
-            const personalpdm = respuestaPDM.respuesta.filter(dato => dato.Area === area && dato.estatus === "true").map(datos => ({ Ubicacion: datos.Ubicacion }));
-            //console.log(personalpdm);
+                //console.log(respuestaPDM.respuesta);
+                const personalpdm = respuestaPDM.respuesta.filter(dato => dato.estatus === "true").map(datos => ({ Ubicacion: datos.Ubicacion }));
+                //console.log(personalpdm);
 
-            const numpersonal = personalpdm.reduce((acc, { Ubicacion }) => {
-                if (acc[Ubicacion]) {
-                    acc[Ubicacion] += 1;
-                } else {
-                    acc[Ubicacion] = 1;
-                }
-                return acc;
-            }, {});
-            //console.log("personas: ", numpersonal);
+                const numpersonal = personalpdm.reduce((acc, { Ubicacion }) => {
+                    if (acc[Ubicacion]) {
+                        acc[Ubicacion] += 1;
+                    } else {
+                        acc[Ubicacion] = 1;
+                    }
+                    return acc;
+                }, {});
+                //console.log("personas: ", numpersonal);
 
-            const valorhr = (dia === "Saturday" || dia === "Sunday") ? 4.5 : 8.5;
-            //console.log(valorhr);
+                const valorhr = (dia === "Saturday" || dia === "Sunday") ? 4.5 : 8.5;
+                //console.log(valorhr);
 
-            const timedisponible = Object.entries(numpersonal).map(([ubicacion, personas]) => {
-                const hhdisponibles = (personas * valorhr);
-                const hhdmin = (hhdisponibles * 60);
+                const timedisponible = Object.entries(numpersonal).map(([ubicacion, personas]) => {
+                    const hhdisponibles = (personas * valorhr);
+                    const hhdmin = (hhdisponibles * 60);
 
-                const hrentero = Math.trunc(hhdisponibles);
-                const minreales = (hhdisponibles - hrentero) * 60;
+                    const hrentero = Math.trunc(hhdisponibles);
+                    const minreales = (hhdisponibles - hrentero) * 60;
 
-                return {
-                    ubicacion: ubicacion,
-                    personas: personas,
-                    minutosreales: hhdmin,
-                    horareal: hrentero,
-                    minreal: minreales
-                }
+                    return {
+                        ubicacion: ubicacion,
+                        personas: personas,
+                        minutosreales: hhdmin,
+                        horareal: hrentero,
+                        minreal: minreales
+                    }
 
-            });
-            //console.log("timedisponible ", timedisponible);
+                });
+                //console.log("timedisponible ", timedisponible);
 
-            mostAsignacion(function (error, respuesta) {
-                if (error) {
-                    console.log(error)
-                    res.status(404).json({
-                        mensaje: respuesta.mensaje
-                    })
-                }
-                else {
-                    let deldia = {};
-                    if (id === "RPMhzte1p8rlfmmq44l" || id === "RPMhztezf1lfbjn5nt") {
-                        deldia = respuesta.respuesta.filter(filtro => (filtro.responsable === "MIGUEL DE LA CRUZ PUEBLITA" || filtro.responsable === " CHRISTIAN ELEAZAR AGUILAR CABALLERO") && filtro.fechainicio === fecha);
+                mostAsignacion(function (error, respuesta) {
+                    if (error) {
+                        console.log(error)
+                        res.status(404).json({
+                            mensaje: respuesta.mensaje
+                        })
                     }
                     else {
-                        deldia = respuesta.respuesta.filter(filtro => filtro.responsable === responsable && filtro.fechainicio === fecha);
-                    }
-                    const deldiatotal = deldia.length;
-                    //console.log("deldia", deldia.length);
+                        const deldia = respuesta.respuesta.filter(filtro => filtro.fechainicio === fecha);
 
-                    const terminadas = deldia.filter((filtro) => filtro.status === "TERMINADO");
-                    const terminadastotal = terminadas.length;
-                    //console.log("terminadas", terminadas.length);
+                        const deldiatotal = deldia.length;
+                        //console.log("deldia", deldia.length);
 
-                    const promedio1 = terminadas.reduce((acumulador, filtro) => {
-                        return acumulador + filtro.eficienciasig;
-                    }, 0);
-                    const promedio = Math.round((promedio1 + Number.EPSILON) * 100) / 100;
-                    const promediototal1 = promedio / terminadas.length
-                    const promediototal = Math.round((promediototal1 + Number.EPSILON) * 100) / 100;
-                    //console.log(promediototal);
+                        const terminadas = deldia.filter((filtro) => filtro.status === "TERMINADO");
+                        const terminadastotal = terminadas.length;
+                        //console.log("terminadas", terminadas.length);
 
-
-                    const promedioasig = (terminadastotal * 100) / deldiatotal;
-                    const promedioasigtotal = Math.round((promedioasig + Number.EPSILON) * 100) / 100;
-                    //console.log(promedioasigtotal);
+                        const promedio1 = terminadas.reduce((acumulador, filtro) => {
+                            return acumulador + filtro.eficienciasig;
+                        }, 0);
+                        const promedio = Math.round((promedio1 + Number.EPSILON) * 100) / 100;
+                        const promediototal1 = promedio / terminadas.length
+                        const promediototal = Math.round((promediototal1 + Number.EPSILON) * 100) / 100;
+                        //console.log(promediototal);
 
 
-                    //Calcular horas hombre utilizadas:
+                        const promedioasig = (terminadastotal * 100) / deldiatotal;
+                        const promedioasigtotal = Math.round((promedioasig + Number.EPSILON) * 100) / 100;
+                        //console.log(promedioasigtotal);
 
-                    const empresatempo = deldia.map(datos => ({ empresa: datos.empresa, tiempo: datos.timeControl }));
-                    //console.log(empresatempo);
 
-                    const Hhempresa = empresatempo.reduce((acc, { empresa, tiempo }) => {
-                        if (acc[empresa]) {
-                            acc[empresa] += tiempo;
-                        } else {
-                            acc[empresa] = tiempo;
-                        }
-                        return acc;
-                    }, {});
+                        //Calcular horas hombre utilizadas:
 
-                    const hhtranscurridas = Object.entries(Hhempresa).map(([empresa, tiempo]) => ({ empresa, tiempo }));
-                    //console.log("hhtranscurridas ", hhtranscurridas);
+                        const empresatempo = deldia.map(datos => ({ empresa: datos.empresa, tiempo: datos.timeControl }));
+                        //console.log(empresatempo);
 
-                    const hhombretotal = timedisponible.map(datos => {
-                        const lodehoy = hhtranscurridas.find(datos2 => datos2.empresa === datos.ubicacion);
+                        const Hhempresa = empresatempo.reduce((acc, { empresa, tiempo }) => {
+                            if (acc[empresa]) {
+                                acc[empresa] += tiempo;
+                            } else {
+                                acc[empresa] = tiempo;
+                            }
+                            return acc;
+                        }, {});
 
-                        const hrrealfin = (datos.horareal <= 9) ? "0" + datos.horareal : datos.horareal;
-                        const minrealfin = (datos.minreal <= 9) ? "0" + datos.minreal : datos.minreal;
+                        const hhtranscurridas = Object.entries(Hhempresa).map(([empresa, tiempo]) => ({ empresa, tiempo }));
+                        //console.log("hhtranscurridas ", hhtranscurridas);
 
-                        if (lodehoy) {
-                            //Calcular el restante en hora y minutos
-                            const minutosRestantes = (lodehoy.tiempo > datos.minutosreales) ? 0 : (datos.minutosreales - lodehoy.tiempo);
-                            const hrrestantes = (minutosRestantes != 0 && minutosRestantes < 59) ? 0 : Math.floor(minutosRestantes / 60);
-                            const minrestantes = (minutosRestantes < 59) ? minutosRestantes : (minutosRestantes % 60);
-                            const hrrestantesfin = (hrrestantes <= 9) ? "0" + hrrestantes : hrrestantes;
-                            const minrestantesfin = (minrestantes <= 9) ? "0" + minrestantes : minrestantes;
+                        const hhombretotal = timedisponible.map(datos => {
+                            const lodehoy = hhtranscurridas.find(datos2 => datos2.empresa === datos.ubicacion);
 
-                            //Calcular el tiempo transcurrido
-                            const hrtrans = (lodehoy.tiempo <= 9) ? 0 : (Math.floor(lodehoy.tiempo / 60));
-                            const mintrans = (lodehoy.tiempo <= 9) ? lodehoy.tiempo : (lodehoy.tiempo % 60);
-                            const hrtransfin = (hrtrans <= 9) ? "0" + hrtrans : hrtrans;
-                            const mintransfin = (mintrans <= 9) ? "0" + mintrans : mintrans;
+                            const hrrealfin = (datos.horareal <= 9) ? "0" + datos.horareal : datos.horareal;
+                            const minrealfin = (datos.minreal <= 9) ? "0" + datos.minreal : datos.minreal;
 
-                            //Promedio
-                            const porcentaje = (lodehoy.tiempo * 100) / datos.minutosreales;
-                            const porcentajetotal = Math.round((porcentaje + Number.EPSILON) * 100) / 100;
+                            if (lodehoy) {
+                                //Calcular el restante en hora y minutos
+                                const minutosRestantes = (lodehoy.tiempo > datos.minutosreales) ? 0 : (datos.minutosreales - lodehoy.tiempo);
+                                const hrrestantes = (minutosRestantes != 0 && minutosRestantes < 59) ? 0 : Math.floor(minutosRestantes / 60);
+                                const minrestantes = (minutosRestantes < 59) ? minutosRestantes : (minutosRestantes % 60);
+                                const hrrestantesfin = (hrrestantes <= 9) ? "0" + hrrestantes : hrrestantes;
+                                const minrestantesfin = (minrestantes <= 9) ? "0" + minrestantes : minrestantes;
+
+                                //Calcular el tiempo transcurrido
+                                const hrtrans = (lodehoy.tiempo <= 9) ? 0 : (Math.floor(lodehoy.tiempo / 60));
+                                const mintrans = (lodehoy.tiempo <= 9) ? lodehoy.tiempo : (lodehoy.tiempo % 60);
+                                const hrtransfin = (hrtrans <= 9) ? "0" + hrtrans : hrtrans;
+                                const mintransfin = (mintrans <= 9) ? "0" + mintrans : mintrans;
+
+                                //Promedio
+                                const porcentaje = (lodehoy.tiempo * 100) / datos.minutosreales;
+                                const porcentajetotal = Math.round((porcentaje + Number.EPSILON) * 100) / 100;
+
+                                return {
+                                    ubicacion: datos.ubicacion,
+                                    personas: datos.personas,
+                                    hrrestante: hrrestantesfin,
+                                    minrestante: minrestantesfin,
+                                    hrtranscurrido: hrtransfin,
+                                    mintranscurrido: mintransfin,
+                                    horareal: hrrealfin,
+                                    minreal: minrealfin,
+                                    porcentaje: porcentajetotal
+                                };
+                            }
 
                             return {
                                 ubicacion: datos.ubicacion,
                                 personas: datos.personas,
-                                hrrestante: hrrestantesfin,
-                                minrestante: minrestantesfin,
-                                hrtranscurrido: hrtransfin,
-                                mintranscurrido: mintransfin,
+                                hrrestante: hrrealfin,
+                                minrestante: minrealfin,
+                                hrtranscurrido: "00",
+                                mintranscurrido: "00",
                                 horareal: hrrealfin,
                                 minreal: minrealfin,
-                                porcentaje: porcentajetotal
+                                porcentaje: 0
                             };
+                        }).filter(item => item !== null);
+
+                        //console.log("total ", hhombretotal);
+
+                        res.status(200).json({
+                            //asignaciones
+                            deldiatotal,
+                            //terminadas
+                            terminadastotal,
+                            //promedio
+                            promediototal,
+                            //promedioasig
+                            promedioasigtotal,
+                            //naves
+                            hhombretotal
+
+                        })
+                    }
+                    //console.log(respuesta);
+                })
+            }
+        })
+    }
+    else {
+        mostPDM(function (error, respuestaPDM) {
+            if (error) {
+                console.log(error)
+                res.status(404).json({
+                    mensaje: respuesta.mensaje
+                })
+            }
+            else {
+                /* Calcular horas disponibles */
+
+                //console.log(respuestaPDM.respuesta);
+                const personalpdm = respuestaPDM.respuesta.filter(dato => dato.Area === area && dato.estatus === "true").map(datos => ({ Ubicacion: datos.Ubicacion }));
+                //console.log(personalpdm);
+
+                const numpersonal = personalpdm.reduce((acc, { Ubicacion }) => {
+                    if (acc[Ubicacion]) {
+                        acc[Ubicacion] += 1;
+                    } else {
+                        acc[Ubicacion] = 1;
+                    }
+                    return acc;
+                }, {});
+                //console.log("personas: ", numpersonal);
+
+                const valorhr = (dia === "Saturday" || dia === "Sunday") ? 4.5 : 8.5;
+                //console.log(valorhr);
+
+                const timedisponible = Object.entries(numpersonal).map(([ubicacion, personas]) => {
+                    const hhdisponibles = (personas * valorhr);
+                    const hhdmin = (hhdisponibles * 60);
+
+                    const hrentero = Math.trunc(hhdisponibles);
+                    const minreales = (hhdisponibles - hrentero) * 60;
+
+                    return {
+                        ubicacion: ubicacion,
+                        personas: personas,
+                        minutosreales: hhdmin,
+                        horareal: hrentero,
+                        minreal: minreales
+                    }
+
+                });
+                //console.log("timedisponible ", timedisponible);
+
+                mostAsignacion(function (error, respuesta) {
+                    if (error) {
+                        console.log(error)
+                        res.status(404).json({
+                            mensaje: respuesta.mensaje
+                        })
+                    }
+                    else {
+                        let deldia = {};
+                        if (id === "RPMhzte1p8rlfmmq44l" || id === "RPMhztezf1lfbjn5nt") {
+                            deldia = respuesta.respuesta.filter(filtro => (filtro.responsable === "MIGUEL DE LA CRUZ PUEBLITA" || filtro.responsable === " CHRISTIAN ELEAZAR AGUILAR CABALLERO") && filtro.fechainicio === fecha);
                         }
+                        else {
+                            deldia = respuesta.respuesta.filter(filtro => filtro.responsable === responsable && filtro.fechainicio === fecha);
+                        }
+                        const deldiatotal = deldia.length;
+                        //console.log("deldia", deldia.length);
 
-                        return {
-                            ubicacion: datos.ubicacion,
-                            personas: datos.personas,
-                            hrrestante: hrrealfin,
-                            minrestante: minrealfin,
-                            hrtranscurrido: "00",
-                            mintranscurrido: "00",
-                            horareal: hrrealfin,
-                            minreal: minrealfin,
-                            porcentaje: 0
-                        };
-                    }).filter(item => item !== null);
+                        const terminadas = deldia.filter((filtro) => filtro.status === "TERMINADO");
+                        const terminadastotal = terminadas.length;
+                        //console.log("terminadas", terminadas.length);
 
-                    //console.log("total ", hhombretotal);
+                        const promedio1 = terminadas.reduce((acumulador, filtro) => {
+                            return acumulador + filtro.eficienciasig;
+                        }, 0);
+                        const promedio = Math.round((promedio1 + Number.EPSILON) * 100) / 100;
+                        const promediototal1 = promedio / terminadas.length
+                        const promediototal = Math.round((promediototal1 + Number.EPSILON) * 100) / 100;
+                        //console.log(promediototal);
 
-                    res.status(200).json({
-                        //asignaciones
-                        deldiatotal,
-                        //terminadas
-                        terminadastotal,
-                        //promedio
-                        promediototal,
-                        //promedioasig
-                        promedioasigtotal,
-                        //naves
-                        hhombretotal
 
-                    })
-                }
-                //console.log(respuesta);
-            })
-        }
-    })
+                        const promedioasig = (terminadastotal * 100) / deldiatotal;
+                        const promedioasigtotal = Math.round((promedioasig + Number.EPSILON) * 100) / 100;
+                        //console.log(promedioasigtotal);
+
+
+                        //Calcular horas hombre utilizadas:
+
+                        const empresatempo = deldia.map(datos => ({ empresa: datos.empresa, tiempo: datos.timeControl }));
+                        //console.log(empresatempo);
+
+                        const Hhempresa = empresatempo.reduce((acc, { empresa, tiempo }) => {
+                            if (acc[empresa]) {
+                                acc[empresa] += tiempo;
+                            } else {
+                                acc[empresa] = tiempo;
+                            }
+                            return acc;
+                        }, {});
+
+                        const hhtranscurridas = Object.entries(Hhempresa).map(([empresa, tiempo]) => ({ empresa, tiempo }));
+                        //console.log("hhtranscurridas ", hhtranscurridas);
+
+                        const hhombretotal = timedisponible.map(datos => {
+                            const lodehoy = hhtranscurridas.find(datos2 => datos2.empresa === datos.ubicacion);
+
+                            const hrrealfin = (datos.horareal <= 9) ? "0" + datos.horareal : datos.horareal;
+                            const minrealfin = (datos.minreal <= 9) ? "0" + datos.minreal : datos.minreal;
+
+                            if (lodehoy) {
+                                //Calcular el restante en hora y minutos
+                                const minutosRestantes = (lodehoy.tiempo > datos.minutosreales) ? 0 : (datos.minutosreales - lodehoy.tiempo);
+                                const hrrestantes = (minutosRestantes != 0 && minutosRestantes < 59) ? 0 : Math.floor(minutosRestantes / 60);
+                                const minrestantes = (minutosRestantes < 59) ? minutosRestantes : (minutosRestantes % 60);
+                                const hrrestantesfin = (hrrestantes <= 9) ? "0" + hrrestantes : hrrestantes;
+                                const minrestantesfin = (minrestantes <= 9) ? "0" + minrestantes : minrestantes;
+
+                                //Calcular el tiempo transcurrido
+                                const hrtrans = (lodehoy.tiempo <= 9) ? 0 : (Math.floor(lodehoy.tiempo / 60));
+                                const mintrans = (lodehoy.tiempo <= 9) ? lodehoy.tiempo : (lodehoy.tiempo % 60);
+                                const hrtransfin = (hrtrans <= 9) ? "0" + hrtrans : hrtrans;
+                                const mintransfin = (mintrans <= 9) ? "0" + mintrans : mintrans;
+
+                                //Promedio
+                                const porcentaje = (lodehoy.tiempo * 100) / datos.minutosreales;
+                                const porcentajetotal = Math.round((porcentaje + Number.EPSILON) * 100) / 100;
+
+                                return {
+                                    ubicacion: datos.ubicacion,
+                                    personas: datos.personas,
+                                    hrrestante: hrrestantesfin,
+                                    minrestante: minrestantesfin,
+                                    hrtranscurrido: hrtransfin,
+                                    mintranscurrido: mintransfin,
+                                    horareal: hrrealfin,
+                                    minreal: minrealfin,
+                                    porcentaje: porcentajetotal
+                                };
+                            }
+
+                            return {
+                                ubicacion: datos.ubicacion,
+                                personas: datos.personas,
+                                hrrestante: hrrealfin,
+                                minrestante: minrealfin,
+                                hrtranscurrido: "00",
+                                mintranscurrido: "00",
+                                horareal: hrrealfin,
+                                minreal: minrealfin,
+                                porcentaje: 0
+                            };
+                        }).filter(item => item !== null);
+
+                        //console.log("total ", hhombretotal);
+
+                        res.status(200).json({
+                            //asignaciones
+                            deldiatotal,
+                            //terminadas
+                            terminadastotal,
+                            //promedio
+                            promediototal,
+                            //promedioasig
+                            promedioasigtotal,
+                            //naves
+                            hhombretotal
+
+                        })
+                    }
+                    //console.log(respuesta);
+                })
+            }
+        })
+    }
 }
 )
 /*EVIDENCIAS*/
@@ -816,219 +1313,45 @@ app.get('/datoselect', verificar_Token, (req, res) => {
     const empresa = (req.query.empresa === 'null') ? "" : req.query.empresa;
     const nombre = (req.query.nombre === 'null') ? "" : req.query.nombre;
     //console.log(empresa);
+    if (id === "RPM4bo70oo55jli0ooihf") {
+        mostPDM(function (error, respuestaPDM) {
+            if (error) {
+                console.log(error)
+                res.status(404).json({
+                    mensaje: respuesta.mensaje
+                })
+            }
+            else {
+                //console.log(respuestaPDM.respuesta);
+                mostStatusresponsable(function (error, respuestaResponsable) {
+                    if (error) {
+                        console.log(error)
+                        res.status(404).json({
+                            mensaje: respuesta.mensaje
+                        })
+                    }
+                    else {
+                        //console.log(respuestaResponsable);
+                        const responsables = respuestaResponsable.respuesta.filter((responsable) => responsable.fecha === fecha);
+                        //console.log("responsables ",responsables);
 
-    /* Editar todo lo de globa estatus en esta consulta, sin dejar de lado la division por id */
-    mostPDM(function (error, respuestaPDM) {
-        if (error) {
-            console.log(error)
-            res.status(404).json({
-                mensaje: respuesta.mensaje
-            })
-        }
-        else {
-            //console.log(respuestaPDM.respuesta);
-
-            mostStatusresponsable(function (error, respuestaResponsable) {
-                if (error) {
-                    console.log(error)
-                    res.status(404).json({
-                        mensaje: respuesta.mensaje
-                    })
-                }
-                else {
-                    //console.log(respuestaResponsable);
-                    const responsables = respuestaResponsable.respuesta.filter((responsable) => responsable.fecha === fecha);
-                    //console.log("responsables ",responsables);
-
-                    mostAsignacion(function (error, respuestaAsig) {
-                        if (error) {
-                            console.log(error)
-                            res.status(404).json({
-                                mensaje: respuestaAsig.mensaje
-                            })
-                        }
-                        else {
-
-                            let deldia = {};
-                            if (id === "RPMhzte1p8rlfmmq44l" || id === "RPMhztezf1lfbjn5nt") {
-                                deldia = respuestaAsig.respuesta.filter(filtro => (filtro.responsable === "MIGUEL DE LA CRUZ PUEBLITA" || filtro.responsable === " CHRISTIAN ELEAZAR AGUILAR CABALLERO") && filtro.fechainicio === fecha);
-                            }
-                            else {
-                                deldia = respuestaAsig.respuesta.filter(filtro => filtro.responsable === responsable && filtro.fechainicio === fecha);
-                            }
-
-                            /* Por empresa, buscando los trabajadores y ... */
-                            if (empresa && nombre) {
-                                /* Calcular horas disponibles */
-
-                                //console.log(respuestaPDM.respuesta);
-                                const personalpdm = respuestaPDM.respuesta.filter(dato => dato.Area === area && dato.estatus === "true" && dato.Ubicacion === req.query.empresa && dato.Nombre === req.query.nombre).map(datos => ({ Ubicacion: datos.Ubicacion }));
-                                //console.log(personalpdm);
-
-                                const numpersonal = personalpdm.reduce((acc, { Ubicacion }) => {
-                                    if (acc[Ubicacion]) {
-                                        acc[Ubicacion] += 1;
-                                    } else {
-                                        acc[Ubicacion] = 1;
-                                    }
-                                    return acc;
-                                }, {});
-                                //console.log("personas: ", numpersonal);
-
-                                const valorhr = (dia === "Saturday" || dia === "Sunday") ? 4.5 : 8.5;
-                                //console.log(valorhr);
-
-                                const timedisponible = Object.entries(numpersonal).map(([ubicacion, personas]) => {
-                                    const hhdisponibles = (personas * valorhr);
-                                    const hhdmin = (hhdisponibles * 60);
-
-                                    const hrentero = Math.trunc(hhdisponibles);
-                                    const minreales = (hhdisponibles - hrentero) * 60;
-
-                                    return {
-                                        ubicacion: ubicacion,
-                                        personas: personas,
-                                        minutosreales: hhdmin,
-                                        horareal: hrentero,
-                                        minreal: minreales
-                                    }
-
-                                });
-
-                                /* MUESTRA EL LISTADO DE LOS TRABAJADORES NO EDITAR */
-                                const ambosdatos = responsables.map((sujeto) => {
-                                    const empresasujeto = deldia.find((id) => id.idasigactivi === sujeto.idasigactivi);
-                                    return {
-                                        nombre: sujeto.responsables,
-                                        empresa: empresasujeto.empresa
-                                    }
-                                });
-                                //console.log(ambosdatos);
-                                const nombreresponsable = ambosdatos.filter((datos => datos.empresa === req.query.empresa)).map((sujeto) => sujeto.nombre).flat();
-                                //console.log(nombreresponsable);
-                                /* Resultado #1 */
-                                const trabajadores = [...new Set(nombreresponsable)];
-                                /* FIN DE MUESTRA EL LISTADO DE LOS TRABAJADORES NO EDITAR */
-
-                                mostControl(function (error, respuestaControl) {
-                                    if (error) {
-                                        console.log(error)
-                                        res.status(404).json({
-                                            mensaje: respuesta.mensaje
-                                        })
-                                    }
-                                    else {
-                                        const deldiacontrol = respuestaControl.respuesta.filter((dcontrol) => dcontrol.fecha === fecha && dcontrol.responsables === req.query.nombre);
-                                        //console.log("deldiacontrol ", deldiacontrol);
-                                        /* Resultado #2 */
-                                        const deldiatotal = deldiacontrol.length;
-                                        //console.log("deldiatotal", deldiatotal);
-
-                                        const terminadas = deldiacontrol.filter((filtro) => filtro.status === "TERMINADO");
-                                        /* Resultado #3 */
-                                        const terminadastotal = terminadas.length;
-                                        //console.log("terminadas", terminadastotal);
-
-                                        const promedio1 = terminadas.reduce((acumulador, filtro) => {
-                                            return acumulador + filtro.eficienciacontrol;
-                                        }, 0);
-                                        const promedio = Math.round((promedio1 + Number.EPSILON) * 100) / 100;
-                                        const promediototal1 = promedio / terminadas.length;
-                                        /* Resultado #3 */
-                                        const promediototal = Math.round((promediototal1 + Number.EPSILON) * 100) / 100;
-                                        //console.log(promediototal);
-
-                                        const promedioasig = (terminadastotal * 100) / deldiatotal;
-                                        /* Resultado #4 */
-                                        const promedioasigtotal = Math.round((promedioasig + Number.EPSILON) * 100) / 100;
-                                        //console.log(promedioasigtotal);
-
-                                        //Calcular horas hombre utilizadas:
-                                        const controltiempo = deldiacontrol.map(datos => ({ tiempo: datos.timestandar }));
-                                        //console.log("controltiempo ",controltiempo);
-
-                                        const hhtranscurridas = controltiempo.reduce((acumulador, filtro) => {
-                                            return acumulador + filtro.tiempo;
-                                        }, 0);
-                                        //console.log("hhtranscurridas ", hhtranscurridas);
-
-                                        const hhombretotal = timedisponible.map(datos => {
-                                            const lodehoy = hhtranscurridas;
-
-                                            const hrrealfin = (datos.horareal <= 9) ? "0" + datos.horareal : datos.horareal;
-                                            const minrealfin = (datos.minreal <= 9) ? "0" + datos.minreal : datos.minreal;
-
-                                            if (lodehoy) {
-                                                //Calcular el restante en hora y minutos
-                                                const minutosRestantes = (hhtranscurridas > datos.minutosreales) ? 0 : (datos.minutosreales - hhtranscurridas);
-                                                const hrrestantes = (minutosRestantes != 0 && minutosRestantes < 59) ? 0 : Math.floor(minutosRestantes / 60);
-                                                const minrestantes = (minutosRestantes < 59) ? minutosRestantes : (minutosRestantes % 60);
-                                                const hrrestantesfin = (hrrestantes <= 9) ? "0" + hrrestantes : hrrestantes;
-                                                const minrestantesfin = (minrestantes <= 9) ? "0" + minrestantes : minrestantes;
-
-                                                //Calcular el tiempo transcurrido
-                                                const hrtrans = (hhtranscurridas <= 9) ? 0 : (Math.floor(hhtranscurridas / 60));
-                                                const mintrans = (hhtranscurridas <= 9) ? hhtranscurridas : (hhtranscurridas % 60);
-                                                const hrtransfin = (hrtrans <= 9) ? "0" + hrtrans : hrtrans;
-                                                const mintransfin = (mintrans <= 9) ? "0" + mintrans : mintrans;
-
-                                                //Promedio
-                                                const porcentaje = (hhtranscurridas * 100) / datos.minutosreales;
-                                                const porcentajetotal = Math.round((porcentaje + Number.EPSILON) * 100) / 100;
-
-                                                return {
-                                                    ubicacion: datos.ubicacion,
-                                                    personas: datos.personas,
-                                                    hrrestante: hrrestantesfin,
-                                                    minrestante: minrestantesfin,
-                                                    hrtranscurrido: hrtransfin,
-                                                    mintranscurrido: mintransfin,
-                                                    horareal: hrrealfin,
-                                                    minreal: minrealfin,
-                                                    porcentaje: porcentajetotal
-                                                };
-                                            }
-
-                                            return {
-                                                ubicacion: datos.ubicacion,
-                                                personas: datos.personas,
-                                                hrrestante: hrrealfin,
-                                                minrestante: minrealfin,
-                                                hrtranscurrido: "00",
-                                                mintranscurrido: "00",
-                                                horareal: hrrealfin,
-                                                minreal: minrealfin,
-                                                porcentaje: 0
-                                            };
-                                        }).filter(item => item !== null);
-
-                                        //console.log("hhombretotal ", hhombretotal);
-
-                                        res.status(200).json({
-                                            //Trabajadores
-                                            trabajadores,
-                                            //asignaciones
-                                            deldiatotal,
-                                            //terminadas
-                                            terminadastotal,
-                                            //promedio
-                                            promediototal,
-                                            //promedioasig
-                                            promedioasigtotal,
-                                            //naves
-                                            hhombretotal
-
-                                        })
-
-                                    }
+                        mostAsignacion(function (error, respuestaAsig) {
+                            if (error) {
+                                console.log(error)
+                                res.status(404).json({
+                                    mensaje: respuestaAsig.mensaje
                                 })
                             }
                             else {
-                                if (empresa) {
+
+                                let deldia = respuestaAsig.respuesta.filter(filtro => filtro.fechainicio === fecha);
+
+                                /* Por empresa, buscando los trabajadores y ... */
+                                if (empresa && nombre) {
                                     /* Calcular horas disponibles */
 
                                     //console.log(respuestaPDM.respuesta);
-                                    const personalpdm = respuestaPDM.respuesta.filter(dato => dato.Area === area && dato.estatus === "true" && dato.Ubicacion === req.query.empresa).map(datos => ({ Ubicacion: datos.Ubicacion }));
+                                    const personalpdm = respuestaPDM.respuesta.filter(dato => dato.estatus === "true" && dato.Ubicacion === req.query.empresa && dato.Nombre === req.query.nombre).map(datos => ({ Ubicacion: datos.Ubicacion }));
                                     //console.log(personalpdm);
 
                                     const numpersonal = personalpdm.reduce((acc, { Ubicacion }) => {
@@ -1061,6 +1384,7 @@ app.get('/datoselect', verificar_Token, (req, res) => {
 
                                     });
 
+                                    /* MUESTRA EL LISTADO DE LOS TRABAJADORES NO EDITAR */
                                     const ambosdatos = responsables.map((sujeto) => {
                                         const empresasujeto = deldia.find((id) => id.idasigactivi === sujeto.idasigactivi);
                                         return {
@@ -1068,129 +1392,670 @@ app.get('/datoselect', verificar_Token, (req, res) => {
                                             empresa: empresasujeto.empresa
                                         }
                                     });
-
+                                    //console.log(ambosdatos);
                                     const nombreresponsable = ambosdatos.filter((datos => datos.empresa === req.query.empresa)).map((sujeto) => sujeto.nombre).flat();
                                     //console.log(nombreresponsable);
-                                    //RESULTADO1: TRABAJADORES OPERANDO
+                                    /* Resultado #1 */
                                     const trabajadores = [...new Set(nombreresponsable)];
+                                    /* FIN DE MUESTRA EL LISTADO DE LOS TRABAJADORES NO EDITAR */
 
-
-                                    //CALCULAR LAS CAJAS DE INFORMACION DE LA EMPRESA (CAMBIA EL CONCEPTO DE "deldia", por los datos obtenidos)
-                                    const deldiaempresa = deldia.filter((datos => datos.empresa === req.query.empresa));
-                                    //console.log("deldiaempresa", deldiaempresa);
-                                    const deldiatotal = deldiaempresa.length;
-                                    //console.log("deldiaempresa", deldiaempresa);
-
-                                    const terminadas = deldiaempresa.filter((filtro) => filtro.status === "TERMINADO");
-                                    const terminadastotal = terminadas.length;
-                                    //console.log("terminadas", terminadas.length);
-
-                                    const promedio1 = terminadas.reduce((acumulador, filtro) => {
-                                        return acumulador + filtro.eficienciasig;
-                                    }, 0);
-                                    const promedio = Math.round((promedio1 + Number.EPSILON) * 100) / 100;
-                                    const promediototal1 = promedio / terminadas.length
-                                    const promediototal = Math.round((promediototal1 + Number.EPSILON) * 100) / 100;
-                                    //console.log(promediototal);
-
-
-                                    const promedioasig = (terminadastotal * 100) / deldiatotal;
-                                    const promedioasigtotal = Math.round((promedioasig + Number.EPSILON) * 100) / 100;
-                                    //console.log(promedioasigtotal);
-
-
-                                    //Calcular horas hombre utilizadas:
-
-                                    const empresatempo = deldiaempresa.map(datos => ({ empresa: datos.empresa, tiempo: datos.timeControl }));
-                                    //console.log(empresatempo);
-
-                                    const Hhempresa = empresatempo.reduce((acc, { empresa, tiempo }) => {
-                                        if (acc[empresa]) {
-                                            acc[empresa] += tiempo;
-                                        } else {
-                                            acc[empresa] = tiempo;
+                                    mostControl(function (error, respuestaControl) {
+                                        if (error) {
+                                            console.log(error)
+                                            res.status(404).json({
+                                                mensaje: respuesta.mensaje
+                                            })
                                         }
-                                        return acc;
-                                    }, {});
+                                        else {
+                                            const deldiacontrol = respuestaControl.respuesta.filter((dcontrol) => dcontrol.fecha === fecha && dcontrol.responsables === req.query.nombre);
+                                            //console.log("deldiacontrol ", deldiacontrol);
+                                            /* Resultado #2 */
+                                            const deldiatotal = deldiacontrol.length;
+                                            //console.log("deldiatotal", deldiatotal);
 
-                                    const hhtranscurridas = Object.entries(Hhempresa).map(([empresa, tiempo]) => ({ empresa, tiempo }));
-                                    //console.log("hhtranscurridas ", hhtranscurridas);
+                                            const terminadas = deldiacontrol.filter((filtro) => filtro.status === "TERMINADO");
+                                            /* Resultado #3 */
+                                            const terminadastotal = terminadas.length;
+                                            //console.log("terminadas", terminadastotal);
 
-                                    const hhombretotal = timedisponible.map(datos => {
-                                        const lodehoy = hhtranscurridas.find(datos2 => datos2.empresa === datos.ubicacion);
+                                            const promedio1 = terminadas.reduce((acumulador, filtro) => {
+                                                return acumulador + filtro.eficienciacontrol;
+                                            }, 0);
+                                            const promedio = Math.round((promedio1 + Number.EPSILON) * 100) / 100;
+                                            const promediototal1 = promedio / terminadas.length;
+                                            /* Resultado #3 */
+                                            const promediototal = Math.round((promediototal1 + Number.EPSILON) * 100) / 100;
+                                            //console.log(promediototal);
 
-                                        const hrrealfin = (datos.horareal <= 9) ? "0" + datos.horareal : datos.horareal;
-                                        const minrealfin = (datos.minreal <= 9) ? "0" + datos.minreal : datos.minreal;
+                                            const promedioasig = (terminadastotal * 100) / deldiatotal;
+                                            /* Resultado #4 */
+                                            const promedioasigtotal = Math.round((promedioasig + Number.EPSILON) * 100) / 100;
+                                            //console.log(promedioasigtotal);
 
-                                        if (lodehoy) {
-                                            //Calcular el restante en hora y minutos
-                                            const minutosRestantes = (lodehoy.tiempo > datos.minutosreales) ? 0 : (datos.minutosreales - lodehoy.tiempo);
-                                            const hrrestantes = (minutosRestantes != 0 && minutosRestantes < 59) ? 0 : Math.floor(minutosRestantes / 60);
-                                            const minrestantes = (minutosRestantes < 59) ? minutosRestantes : (minutosRestantes % 60);
-                                            const hrrestantesfin = (hrrestantes <= 9) ? "0" + hrrestantes : hrrestantes;
-                                            const minrestantesfin = (minrestantes <= 9) ? "0" + minrestantes : minrestantes;
+                                            //Calcular horas hombre utilizadas:
+                                            const controltiempo = deldiacontrol.map(datos => ({ tiempo: datos.timestandar }));
+                                            //console.log("controltiempo ",controltiempo);
 
-                                            //Calcular el tiempo transcurrido
-                                            const hrtrans = (lodehoy.tiempo <= 9) ? 0 : (Math.floor(lodehoy.tiempo / 60));
-                                            const mintrans = (lodehoy.tiempo <= 9) ? lodehoy.tiempo : (lodehoy.tiempo % 60);
-                                            const hrtransfin = (hrtrans <= 9) ? "0" + hrtrans : hrtrans;
-                                            const mintransfin = (mintrans <= 9) ? "0" + mintrans : mintrans;
+                                            const hhtranscurridas = controltiempo.reduce((acumulador, filtro) => {
+                                                return acumulador + filtro.tiempo;
+                                            }, 0);
+                                            //console.log("hhtranscurridas ", hhtranscurridas);
 
-                                            //Promedio
-                                            const porcentaje = (lodehoy.tiempo * 100) / datos.minutosreales;
-                                            const porcentajetotal = Math.round((porcentaje + Number.EPSILON) * 100) / 100;
+                                            const hhombretotal = timedisponible.map(datos => {
+                                                const lodehoy = hhtranscurridas;
+
+                                                const hrrealfin = (datos.horareal <= 9) ? "0" + datos.horareal : datos.horareal;
+                                                const minrealfin = (datos.minreal <= 9) ? "0" + datos.minreal : datos.minreal;
+
+                                                if (lodehoy) {
+                                                    //Calcular el restante en hora y minutos
+                                                    const minutosRestantes = (hhtranscurridas > datos.minutosreales) ? 0 : (datos.minutosreales - hhtranscurridas);
+                                                    const hrrestantes = (minutosRestantes != 0 && minutosRestantes < 59) ? 0 : Math.floor(minutosRestantes / 60);
+                                                    const minrestantes = (minutosRestantes < 59) ? minutosRestantes : (minutosRestantes % 60);
+                                                    const hrrestantesfin = (hrrestantes <= 9) ? "0" + hrrestantes : hrrestantes;
+                                                    const minrestantesfin = (minrestantes <= 9) ? "0" + minrestantes : minrestantes;
+
+                                                    //Calcular el tiempo transcurrido
+                                                    const hrtrans = (hhtranscurridas <= 9) ? 0 : (Math.floor(hhtranscurridas / 60));
+                                                    const mintrans = (hhtranscurridas <= 9) ? hhtranscurridas : (hhtranscurridas % 60);
+                                                    const hrtransfin = (hrtrans <= 9) ? "0" + hrtrans : hrtrans;
+                                                    const mintransfin = (mintrans <= 9) ? "0" + mintrans : mintrans;
+
+                                                    //Promedio
+                                                    const porcentaje = (hhtranscurridas * 100) / datos.minutosreales;
+                                                    const porcentajetotal = Math.round((porcentaje + Number.EPSILON) * 100) / 100;
+
+                                                    return {
+                                                        ubicacion: datos.ubicacion,
+                                                        personas: datos.personas,
+                                                        hrrestante: hrrestantesfin,
+                                                        minrestante: minrestantesfin,
+                                                        hrtranscurrido: hrtransfin,
+                                                        mintranscurrido: mintransfin,
+                                                        horareal: hrrealfin,
+                                                        minreal: minrealfin,
+                                                        porcentaje: porcentajetotal
+                                                    };
+                                                }
+
+                                                return {
+                                                    ubicacion: datos.ubicacion,
+                                                    personas: datos.personas,
+                                                    hrrestante: hrrealfin,
+                                                    minrestante: minrealfin,
+                                                    hrtranscurrido: "00",
+                                                    mintranscurrido: "00",
+                                                    horareal: hrrealfin,
+                                                    minreal: minrealfin,
+                                                    porcentaje: 0
+                                                };
+                                            }).filter(item => item !== null);
+
+                                            //console.log("hhombretotal ", hhombretotal);
+
+                                            res.status(200).json({
+                                                //Trabajadores
+                                                trabajadores,
+                                                //asignaciones
+                                                deldiatotal,
+                                                //terminadas
+                                                terminadastotal,
+                                                //promedio
+                                                promediototal,
+                                                //promedioasig
+                                                promedioasigtotal,
+                                                //naves
+                                                hhombretotal
+
+                                            })
+
+                                        }
+                                    })
+                                }
+                                else {
+                                    if (empresa) {
+                                        /* Calcular horas disponibles */
+
+                                        //console.log(respuestaPDM.respuesta);
+                                        const personalpdm = respuestaPDM.respuesta.filter(dato => dato.estatus === "true" && dato.Ubicacion === req.query.empresa).map(datos => ({ Ubicacion: datos.Ubicacion }));
+                                        //console.log(personalpdm);
+
+                                        const numpersonal = personalpdm.reduce((acc, { Ubicacion }) => {
+                                            if (acc[Ubicacion]) {
+                                                acc[Ubicacion] += 1;
+                                            } else {
+                                                acc[Ubicacion] = 1;
+                                            }
+                                            return acc;
+                                        }, {});
+                                        //console.log("personas: ", numpersonal);
+
+                                        const valorhr = (dia === "Saturday" || dia === "Sunday") ? 4.5 : 8.5;
+                                        //console.log(valorhr);
+
+                                        const timedisponible = Object.entries(numpersonal).map(([ubicacion, personas]) => {
+                                            const hhdisponibles = (personas * valorhr);
+                                            const hhdmin = (hhdisponibles * 60);
+
+                                            const hrentero = Math.trunc(hhdisponibles);
+                                            const minreales = (hhdisponibles - hrentero) * 60;
+
+                                            return {
+                                                ubicacion: ubicacion,
+                                                personas: personas,
+                                                minutosreales: hhdmin,
+                                                horareal: hrentero,
+                                                minreal: minreales
+                                            }
+
+                                        });
+
+                                        const ambosdatos = responsables.map((sujeto) => {
+                                            const empresasujeto = deldia.find((id) => id.idasigactivi === sujeto.idasigactivi);
+                                            return {
+                                                nombre: sujeto.responsables,
+                                                empresa: empresasujeto.empresa
+                                            }
+                                        });
+
+                                        const nombreresponsable = ambosdatos.filter((datos => datos.empresa === req.query.empresa)).map((sujeto) => sujeto.nombre).flat();
+                                        //console.log(nombreresponsable);
+                                        //RESULTADO1: TRABAJADORES OPERANDO
+                                        const trabajadores = [...new Set(nombreresponsable)];
+
+
+                                        //CALCULAR LAS CAJAS DE INFORMACION DE LA EMPRESA (CAMBIA EL CONCEPTO DE "deldia", por los datos obtenidos)
+                                        const deldiaempresa = deldia.filter((datos => datos.empresa === req.query.empresa));
+                                        //console.log("deldiaempresa", deldiaempresa);
+                                        const deldiatotal = deldiaempresa.length;
+                                        //console.log("deldiaempresa", deldiaempresa);
+
+                                        const terminadas = deldiaempresa.filter((filtro) => filtro.status === "TERMINADO");
+                                        const terminadastotal = terminadas.length;
+                                        //console.log("terminadas", terminadas.length);
+
+                                        const promedio1 = terminadas.reduce((acumulador, filtro) => {
+                                            return acumulador + filtro.eficienciasig;
+                                        }, 0);
+                                        const promedio = Math.round((promedio1 + Number.EPSILON) * 100) / 100;
+                                        const promediototal1 = promedio / terminadas.length
+                                        const promediototal = Math.round((promediototal1 + Number.EPSILON) * 100) / 100;
+                                        //console.log(promediototal);
+
+
+                                        const promedioasig = (terminadastotal * 100) / deldiatotal;
+                                        const promedioasigtotal = Math.round((promedioasig + Number.EPSILON) * 100) / 100;
+                                        //console.log(promedioasigtotal);
+
+
+                                        //Calcular horas hombre utilizadas:
+
+                                        const empresatempo = deldiaempresa.map(datos => ({ empresa: datos.empresa, tiempo: datos.timeControl }));
+                                        //console.log(empresatempo);
+
+                                        const Hhempresa = empresatempo.reduce((acc, { empresa, tiempo }) => {
+                                            if (acc[empresa]) {
+                                                acc[empresa] += tiempo;
+                                            } else {
+                                                acc[empresa] = tiempo;
+                                            }
+                                            return acc;
+                                        }, {});
+
+                                        const hhtranscurridas = Object.entries(Hhempresa).map(([empresa, tiempo]) => ({ empresa, tiempo }));
+                                        //console.log("hhtranscurridas ", hhtranscurridas);
+
+                                        const hhombretotal = timedisponible.map(datos => {
+                                            const lodehoy = hhtranscurridas.find(datos2 => datos2.empresa === datos.ubicacion);
+
+                                            const hrrealfin = (datos.horareal <= 9) ? "0" + datos.horareal : datos.horareal;
+                                            const minrealfin = (datos.minreal <= 9) ? "0" + datos.minreal : datos.minreal;
+
+                                            if (lodehoy) {
+                                                //Calcular el restante en hora y minutos
+                                                const minutosRestantes = (lodehoy.tiempo > datos.minutosreales) ? 0 : (datos.minutosreales - lodehoy.tiempo);
+                                                const hrrestantes = (minutosRestantes != 0 && minutosRestantes < 59) ? 0 : Math.floor(minutosRestantes / 60);
+                                                const minrestantes = (minutosRestantes < 59) ? minutosRestantes : (minutosRestantes % 60);
+                                                const hrrestantesfin = (hrrestantes <= 9) ? "0" + hrrestantes : hrrestantes;
+                                                const minrestantesfin = (minrestantes <= 9) ? "0" + minrestantes : minrestantes;
+
+                                                //Calcular el tiempo transcurrido
+                                                const hrtrans = (lodehoy.tiempo <= 9) ? 0 : (Math.floor(lodehoy.tiempo / 60));
+                                                const mintrans = (lodehoy.tiempo <= 9) ? lodehoy.tiempo : (lodehoy.tiempo % 60);
+                                                const hrtransfin = (hrtrans <= 9) ? "0" + hrtrans : hrtrans;
+                                                const mintransfin = (mintrans <= 9) ? "0" + mintrans : mintrans;
+
+                                                //Promedio
+                                                const porcentaje = (lodehoy.tiempo * 100) / datos.minutosreales;
+                                                const porcentajetotal = Math.round((porcentaje + Number.EPSILON) * 100) / 100;
+
+                                                return {
+                                                    ubicacion: datos.ubicacion,
+                                                    personas: datos.personas,
+                                                    hrrestante: hrrestantesfin,
+                                                    minrestante: minrestantesfin,
+                                                    hrtranscurrido: hrtransfin,
+                                                    mintranscurrido: mintransfin,
+                                                    horareal: hrrealfin,
+                                                    minreal: minrealfin,
+                                                    porcentaje: porcentajetotal
+                                                };
+                                            }
 
                                             return {
                                                 ubicacion: datos.ubicacion,
                                                 personas: datos.personas,
-                                                hrrestante: hrrestantesfin,
-                                                minrestante: minrestantesfin,
-                                                hrtranscurrido: hrtransfin,
-                                                mintranscurrido: mintransfin,
+                                                hrrestante: hrrealfin,
+                                                minrestante: minrealfin,
+                                                hrtranscurrido: "00",
+                                                mintranscurrido: "00",
                                                 horareal: hrrealfin,
                                                 minreal: minrealfin,
-                                                porcentaje: porcentajetotal
+                                                porcentaje: 0
                                             };
-                                        }
+                                        }).filter(item => item !== null);
 
-                                        return {
-                                            ubicacion: datos.ubicacion,
-                                            personas: datos.personas,
-                                            hrrestante: hrrealfin,
-                                            minrestante: minrealfin,
-                                            hrtranscurrido: "00",
-                                            mintranscurrido: "00",
-                                            horareal: hrrealfin,
-                                            minreal: minrealfin,
-                                            porcentaje: 0
-                                        };
-                                    }).filter(item => item !== null);
+                                        //console.log("total ", hhombretotal);
 
-                                    //console.log("total ", hhombretotal);
+                                        res.status(200).json({
+                                            //Trabajadores
+                                            trabajadores,
+                                            //asignaciones
+                                            deldiatotal,
+                                            //terminadas
+                                            terminadastotal,
+                                            //promedio
+                                            promediototal,
+                                            //promedioasig
+                                            promedioasigtotal,
+                                            //naves
+                                            hhombretotal
 
-                                    res.status(200).json({
-                                        //Trabajadores
-                                        trabajadores,
-                                        //asignaciones
-                                        deldiatotal,
-                                        //terminadas
-                                        terminadastotal,
-                                        //promedio
-                                        promediototal,
-                                        //promedioasig
-                                        promedioasigtotal,
-                                        //naves
-                                        hhombretotal
-
-                                    })
+                                        })
+                                    }
                                 }
                             }
-                        }
-                    })
-                }
-            })
-        }
-    })
+                        })
+                    }
+                })
+            }
+        })
+    }
+    else {
+        /* Editar todo lo de globa estatus en esta consulta, sin dejar de lado la division por id */
+        mostPDM(function (error, respuestaPDM) {
+            if (error) {
+                console.log(error)
+                res.status(404).json({
+                    mensaje: respuesta.mensaje
+                })
+            }
+            else {
+                //console.log(respuestaPDM.respuesta);
+                mostStatusresponsable(function (error, respuestaResponsable) {
+                    if (error) {
+                        console.log(error)
+                        res.status(404).json({
+                            mensaje: respuesta.mensaje
+                        })
+                    }
+                    else {
+                        //console.log(respuestaResponsable);
+                        const responsables = respuestaResponsable.respuesta.filter((responsable) => responsable.fecha === fecha);
+                        //console.log("responsables ",responsables);
+
+                        mostAsignacion(function (error, respuestaAsig) {
+                            if (error) {
+                                console.log(error)
+                                res.status(404).json({
+                                    mensaje: respuestaAsig.mensaje
+                                })
+                            }
+                            else {
+
+                                let deldia = {};
+                                if (id === "RPMhzte1p8rlfmmq44l" || id === "RPMhztezf1lfbjn5nt") {
+                                    deldia = respuestaAsig.respuesta.filter(filtro => (filtro.responsable === "MIGUEL DE LA CRUZ PUEBLITA" || filtro.responsable === " CHRISTIAN ELEAZAR AGUILAR CABALLERO") && filtro.fechainicio === fecha);
+                                }
+                                else {
+                                    deldia = respuestaAsig.respuesta.filter(filtro => filtro.responsable === responsable && filtro.fechainicio === fecha);
+                                }
+
+                                /* Por empresa, buscando los trabajadores y ... */
+                                if (empresa && nombre) {
+                                    /* Calcular horas disponibles */
+
+                                    //console.log(respuestaPDM.respuesta);
+                                    const personalpdm = respuestaPDM.respuesta.filter(dato => dato.Area === area && dato.estatus === "true" && dato.Ubicacion === req.query.empresa && dato.Nombre === req.query.nombre).map(datos => ({ Ubicacion: datos.Ubicacion }));
+                                    //console.log(personalpdm);
+
+                                    const numpersonal = personalpdm.reduce((acc, { Ubicacion }) => {
+                                        if (acc[Ubicacion]) {
+                                            acc[Ubicacion] += 1;
+                                        } else {
+                                            acc[Ubicacion] = 1;
+                                        }
+                                        return acc;
+                                    }, {});
+                                    //console.log("personas: ", numpersonal);
+
+                                    const valorhr = (dia === "Saturday" || dia === "Sunday") ? 4.5 : 8.5;
+                                    //console.log(valorhr);
+
+                                    const timedisponible = Object.entries(numpersonal).map(([ubicacion, personas]) => {
+                                        const hhdisponibles = (personas * valorhr);
+                                        const hhdmin = (hhdisponibles * 60);
+
+                                        const hrentero = Math.trunc(hhdisponibles);
+                                        const minreales = (hhdisponibles - hrentero) * 60;
+
+                                        return {
+                                            ubicacion: ubicacion,
+                                            personas: personas,
+                                            minutosreales: hhdmin,
+                                            horareal: hrentero,
+                                            minreal: minreales
+                                        }
+
+                                    });
+
+                                    /* MUESTRA EL LISTADO DE LOS TRABAJADORES NO EDITAR */
+                                    const ambosdatos = responsables.map((sujeto) => {
+                                        const empresasujeto = deldia.find((id) => id.idasigactivi === sujeto.idasigactivi);
+                                        return {
+                                            nombre: sujeto.responsables,
+                                            empresa: empresasujeto.empresa
+                                        }
+                                    });
+                                    //console.log(ambosdatos);
+                                    const nombreresponsable = ambosdatos.filter((datos => datos.empresa === req.query.empresa)).map((sujeto) => sujeto.nombre).flat();
+                                    //console.log(nombreresponsable);
+                                    /* Resultado #1 */
+                                    const trabajadores = [...new Set(nombreresponsable)];
+                                    /* FIN DE MUESTRA EL LISTADO DE LOS TRABAJADORES NO EDITAR */
+
+                                    mostControl(function (error, respuestaControl) {
+                                        if (error) {
+                                            console.log(error)
+                                            res.status(404).json({
+                                                mensaje: respuesta.mensaje
+                                            })
+                                        }
+                                        else {
+                                            const deldiacontrol = respuestaControl.respuesta.filter((dcontrol) => dcontrol.fecha === fecha && dcontrol.responsables === req.query.nombre);
+                                            //console.log("deldiacontrol ", deldiacontrol);
+                                            /* Resultado #2 */
+                                            const deldiatotal = deldiacontrol.length;
+                                            //console.log("deldiatotal", deldiatotal);
+
+                                            const terminadas = deldiacontrol.filter((filtro) => filtro.status === "TERMINADO");
+                                            /* Resultado #3 */
+                                            const terminadastotal = terminadas.length;
+                                            //console.log("terminadas", terminadastotal);
+
+                                            const promedio1 = terminadas.reduce((acumulador, filtro) => {
+                                                return acumulador + filtro.eficienciacontrol;
+                                            }, 0);
+                                            const promedio = Math.round((promedio1 + Number.EPSILON) * 100) / 100;
+                                            const promediototal1 = promedio / terminadas.length;
+                                            /* Resultado #3 */
+                                            const promediototal = Math.round((promediototal1 + Number.EPSILON) * 100) / 100;
+                                            //console.log(promediototal);
+
+                                            const promedioasig = (terminadastotal * 100) / deldiatotal;
+                                            /* Resultado #4 */
+                                            const promedioasigtotal = Math.round((promedioasig + Number.EPSILON) * 100) / 100;
+                                            //console.log(promedioasigtotal);
+
+                                            //Calcular horas hombre utilizadas:
+                                            const controltiempo = deldiacontrol.map(datos => ({ tiempo: datos.timestandar }));
+                                            //console.log("controltiempo ",controltiempo);
+
+                                            const hhtranscurridas = controltiempo.reduce((acumulador, filtro) => {
+                                                return acumulador + filtro.tiempo;
+                                            }, 0);
+                                            //console.log("hhtranscurridas ", hhtranscurridas);
+
+                                            const hhombretotal = timedisponible.map(datos => {
+                                                const lodehoy = hhtranscurridas;
+
+                                                const hrrealfin = (datos.horareal <= 9) ? "0" + datos.horareal : datos.horareal;
+                                                const minrealfin = (datos.minreal <= 9) ? "0" + datos.minreal : datos.minreal;
+
+                                                if (lodehoy) {
+                                                    //Calcular el restante en hora y minutos
+                                                    const minutosRestantes = (hhtranscurridas > datos.minutosreales) ? 0 : (datos.minutosreales - hhtranscurridas);
+                                                    const hrrestantes = (minutosRestantes != 0 && minutosRestantes < 59) ? 0 : Math.floor(minutosRestantes / 60);
+                                                    const minrestantes = (minutosRestantes < 59) ? minutosRestantes : (minutosRestantes % 60);
+                                                    const hrrestantesfin = (hrrestantes <= 9) ? "0" + hrrestantes : hrrestantes;
+                                                    const minrestantesfin = (minrestantes <= 9) ? "0" + minrestantes : minrestantes;
+
+                                                    //Calcular el tiempo transcurrido
+                                                    const hrtrans = (hhtranscurridas <= 9) ? 0 : (Math.floor(hhtranscurridas / 60));
+                                                    const mintrans = (hhtranscurridas <= 9) ? hhtranscurridas : (hhtranscurridas % 60);
+                                                    const hrtransfin = (hrtrans <= 9) ? "0" + hrtrans : hrtrans;
+                                                    const mintransfin = (mintrans <= 9) ? "0" + mintrans : mintrans;
+
+                                                    //Promedio
+                                                    const porcentaje = (hhtranscurridas * 100) / datos.minutosreales;
+                                                    const porcentajetotal = Math.round((porcentaje + Number.EPSILON) * 100) / 100;
+
+                                                    return {
+                                                        ubicacion: datos.ubicacion,
+                                                        personas: datos.personas,
+                                                        hrrestante: hrrestantesfin,
+                                                        minrestante: minrestantesfin,
+                                                        hrtranscurrido: hrtransfin,
+                                                        mintranscurrido: mintransfin,
+                                                        horareal: hrrealfin,
+                                                        minreal: minrealfin,
+                                                        porcentaje: porcentajetotal
+                                                    };
+                                                }
+
+                                                return {
+                                                    ubicacion: datos.ubicacion,
+                                                    personas: datos.personas,
+                                                    hrrestante: hrrealfin,
+                                                    minrestante: minrealfin,
+                                                    hrtranscurrido: "00",
+                                                    mintranscurrido: "00",
+                                                    horareal: hrrealfin,
+                                                    minreal: minrealfin,
+                                                    porcentaje: 0
+                                                };
+                                            }).filter(item => item !== null);
+
+                                            //console.log("hhombretotal ", hhombretotal);
+
+                                            res.status(200).json({
+                                                //Trabajadores
+                                                trabajadores,
+                                                //asignaciones
+                                                deldiatotal,
+                                                //terminadas
+                                                terminadastotal,
+                                                //promedio
+                                                promediototal,
+                                                //promedioasig
+                                                promedioasigtotal,
+                                                //naves
+                                                hhombretotal
+
+                                            })
+
+                                        }
+                                    })
+                                }
+                                else {
+                                    if (empresa) {
+                                        /* Calcular horas disponibles */
+
+                                        //console.log(respuestaPDM.respuesta);
+                                        const personalpdm = respuestaPDM.respuesta.filter(dato => dato.Area === area && dato.estatus === "true" && dato.Ubicacion === req.query.empresa).map(datos => ({ Ubicacion: datos.Ubicacion }));
+                                        //console.log(personalpdm);
+
+                                        const numpersonal = personalpdm.reduce((acc, { Ubicacion }) => {
+                                            if (acc[Ubicacion]) {
+                                                acc[Ubicacion] += 1;
+                                            } else {
+                                                acc[Ubicacion] = 1;
+                                            }
+                                            return acc;
+                                        }, {});
+                                        //console.log("personas: ", numpersonal);
+
+                                        const valorhr = (dia === "Saturday" || dia === "Sunday") ? 4.5 : 8.5;
+                                        //console.log(valorhr);
+
+                                        const timedisponible = Object.entries(numpersonal).map(([ubicacion, personas]) => {
+                                            const hhdisponibles = (personas * valorhr);
+                                            const hhdmin = (hhdisponibles * 60);
+
+                                            const hrentero = Math.trunc(hhdisponibles);
+                                            const minreales = (hhdisponibles - hrentero) * 60;
+
+                                            return {
+                                                ubicacion: ubicacion,
+                                                personas: personas,
+                                                minutosreales: hhdmin,
+                                                horareal: hrentero,
+                                                minreal: minreales
+                                            }
+
+                                        });
+
+                                        const ambosdatos = responsables.map((sujeto) => {
+                                            const empresasujeto = deldia.find((id) => id.idasigactivi === sujeto.idasigactivi);
+                                            return {
+                                                nombre: sujeto.responsables,
+                                                empresa: empresasujeto.empresa
+                                            }
+                                        });
+
+                                        const nombreresponsable = ambosdatos.filter((datos => datos.empresa === req.query.empresa)).map((sujeto) => sujeto.nombre).flat();
+                                        //console.log(nombreresponsable);
+                                        //RESULTADO1: TRABAJADORES OPERANDO
+                                        const trabajadores = [...new Set(nombreresponsable)];
+
+
+                                        //CALCULAR LAS CAJAS DE INFORMACION DE LA EMPRESA (CAMBIA EL CONCEPTO DE "deldia", por los datos obtenidos)
+                                        const deldiaempresa = deldia.filter((datos => datos.empresa === req.query.empresa));
+                                        //console.log("deldiaempresa", deldiaempresa);
+                                        const deldiatotal = deldiaempresa.length;
+                                        //console.log("deldiaempresa", deldiaempresa);
+
+                                        const terminadas = deldiaempresa.filter((filtro) => filtro.status === "TERMINADO");
+                                        const terminadastotal = terminadas.length;
+                                        //console.log("terminadas", terminadas.length);
+
+                                        const promedio1 = terminadas.reduce((acumulador, filtro) => {
+                                            return acumulador + filtro.eficienciasig;
+                                        }, 0);
+                                        const promedio = Math.round((promedio1 + Number.EPSILON) * 100) / 100;
+                                        const promediototal1 = promedio / terminadas.length
+                                        const promediototal = Math.round((promediototal1 + Number.EPSILON) * 100) / 100;
+                                        //console.log(promediototal);
+
+
+                                        const promedioasig = (terminadastotal * 100) / deldiatotal;
+                                        const promedioasigtotal = Math.round((promedioasig + Number.EPSILON) * 100) / 100;
+                                        //console.log(promedioasigtotal);
+
+
+                                        //Calcular horas hombre utilizadas:
+
+                                        const empresatempo = deldiaempresa.map(datos => ({ empresa: datos.empresa, tiempo: datos.timeControl }));
+                                        //console.log(empresatempo);
+
+                                        const Hhempresa = empresatempo.reduce((acc, { empresa, tiempo }) => {
+                                            if (acc[empresa]) {
+                                                acc[empresa] += tiempo;
+                                            } else {
+                                                acc[empresa] = tiempo;
+                                            }
+                                            return acc;
+                                        }, {});
+
+                                        const hhtranscurridas = Object.entries(Hhempresa).map(([empresa, tiempo]) => ({ empresa, tiempo }));
+                                        //console.log("hhtranscurridas ", hhtranscurridas);
+
+                                        const hhombretotal = timedisponible.map(datos => {
+                                            const lodehoy = hhtranscurridas.find(datos2 => datos2.empresa === datos.ubicacion);
+
+                                            const hrrealfin = (datos.horareal <= 9) ? "0" + datos.horareal : datos.horareal;
+                                            const minrealfin = (datos.minreal <= 9) ? "0" + datos.minreal : datos.minreal;
+
+                                            if (lodehoy) {
+                                                //Calcular el restante en hora y minutos
+                                                const minutosRestantes = (lodehoy.tiempo > datos.minutosreales) ? 0 : (datos.minutosreales - lodehoy.tiempo);
+                                                const hrrestantes = (minutosRestantes != 0 && minutosRestantes < 59) ? 0 : Math.floor(minutosRestantes / 60);
+                                                const minrestantes = (minutosRestantes < 59) ? minutosRestantes : (minutosRestantes % 60);
+                                                const hrrestantesfin = (hrrestantes <= 9) ? "0" + hrrestantes : hrrestantes;
+                                                const minrestantesfin = (minrestantes <= 9) ? "0" + minrestantes : minrestantes;
+
+                                                //Calcular el tiempo transcurrido
+                                                const hrtrans = (lodehoy.tiempo <= 9) ? 0 : (Math.floor(lodehoy.tiempo / 60));
+                                                const mintrans = (lodehoy.tiempo <= 9) ? lodehoy.tiempo : (lodehoy.tiempo % 60);
+                                                const hrtransfin = (hrtrans <= 9) ? "0" + hrtrans : hrtrans;
+                                                const mintransfin = (mintrans <= 9) ? "0" + mintrans : mintrans;
+
+                                                //Promedio
+                                                const porcentaje = (lodehoy.tiempo * 100) / datos.minutosreales;
+                                                const porcentajetotal = Math.round((porcentaje + Number.EPSILON) * 100) / 100;
+
+                                                return {
+                                                    ubicacion: datos.ubicacion,
+                                                    personas: datos.personas,
+                                                    hrrestante: hrrestantesfin,
+                                                    minrestante: minrestantesfin,
+                                                    hrtranscurrido: hrtransfin,
+                                                    mintranscurrido: mintransfin,
+                                                    horareal: hrrealfin,
+                                                    minreal: minrealfin,
+                                                    porcentaje: porcentajetotal
+                                                };
+                                            }
+
+                                            return {
+                                                ubicacion: datos.ubicacion,
+                                                personas: datos.personas,
+                                                hrrestante: hrrealfin,
+                                                minrestante: minrealfin,
+                                                hrtranscurrido: "00",
+                                                mintranscurrido: "00",
+                                                horareal: hrrealfin,
+                                                minreal: minrealfin,
+                                                porcentaje: 0
+                                            };
+                                        }).filter(item => item !== null);
+
+                                        //console.log("total ", hhombretotal);
+
+                                        res.status(200).json({
+                                            //Trabajadores
+                                            trabajadores,
+                                            //asignaciones
+                                            deldiatotal,
+                                            //terminadas
+                                            terminadastotal,
+                                            //promedio
+                                            promediototal,
+                                            //promedioasig
+                                            promedioasigtotal,
+                                            //naves
+                                            hhombretotal
+
+                                        })
+                                    }
+                                }
+                            }
+                        })
+                    }
+                })
+            }
+        })
+    }
 }
 )
 /* Fin de hoja de actdiarias */
@@ -1338,38 +2203,166 @@ app.put('/actualizarAsig', (req, res) => {
 
 
 /* Hoja de control */
-app.get('/Controlasignados/:id', (req, res) => {
+//MODIFICADO PARA TENER EL MISMO ESTILO QUE ACTDIARIAS (29/01/2025)
+app.get('/Controlasignados', (req, res) => {
     const fecha = moment().format("YYYY-MM-DD");
-    var idcheck = req.params.id
-    mostControlasignados(idcheck, fecha, function (error, respuesta) {
+    var idcheck = req.query.nombre;
+    var empresa = req.query.empresa;
+    //console.log(empresa);
+    mostAsignacion(function (error, respuestaAsig) {
         if (error) {
             console.log(error)
             res.status(404).json({
-                mensaje: respuesta.mensaje
+                mensaje: respuestaAsig.mensaje
             })
         }
         else {
-            //console.log(respuesta);
-            const uniqueControls = {};
-            // Iterar sobre la respuesta
-            respuesta.respuesta.forEach(item => {
-                // Verificar si ya existe un registro con el mismo idcontrolactivi
-                if (!uniqueControls[item.idcontrolactivi] || uniqueControls[item.idcontrolactivi].idtiempos < item.idtiempos) {
-                    uniqueControls[item.idcontrolactivi] = item; // Guardar el registro con el idtiempos más alto
+            const asignadas = respuestaAsig.respuesta.filter(filtro => filtro.empresa === empresa && filtro.fechainicio === fecha);
+            //console.log("asignadas", asignadas);
+            const deldiatotal = asignadas.length;
+
+            const terminadas = asignadas.filter((filtro) => filtro.status === "TERMINADO");
+            /* Resultado #2 */
+            const terminadastotal = terminadas.length;
+            //console.log("terminadas", terminadastotal);
+
+            const promedio1 = terminadas.reduce((acumulador, filtro) => {
+                return acumulador + filtro.eficienciacontrol;
+            }, 0);
+            const promedio = Math.round((promedio1 + Number.EPSILON) * 100) / 100;
+            const promediototal1 = promedio / terminadas.length;
+            /* Resultado #3 */
+            const promediototal = Math.round((promediototal1 + Number.EPSILON) * 100) / 100;
+            //console.log(promediototal);
+
+            const promedioasig = (terminadastotal * 100) / deldiatotal;
+            /* Resultado #4 */
+            const promedioasigtotal = Math.round((promedioasig + Number.EPSILON) * 100) / 100;
+            //console.log(promedioasigtotal);
+
+            mostStatusresponsable(function (error, respuestaResponsable) {
+                if (error) {
+                    console.log(error)
+                    res.status(404).json({
+                        mensaje: respuesta.mensaje
+                    })
                 }
-            })
-            // Convertir el objeto a un array
-            const result = Object.values(uniqueControls);
+                else {
+                    //console.log(respuestaResponsable);
 
-            const cuantosterminados = result.filter(filtro => filtro.estatusC === "TERMINADO")
-            //console.log(result);
+                    const responsables = respuestaResponsable.respuesta.filter((responsable) => responsable.fecha === fecha && responsable.idchecksupervisor === idcheck);
+                    //console.log("responsables ",responsables);
+
+                    const nombres = responsables.map((sujeto) => {
+                        return {
+                            nombre: sujeto.responsables,
+                        }
+                    });
+                    //console.log("nombres ",nombres);
+                    const nomempresas = nombres.map((datos => ([datos.nombre]))).flat();
+                    const uninombre = [...new Set(nomempresas)];
+                    //console.log("uninombre ",uninombre);
 
 
-            res.status(200).json({
-                result: result,
-                terminadas: cuantosterminados.length,
+                    const respuestacard = asignadas.map(datos => {
+                        const responsablesid = responsables.filter((sujeto) => sujeto.idasigactivi === datos.idasigactivi).map((sujetofinal) => {
+                            const hrtrans = (sujetofinal.timestandar <= 9) ? 0 : (Math.floor(sujetofinal.timestandar / 60));
+                            const mintrans = (sujetofinal.timestandar <= 9) ? sujetofinal.timestandar : (sujetofinal.timestandar % 60);
+                            const hrtransfin = (hrtrans <= 9) ? "0" + hrtrans : hrtrans;
+                            const mintransfin = (mintrans <= 9) ? "0" + mintrans : mintrans;
 
-            })
+                            return {
+                                nombre: sujetofinal.responsables,
+                                tiempo: hrtransfin + ":" + mintransfin,
+                                estatus: sujetofinal.status,
+                                kgresponsable: sujetofinal.kg,
+                                kg: sujetofinal.kg,
+                                eficiencia: sujetofinal.eficienciacontrol
+
+                            }
+                        });
+                        //console.log("responsablesid ", responsablesid);
+                        const ordenadoresponsables = [];
+                        // Definir el orden de los estatus
+                        const ordenEstatus = ["INICIAR", "EN PAUSA", "EN PROCESO", "TERMINADO"];
+
+                        // Ordenar los datos antes de agregar a nuevocontrol
+                        responsablesid.forEach((datos) => {
+                            // Agregar los datos al arreglo, ordenados por el estatus
+                            const estatusIndex = ordenEstatus.indexOf(datos.estatus);
+                            if (estatusIndex !== -1) {
+                                ordenadoresponsables.push({ ...datos, estatusIndex });
+                            }
+                        });
+
+                        ordenadoresponsables.sort((a, b) => a.estatusIndex - b.estatusIndex).forEach((datos) => {
+                            delete datos.estatusIndex;
+                        });
+                        //console.log("Ordenado: ", ordenadoresponsables);
+
+                        //Calcular el tiempo transcurrido en asignadas
+                        const hrtrans = (datos.timeControl <= 9) ? 0 : (Math.floor(datos.timeControl / 60));
+                        const mintrans = (datos.timeControl <= 9) ? datos.timeControl : (datos.timeControl % 60);
+                        const hrtransfin = (hrtrans <= 9) ? "0" + hrtrans : hrtrans;
+                        const mintransfin = (mintrans <= 9) ? "0" + mintrans : mintrans;
+
+                        return {
+                            Id: datos.idasigactivi,
+                            Empresa: datos.empresa,
+                            Actividad: datos.actividad,
+                            TiempoTranscurrido: hrtransfin + ":" + mintransfin,
+                            KgRealizados: datos.kgControl + "kg",
+                            Eficiencia: datos.eficienciasig + "%",
+                            Estatus: datos.status,
+                            Responsables: datos.numpersonas,
+                            asignados: ordenadoresponsables,
+                            kgactividades: datos.kg
+
+
+                        }
+                    });
+                    //console.log("respuestacard ", respuestacard);
+
+                    const nuevoarray = [];
+                    // Definir el orden de los estatus
+                    const ordenEstatus = ["INICIAR", "EN PAUSA", "EN PROCESO", "TERMINADO"];
+
+                    // Ordenar los datos antes de agregar a nuevocontrol
+                    respuestacard.forEach((datos) => {
+                        // Agregar los datos al arreglo, ordenados por el estatus
+                        const estatusIndex = ordenEstatus.indexOf(datos.Estatus);
+                        if (estatusIndex !== -1) {
+                            nuevoarray.push({ ...datos, estatusIndex });
+                        }
+                    })
+
+                    nuevoarray.sort((a, b) => a.estatusIndex - b.estatusIndex).forEach((datos) => {
+                        delete datos.estatusIndex;
+                    });
+
+
+                    //console.log("Ordenado: ", nuevoarray);
+
+                    //console.log("Sin ordenar: ", respuestacard);
+
+                    res.status(200).json({
+                        asignadas,
+                        nuevoarray,
+                        uninombre,
+
+                        //asignaciones
+                        deldiatotal,
+                        //terminadas
+                        terminadastotal,
+                        //promedio
+                        promediototal,
+                        //promedioasig
+                        promedioasigtotal,
+                    })
+                }
+
+            });
+
         }
         //console.log(respuesta);
     })
@@ -1384,7 +2377,7 @@ app.post('/insertarControl', (req, res) => {
         const lat = 0;
         const status = "INICIAR";
         //console.log(req.body);
-        mostControlasignados(req.body.idchecksupervisor, fecha, function (error, respuesta) {
+        mostStatusresponsable(function (error, respuesta) {
             if (error) {
                 console.log(error)
                 res.status(404).json({
@@ -1395,10 +2388,10 @@ app.post('/insertarControl', (req, res) => {
             else {
                 //console.log(req.body)
                 //console.log(respuesta.respuesta)
-                const datosFil = respuesta.respuesta.find((filtro) => filtro.idactividades === req.body.idactividades && filtro.responsables === req.body.responsables);
+                const datosFil = respuesta.respuesta.find((filtro) => filtro.fecha === fecha && filtro.idactividades === req.body.idactividades && filtro.responsables === req.body.responsables);
                 //console.log(datosFil);
                 if (datosFil) {
-                    console.log("El responsable ya esta asignado en la actividad");
+                    //console.log("El responsable ya esta asignado en la actividad");
                     res.status(400).json({
                         mensaje: "El responsable ya esta asignado en la actividad"
                     });
@@ -1436,9 +2429,9 @@ app.post('/insertarControl', (req, res) => {
                                                 })
                                             }
                                             else {
-                                                console.log(respuesta.respuesta[0].numpersonas);
+                                                //console.log(respuesta.respuesta[0].numpersonas);
                                                 const personastotales = respuesta.respuesta[0].numpersonas + 1;
-                                                console.log(personastotales);
+                                                //console.log(personastotales);
                                                 editNumpersonas(req.body.idasigactivi, personastotales, function (error, respuesta) {
                                                     if (error) {
                                                         console.log(error)
@@ -1519,9 +2512,7 @@ app.get('/buscar_Supervisor/:id', async (req, res) => {
                             })
                         }
                         else {
-                            const ayudantes = respuesta.respuesta.filter(filtro => filtro.Ubicacion === supervisor.Ubicacion);
-                            //const resultado = Object.values(ayudantes);
-
+                            const empresa = supervisor.Ubicacion;
                             //console.log(supervisor.Ubicacion);
                             //console.log(fecha);
                             //console.log(respuesta.respuesta);
@@ -1542,10 +2533,12 @@ app.get('/buscar_Supervisor/:id', async (req, res) => {
                                             })
                                         }
                                         else {
-                                            //console.log(respuesta.respuesta);
+                                            const responsables = respuestaMateriales.respuesta.filter((estatus) => estatus.estatus === "true");
+                                            //console.log(responsables.length);
                                             res.status(200).json({
+                                                empresa: empresa,
                                                 actividades: respuestaActividades,
-                                                responsables: respuestaMateriales,
+                                                responsables: responsables,
                                                 asignadas: respuestaActividades.respuesta.length
                                             })
                                         }
@@ -1568,18 +2561,175 @@ app.get('/buscar_Supervisor/:id', async (req, res) => {
         }
     })
 })
+app.get('/datoselectcontrol', (req, res) => {
+    const fecha = moment().format("YYYY-MM-DD");
+    const dia = moment().format("dddd");
+    //console.log(dia);
+
+    //console.log(req.query);
+    const empresa = (req.query.nave === 'null') ? "" : req.query.nave;
+    const nombre = (req.query.trabajador === 'null') ? "" : req.query.trabajador;
+
+    if (nombre) {
+        /* Calcular horas disponibles */
+        /* //console.log(respuestaPDM.respuesta);
+        const personalpdm = respuestaPDM.respuesta.filter(dato => dato.Area === area && dato.estatus === "true" && dato.Ubicacion === req.query.empresa && dato.Nombre === req.query.nombre).map(datos => ({ Ubicacion: datos.Ubicacion }));
+        //console.log(personalpdm);
+
+        const numpersonal = personalpdm.reduce((acc, { Ubicacion }) => {
+            if (acc[Ubicacion]) {
+                acc[Ubicacion] += 1;
+            } else {
+                acc[Ubicacion] = 1;
+            }
+            return acc;
+        }, {});
+        //console.log("personas: ", numpersonal);
+
+        const valorhr = (dia === "Saturday" || dia === "Sunday") ? 4.5 : 8.5;
+        //console.log(valorhr);
+
+        const timedisponible = Object.entries(numpersonal).map(([ubicacion, personas]) => {
+            const hhdisponibles = (personas * valorhr);
+            const hhdmin = (hhdisponibles * 60);
+
+            const hrentero = Math.trunc(hhdisponibles);
+            const minreales = (hhdisponibles - hrentero) * 60;
+
+            return {
+                ubicacion: ubicacion,
+                personas: personas,
+                minutosreales: hhdmin,
+                horareal: hrentero,
+                minreal: minreales
+            }
+
+        }); */
+
+        mostControl(function (error, respuestaControl) {
+            if (error) {
+                console.log(error)
+                res.status(404).json({
+                    mensaje: respuesta.mensaje
+                })
+            }
+            else {
+                const deldiacontrol = respuestaControl.respuesta.filter((dcontrol) => dcontrol.fecha === fecha && dcontrol.responsables === req.query.trabajador);
+                //console.log("deldiacontrol ", deldiacontrol);
+                /* Resultado #1 */
+                const deldiatotal = deldiacontrol.length;
+                //console.log("deldiatotal", deldiatotal);
+
+                const terminadas = deldiacontrol.filter((filtro) => filtro.status === "TERMINADO");
+                /* Resultado #2 */
+                const terminadastotal = terminadas.length;
+                //console.log("terminadas", terminadastotal);
+
+                const promedio1 = terminadas.reduce((acumulador, filtro) => {
+                    return acumulador + filtro.eficienciacontrol;
+                }, 0);
+                const promedio = Math.round((promedio1 + Number.EPSILON) * 100) / 100;
+                const promediototal1 = promedio / terminadas.length;
+                /* Resultado #3 */
+                const promediototal = Math.round((promediototal1 + Number.EPSILON) * 100) / 100;
+                //console.log(promediototal);
+
+                const promedioasig = (terminadastotal * 100) / deldiatotal;
+                /* Resultado #4 */
+                const promedioasigtotal = Math.round((promedioasig + Number.EPSILON) * 100) / 100;
+                //console.log(promedioasigtotal);
+
+                //Calcular horas hombre utilizadas (CALCULAR HORAS HOMBRE Y MOSTRAR CUADRO):
+                /* const controltiempo = deldiacontrol.map(datos => ({ tiempo: datos.timestandar }));
+                //console.log("controltiempo ",controltiempo);
+
+                const hhtranscurridas = controltiempo.reduce((acumulador, filtro) => {
+                    return acumulador + filtro.tiempo;
+                }, 0);
+                //console.log("hhtranscurridas ", hhtranscurridas);
+
+                const hhombretotal = timedisponible.map(datos => {
+                    const lodehoy = hhtranscurridas;
+
+                    const hrrealfin = (datos.horareal <= 9) ? "0" + datos.horareal : datos.horareal;
+                    const minrealfin = (datos.minreal <= 9) ? "0" + datos.minreal : datos.minreal;
+
+                    if (lodehoy) {
+                        //Calcular el restante en hora y minutos
+                        const minutosRestantes = (hhtranscurridas > datos.minutosreales) ? 0 : (datos.minutosreales - hhtranscurridas);
+                        const hrrestantes = (minutosRestantes != 0 && minutosRestantes < 59) ? 0 : Math.floor(minutosRestantes / 60);
+                        const minrestantes = (minutosRestantes < 59) ? minutosRestantes : (minutosRestantes % 60);
+                        const hrrestantesfin = (hrrestantes <= 9) ? "0" + hrrestantes : hrrestantes;
+                        const minrestantesfin = (minrestantes <= 9) ? "0" + minrestantes : minrestantes;
+
+                        //Calcular el tiempo transcurrido
+                        const hrtrans = (hhtranscurridas <= 9) ? 0 : (Math.floor(hhtranscurridas / 60));
+                        const mintrans = (hhtranscurridas <= 9) ? hhtranscurridas : (hhtranscurridas % 60);
+                        const hrtransfin = (hrtrans <= 9) ? "0" + hrtrans : hrtrans;
+                        const mintransfin = (mintrans <= 9) ? "0" + mintrans : mintrans;
+
+                        //Promedio
+                        const porcentaje = (hhtranscurridas * 100) / datos.minutosreales;
+                        const porcentajetotal = Math.round((porcentaje + Number.EPSILON) * 100) / 100;
+
+                        return {
+                            ubicacion: datos.ubicacion,
+                            personas: datos.personas,
+                            hrrestante: hrrestantesfin,
+                            minrestante: minrestantesfin,
+                            hrtranscurrido: hrtransfin,
+                            mintranscurrido: mintransfin,
+                            horareal: hrrealfin,
+                            minreal: minrealfin,
+                            porcentaje: porcentajetotal
+                        };
+                    }
+
+                    return {
+                        ubicacion: datos.ubicacion,
+                        personas: datos.personas,
+                        hrrestante: hrrealfin,
+                        minrestante: minrealfin,
+                        hrtranscurrido: "00",
+                        mintranscurrido: "00",
+                        horareal: hrrealfin,
+                        minreal: minrealfin,
+                        porcentaje: 0
+                    };
+                }).filter(item => item !== null);
+
+                //console.log("hhombretotal ", hhombretotal); */
+
+                res.status(200).json({
+                    //asignaciones
+                    deldiatotal,
+                    //terminadas
+                    terminadastotal,
+                    //promedio
+                    promediototal,
+                    //promedioasig
+                    promedioasigtotal,
+
+                });
+
+            }
+        })
+    }
+}
+)
+
 /* Fin de hoja de control */
 
 
 
 
 /* Hoja de editeficienciakg */
-/* MODIFICADO PARA PERMISO DE ING. CHRISTIAN */
+/* MODIFICADO PARA PERMISO DE ING. CHRISTIAN, MODIFICADO PARA MOSTRAR RESULTADOS POR CARD */
 app.get('/EficienciaKg', verificar_Token, (req, res) => {
     const usuario = req.usuario;
     const responsable = usuario.nombre;
     const id = usuario.id;
-    console.log(responsable);
+    //console.log(responsable);
     mostEficienciakg(function (error, respuestaEficienciakg) {
         if (error) {
             console.log(error)
@@ -1596,9 +2746,108 @@ app.get('/EficienciaKg', verificar_Token, (req, res) => {
             else {
                 respuesta = respuestaEficienciakg.respuesta.filter((filtro) => filtro.responsable === responsable);
             }
-            res.status(200).json({
+            const asignadas = respuesta;
+            mostStatusresponsable(function (error, respuestaResponsable) {
+                if (error) {
+                    console.log(error)
+                    res.status(404).json({
+                        mensaje: respuesta.mensaje
+                    })
+                }
+                else {
+                    //console.log(respuestaResponsable);
+                    const respuestacard = asignadas.map(datos => {
+                        const responsablesid = respuestaResponsable.respuesta.filter((sujeto) => sujeto.idasigactivi === datos.idasigactivi).map((sujetofinal) => {
+                            const hrtrans = (sujetofinal.timestandar <= 9) ? 0 : (Math.floor(sujetofinal.timestandar / 60));
+                            const mintrans = (sujetofinal.timestandar <= 9) ? sujetofinal.timestandar : (sujetofinal.timestandar % 60);
+                            const hrtransfin = (hrtrans <= 9) ? "0" + hrtrans : hrtrans;
+                            const mintransfin = (mintrans <= 9) ? "0" + mintrans : mintrans;
+
+                            return {
+                                idcontrol: sujetofinal.idcontrolactivi,
+                                nombre: sujetofinal.responsables,
+                                tiempo: hrtransfin + ":" + mintransfin,
+                                estatus: sujetofinal.status,
+                                KgRealizados: sujetofinal.kg,
+                                kg: sujetofinal.kg
+
+                            }
+                        });
+                        //console.log("responsablesid ", responsablesid);
+                        const ordenadoresponsables = [];
+                        // Definir el orden de los estatus
+                        const ordenEstatus = ["INICIAR", "EN PAUSA", "EN PROCESO", "TERMINADO"];
+
+                        // Ordenar los datos antes de agregar a nuevocontrol
+                        responsablesid.forEach((datos) => {
+                            // Agregar los datos al arreglo, ordenados por el estatus
+                            const estatusIndex = ordenEstatus.indexOf(datos.estatus);
+                            if (estatusIndex !== -1) {
+                                ordenadoresponsables.push({ ...datos, estatusIndex });
+                            }
+                        });
+
+                        ordenadoresponsables.sort((a, b) => a.estatusIndex - b.estatusIndex).forEach((datos) => {
+                            delete datos.estatusIndex;
+                        });
+                        //console.log("Ordenado: ", ordenadoresponsables);
+
+                        //Calcular el tiempo transcurrido en asignadas
+                        const hrtrans = (datos.timeControl <= 9) ? 0 : (Math.floor(datos.timeControl / 60));
+                        const mintrans = (datos.timeControl <= 9) ? datos.timeControl : (datos.timeControl % 60);
+                        const hrtransfin = (hrtrans <= 9) ? "0" + hrtrans : hrtrans;
+                        const mintransfin = (mintrans <= 9) ? "0" + mintrans : mintrans;
+
+                        return {
+                            Id: datos.idasigactivi,
+                            fecha: datos.fechainicio,
+                            Empresa: datos.empresa,
+                            Actividad: datos.actividad,
+                            TiempoTranscurrido: hrtransfin + ":" + mintransfin,
+                            KgRealizados: datos.kgControl + "kg",
+                            Eficiencia: datos.eficienciasig + "%",
+                            Estatus: datos.status,
+                            Responsables: datos.numpersonas,
+                            asignados: ordenadoresponsables,
+                            individualestatus: datos.individualkg,
+                            kg: datos.kgControl,
+
+                        }
+                    });
+                    //console.log("respuestacard ", respuestacard);
+
+                    const nuevoarray = [];
+                    // Definir el orden de los estatus
+                    const ordenEstatus = ["INICIAR", "EN PAUSA", "EN PROCESO", "TERMINADO"];
+
+                    // Ordenar los datos antes de agregar a nuevocontrol
+                    respuestacard.forEach((datos) => {
+                        // Agregar los datos al arreglo, ordenados por el estatus
+                        const estatusIndex = ordenEstatus.indexOf(datos.Estatus);
+                        if (estatusIndex !== -1) {
+                            nuevoarray.push({ ...datos, estatusIndex });
+                        }
+                    })
+
+                    nuevoarray.sort((a, b) => a.estatusIndex - b.estatusIndex).forEach((datos) => {
+                        delete datos.estatusIndex;
+                    });
+
+
+                    //console.log("Ordenado: ", nuevoarray);
+
+                    //console.log("Sin ordenar: ", respuestacard);
+
+                    res.status(200).json({
+                        nuevoarray,
+                    })
+                }
+
+            });
+
+            /* res.status(200).json({
                 respuesta
-            })
+            }) */
         }
         //console.log(respuesta);
     })
@@ -1608,8 +2857,9 @@ app.put('/actualizarAsignacionkg', (req, res) => {
     const fecha = moment().format("YYYY-MM-DD");
     /* idasigactivi, status, timestandar, kg */
     const status = "TERMINADO";
-    if (req.body.idasigactivi && req.body.kg) {
-        mostEficienciakg(function (error, respuesta) {
+    if (req.body.idasigactivi) {
+        //console.log(req.body);
+        mostEficienciakg(function (error, respuestaEficienciakg) {
             if (error) {
                 console.log(error)
                 res.status(404).json({
@@ -1619,11 +2869,12 @@ app.put('/actualizarAsignacionkg', (req, res) => {
             else {
                 //console.log(respuesta.respuesta);
                 const idasigactivi = parseInt(req.body.idasigactivi);
-                const asignacion = respuesta.respuesta.find(filtro => filtro.idasigactivi === idasigactivi);
+                const asignacion = respuestaEficienciakg.respuesta.find(filtro => filtro.idasigactivi === idasigactivi);
                 //console.log(asignacion);
                 const idactividades = asignacion.idactividades;
-                const timecontrol = parseInt(asignacion.timeControl);
-                mostAsignaciones(idasigactivi, function (error, respuesta) {
+                const kgrecord = parseInt(asignacion.kg);
+
+                mostAsignaciones(idasigactivi, function (error, respuestaAsignaciones) {
                     if (error) {
                         console.log(error)
                         res.status(404).json({
@@ -1631,20 +2882,30 @@ app.put('/actualizarAsignacionkg', (req, res) => {
                         })
                     }
                     else {
-                        console.log(respuesta.respuesta[0].kg);
-                        const totaldatos = respuesta.respuesta.length - 1;
-                        const kilos = parseFloat(req.body.kg) + parseFloat(respuesta.respuesta[0].kg);
-                        respuesta.respuesta.forEach((datos, index) => {
-                            editControlkg(datos.idcontrolactivi, kilos, function (error, respuesta) {
-                                if (error) {
-                                    console.log(error)
-                                    res.status(404).json({
-                                        mensaje: respuesta.mensaje
-                                    })
-                                }
-                                else {
-                                    if (totaldatos === index) {
-                                        editStatusasignacion(req.body.idasigactivi, status, timecontrol, kilos, function (error, respuesta) {
+                        //console.log(respuesta.respuesta);
+                        const todasasignaciones = respuestaAsignaciones.respuesta;
+                        if (asignacion.individualkg === "true") {
+                            if (req.body.kgcontrol && req.body.idcontrolactivi) {
+                                const kgcontrol = parseFloat(req.body.kgcontrol);
+                                //CALCULAR EFICIENCIA POR CONTROL
+                                const timecontrol = respuestaAsignaciones.respuesta.find((sujeto) => sujeto.idcontrolactivi === req.body.idcontrolactivi);
+                                const porhora = (kgcontrol / timecontrol.timestandar) * 60;
+                                const eficienciasig1 = (porhora * 100) / kgrecord;
+                                const eficienciatotal = Math.round((eficienciasig1 + Number.EPSILON) * 100) / 100;
+                                //console.log(eficienciatotal);
+                                //FIN DE CALCULAR EFICIENCIA POR CONTROL
+
+                                //console.log(req.body.idcontrolactivi, req.body.kgcontrol, eficienciatotal);
+                                editControlkg(req.body.idcontrolactivi, req.body.kgcontrol, eficienciatotal, function (error, respuesta) {
+                                    if (error) {
+                                        console.log(error)
+                                        res.status(404).json({
+                                            mensaje: respuesta.mensaje
+                                        })
+                                    }
+                                    else {
+                                        io.emit('escuchando', respuesta);
+                                        mostAsignaciones(idasigactivi, function (error, respuestaAsignaciones) {
                                             if (error) {
                                                 console.log(error)
                                                 res.status(404).json({
@@ -1652,63 +2913,203 @@ app.put('/actualizarAsignacionkg', (req, res) => {
                                                 })
                                             }
                                             else {
-                                                io.emit('escuchando', respuesta);
+                                                const todosconkg = respuestaAsignaciones.respuesta.every(control => control.kg > 0);
+                                                if (!todosconkg) {
+                                                    res.status(200).json({
+                                                        mensaje: respuesta.mensaje
+                                                    })
+                                                }
+                                                else {
+                                                    const kgcontrolsumado = respuestaAsignaciones.respuesta.reduce((acumulador, filtro) => {
+                                                        return acumulador + filtro.kg;
+                                                    }, 0);
+                                                    //console.log("kgcontrolsumado ",kgcontrolsumado);
+                                                    if (kgcontrolsumado) {
+                                                        const timecontrol = asignacion.timeControl;
+                                                        //console.log("timecontrol ", timecontrol);
 
-                                                const eficacia = 0;
-                                                console.log(eficacia);
+                                                        //CALCULAR EFICIENCIA POR ASIGNACION
+                                                        const porhora = (kgcontrolsumado / timecontrol) * 60;
+                                                        const eficienciasig1 = (porhora * 100) / asignacion.kg;
+                                                        const eficienciatotal = Math.round((eficienciasig1 + Number.EPSILON) * 100) / 100;
+                                                        //console.log(eficienciatotal);
+                                                        //FIN DE CALCULAR EFICIENCIA POR ASIGNACION
+                                                        const eficacia = 0;
+                                                        console.log(req.body.idasigactivi, eficacia, eficienciatotal, asignacion.individualkg,);
+                                                        editStatusasignacion(req.body.idasigactivi, status, timecontrol, kgcontrolsumado, function (error, respuesta) {
+                                                            if (error) {
+                                                                console.log(error)
+                                                                res.status(404).json({
+                                                                    mensaje: respuesta.mensaje
+                                                                })
+                                                            }
+                                                            else {
+                                                                io.emit('escuchando', respuesta);
+                                                                editEficacia(req.body.idasigactivi, eficacia, eficienciatotal, asignacion.individualkg, function (error, respuesta) {
+                                                                    if (error) {
+                                                                        console.log(error)
+                                                                        res.status(404).json({
+                                                                            mensaje: respuesta.mensaje
+                                                                        })
+                                                                    }
+                                                                    else {
+                                                                        io.emit('escuchando', respuesta.mensaje);
+                                                                        if (eficienciatotal >= 100) {
+                                                                            const hora = 1;
+                                                                            const minutos = 0;
+                                                                            const timecontrol = 60;
+                                                                            const kilos = Math.round((porhora + Number.EPSILON) * 100) / 100;
+                                                                            console.log(kilos);
+                                                                            editStatusactividadesKg(idactividades, kilos, hora, minutos, timecontrol, eficienciatotal, function (error, respuesta) {
+                                                                                if (error) {
+                                                                                    console.log(error)
+                                                                                    res.status(404).json({
+                                                                                        mensaje: respuesta.mensaje
+                                                                                    })
+                                                                                }
+                                                                                else {
+                                                                                    io.emit('escuchando', respuesta.mensaje);
+                                                                                    res.status(200).json({
+                                                                                        mensaje: respuesta.mensaje
+                                                                                    })
+                                                                                }
+                                                                                console.log(respuesta);
+                                                                            })
+                                                                        }
+                                                                        else {
+                                                                            res.status(200).json({
+                                                                                mensaje: "Actividad terminada"
+                                                                            });
+                                                                        }
+                                                                    }
+                                                                })
 
-                                                const porhora = (kilos / timecontrol) * 60;
-                                                const eficienciasig1 = (porhora * 100) / asignacion.kg;
-                                                const eficienciatotal = Math.round((eficienciasig1 + Number.EPSILON) * 100) / 100;
-                                                console.log(eficienciatotal);
 
-                                                editEficacia(req.body.idasigactivi, eficacia, eficienciatotal, function (error, respuesta) {
-                                                    if (error) {
-                                                        console.log(error)
-                                                        res.status(404).json({
-                                                            mensaje: respuesta.mensaje
+                                                            }
+                                                            //console.log(respuesta);
                                                         })
                                                     }
                                                     else {
-                                                        io.emit('escuchando', respuesta.mensaje);
-                                                        if (eficienciatotal >= 100) {
-                                                            const hora = 1;
-                                                            const minutos = 0;
-                                                            const timecontrol = 60;
-                                                            const kilos = Math.round((porhora + Number.EPSILON) * 100) / 100;
-                                                            console.log(kilos);
-                                                            editStatusactividadesKg(idactividades, kilos, hora, minutos, timecontrol, eficienciatotal, function (error, respuesta) {
-                                                                if (error) {
-                                                                    console.log(error)
-                                                                    res.status(404).json({
-                                                                        mensaje: respuesta.mensaje
-                                                                    })
-                                                                }
-                                                                else {
-                                                                    io.emit('escuchando', respuesta.mensaje);
-                                                                    res.status(200).json({
-                                                                        mensaje: respuesta.mensaje
-                                                                    })
-                                                                }
-                                                                console.log(respuesta);
+                                                        res.status(400).json({
+                                                            mensaje: "Solicita ayuda del desarrollador"
+                                                        })
+                                                    }
+
+                                                }
+                                            }
+                                        })
+
+                                    }
+                                })
+
+                            }
+                            else {
+                                res.status(400).json({
+                                    mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
+                                })
+                            }
+
+                        }
+                        else {
+                            if (req.body.kg) {
+                                const timecontrol = asignacion.timeControl;
+                                //console.log("timecontrol ", timecontrol);
+                                const porminuto = req.body.kg / timecontrol;
+                                //console.log(req.body.idasigactivi, status, timecontrol, req.body.kg);
+                                editStatusasignacion(req.body.idasigactivi, status, timecontrol, req.body.kg, function (error, respuesta) {
+                                    if (error) {
+                                        console.log(error)
+                                        res.status(404).json({
+                                            mensaje: respuesta.mensaje
+                                        })
+                                    }
+                                    else {
+                                        todasasignaciones.forEach((datos) => {
+                                            const kgrealizados1 = porminuto * datos.timestandar;
+                                            const kgrealizados = Math.round((kgrealizados1 + Number.EPSILON) * 100) / 100;
+                                            //console.log("datos.timestandar ",kgrealizados);
+                                            //console.log("kgrealizados ",kgrealizados);
+
+                                            //CALCULAR EFICIENCIA POR CONTROL
+                                            const porhora = (kgrealizados / datos.timestandar) * 60;
+                                            const eficienciasig1 = (porhora * 100) / kgrecord;
+                                            const eficienciatotal = Math.round((eficienciasig1 + Number.EPSILON) * 100) / 100;
+                                            //console.log("eficienciatotal ",eficienciatotal);
+                                            //FIN DE CALCULAR EFICIENCIA POR CONTROL
+
+                                            //console.log(datos.idcontrolactivi, kgrealizados, eficienciatotal,);
+                                            editControlkg(datos.idcontrolactivi, kgrealizados, eficienciatotal, function (error, respuesta) {
+                                                if (error) {
+                                                    console.log(error)
+                                                    res.status(404).json({
+                                                        mensaje: respuesta.mensaje
+                                                    })
+                                                }
+                                                else {
+                                                    io.emit('escuchando', respuesta);
+                                                    console.log(respuesta);
+                                                }
+                                            })
+                                        })
+
+                                        //CALCULAR EFICIENCIA POR ASIGNACION
+                                        const timecontrol = asignacion.timeControl;
+                                        const porhora = (req.body.kg / timecontrol) * 60;
+                                        const eficienciasig1 = (porhora * 100) / asignacion.kg;
+                                        const eficienciatotal = Math.round((eficienciasig1 + Number.EPSILON) * 100) / 100;
+                                        //console.log(eficienciatotal);
+                                        //FIN DE CALCULAR EFICIENCIA POR ASIGNACION
+                                        const eficacia = 0;
+                                        editEficacia(req.body.idasigactivi, eficacia, eficienciatotal, req.body.condicionglobal, function (error, respuesta) {
+                                            if (error) {
+                                                console.log(error)
+                                                res.status(404).json({
+                                                    mensaje: respuesta.mensaje
+                                                })
+                                            }
+                                            else {
+                                                io.emit('escuchando', respuesta.mensaje);
+                                                if (eficienciatotal >= 100) {
+                                                    const hora = 1;
+                                                    const minutos = 0;
+                                                    const timecontrol = 60;
+                                                    const kilos = Math.round((porhora + Number.EPSILON) * 100) / 100;
+                                                    //console.log(kilos);
+                                                    editStatusactividadesKg(idactividades, kilos, hora, minutos, timecontrol, eficienciatotal, function (error, respuesta) {
+                                                        if (error) {
+                                                            console.log(error)
+                                                            res.status(404).json({
+                                                                mensaje: respuesta.mensaje
                                                             })
                                                         }
                                                         else {
+                                                            io.emit('escuchando', respuesta.mensaje);
                                                             res.status(200).json({
-                                                                mensaje: "Actividad terminada"
-                                                            });
+                                                                mensaje: respuesta.mensaje
+                                                            })
                                                         }
-                                                    }
-                                                })
-
-
+                                                        console.log(respuesta);
+                                                    })
+                                                }
+                                                else {
+                                                    res.status(200).json({
+                                                        mensaje: "Actividad terminada"
+                                                    });
+                                                }
                                             }
-                                            //console.log(respuesta);
                                         })
+
+
                                     }
-                                }
-                            })
-                        });
+                                    //console.log(respuesta);
+                                })
+                            }
+                            else {
+                                res.status(400).json({
+                                    mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
+                                })
+                            }
+                        }
 
                     }
                 })
@@ -1716,6 +3117,32 @@ app.put('/actualizarAsignacionkg', (req, res) => {
 
             }
             //console.log(respuesta);
+        })
+    } else {
+        //console.log("Existen datos vacíos");
+        res.status(400).json({
+            mensaje: "Parece que existen campos vacíos, válida la información nuevamente"
+        });
+    }
+})
+app.put('/editestatusasig', (req, res) => {
+    //console.log(req.body);
+    if (req.body.idasigactivi) {
+        const eficacia = 0;
+        const eficienciatotal = 0;
+        editEficacia(req.body.idasigactivi, eficacia, eficienciatotal, req.body.condicionglobal, function (error, respuesta) {
+            if (error) {
+                console.log(error)
+                res.status(404).json({
+                    mensaje: respuesta.mensaje
+                })
+            }
+            else {
+                io.emit('escuchando', respuesta.mensaje);
+                res.status(200).json({
+                    mensaje: "Actividad terminada"
+                });
+            }
         })
     } else {
         //console.log("Existen datos vacíos");
@@ -1756,6 +3183,79 @@ app.get('/Eficacia', verificar_Token, (req, res) => {
         })
     }
     else {
+        mostAsignacioneficacia(function (error, respuestaAsig) {
+            if (error) {
+                console.log(error)
+                res.status(404).json({
+                    mensaje: respuestaAsig.mensaje
+                })
+            }
+            else {
+                const todasasignadas = respuestaAsig.respuesta.filter(filtro => filtro.responsable === responsable);
+                //console.log("todasasignadas ",respuesta);
+
+                mostStatusresponsable(function (error, respuestaResponsable) {
+                    if (error) {
+                        console.log(error)
+                        res.status(404).json({
+                            mensaje: respuesta.mensaje
+                        })
+                    }
+                    else {
+                        //console.log("respuestaResponsable ", respuestaResponsable);
+                        const respuesta = todasasignadas.map((asignado) => {
+                            const responsables = respuestaResponsable.respuesta.filter((control) => control.idasigactivi === asignado.idasigactivi).length;
+
+                            const hrtrans = (asignado.timeControl <= 9) ? 0 : (Math.floor(asignado.timeControl / 60));
+                            const mintrans = (asignado.timeControl <= 9) ? asignado.timeControl : (asignado.timeControl % 60);
+                            const hrtransfin = (hrtrans <= 9) ? "0" + hrtrans : hrtrans;
+                            const mintransfin = (mintrans <= 9) ? "0" + mintrans : mintrans;
+
+                            const responsablesid = respuestaResponsable.respuesta.filter((sujeto) => sujeto.idasigactivi === asignado.idasigactivi).map((sujetofinal) => {
+                                const hrtrans = (sujetofinal.timestandar <= 9) ? 0 : (Math.floor(sujetofinal.timestandar / 60));
+                                const mintrans = (sujetofinal.timestandar <= 9) ? sujetofinal.timestandar : (sujetofinal.timestandar % 60);
+                                const hrtransfin = (hrtrans <= 9) ? "0" + hrtrans : hrtrans;
+                                const mintransfin = (mintrans <= 9) ? "0" + mintrans : mintrans;
+
+                                return {
+                                    nombre: sujetofinal.responsables,
+                                    tiempo: hrtransfin + ":" + mintransfin,
+                                    estatus: sujetofinal.status
+
+                                }
+                            });
+
+                            return {
+                                idasigactivi: asignado.idasigactivi,
+                                fecha: asignado.fechainicio,
+                                empresa: asignado.empresa,
+                                timeControl: hrtransfin + ":" + mintransfin,
+                                kgControl: asignado.kgControl,
+                                eficienciasig: asignado.eficienciasig,
+                                actividad: asignado.actividad,
+                                numpersonas: responsables,
+                                asignados: responsablesid,
+                                kgactividad: asignado.kg,
+                            }
+                        })
+                        //console.log(respuesta);
+                        res.status(200).json({
+                            respuesta
+                        })
+                    }
+                })
+            }
+            //console.log(respuesta);
+        })
+    }
+}
+)
+app.get('/buscafechas', verificar_Token, (req, res) => {
+    const usuario = req.usuario;
+    //console.log(responsable);
+    const id = usuario.id;
+    console.log(req.query);
+    if (id === "RPMhzte1p8rlfmmq44l" || id === "RPMhztezf1lfbjn5nt") {
         mostAsignacion(function (error, respuestaAsig) {
             if (error) {
                 console.log(error)
@@ -1764,11 +3264,77 @@ app.get('/Eficacia', verificar_Token, (req, res) => {
                 })
             }
             else {
-                const respuesta = respuestaAsig.respuesta.filter(filtro => filtro.responsable === responsable);
+                const respuesta = respuestaAsig.respuesta.filter(filtro => (filtro.responsable === "MIGUEL DE LA CRUZ PUEBLITA" || filtro.responsable === " CHRISTIAN ELEAZAR AGUILAR CABALLERO"));
                 //console.log(nuevarespuesta);
                 res.status(200).json({
                     respuesta
                 })
+            }
+            //console.log(respuesta);
+        })
+    }
+    else {
+        mostAsignacioneficacia(function (error, respuestaAsig) {
+            if (error) {
+                console.log(error)
+                res.status(404).json({
+                    mensaje: respuestaAsig.mensaje
+                })
+            }
+            else {
+                const todasasignadas = respuestaAsig.respuesta.filter(filtro => filtro.responsable === responsable);
+                console.log("todasasignadas ", todasasignadas);
+
+                /* mostStatusresponsable(function (error, respuestaResponsable) {
+                    if (error) {
+                        console.log(error)
+                        res.status(404).json({
+                            mensaje: respuesta.mensaje
+                        })
+                    }
+                    else {
+                        console.log("respuestaResponsable ", respuestaResponsable);
+                        const respuesta = todasasignadas.map((asignado) => {
+                            const responsables = respuestaResponsable.respuesta.filter((control) => control.idasigactivi === asignado.idasigactivi).length;
+
+                            const hrtrans = (asignado.timeControl <= 9) ? 0 : (Math.floor(asignado.timeControl / 60));
+                            const mintrans = (asignado.timeControl <= 9) ? asignado.timeControl : (asignado.timeControl % 60);
+                            const hrtransfin = (hrtrans <= 9) ? "0" + hrtrans : hrtrans;
+                            const mintransfin = (mintrans <= 9) ? "0" + mintrans : mintrans;
+
+                            const responsablesid = respuestaResponsable.respuesta.filter((sujeto) => sujeto.idasigactivi === asignado.idasigactivi).map((sujetofinal) => {
+                                const hrtrans = (sujetofinal.timestandar <= 9) ? 0 : (Math.floor(sujetofinal.timestandar / 60));
+                                const mintrans = (sujetofinal.timestandar <= 9) ? sujetofinal.timestandar : (sujetofinal.timestandar % 60);
+                                const hrtransfin = (hrtrans <= 9) ? "0" + hrtrans : hrtrans;
+                                const mintransfin = (mintrans <= 9) ? "0" + mintrans : mintrans;
+
+                                return {
+                                    nombre: sujetofinal.responsables,
+                                    tiempo: hrtransfin + ":" + mintransfin,
+                                    estatus: sujetofinal.status
+
+                                }
+                            });
+
+                            return {
+                                idasigactivi: asignado.idasigactivi,
+                                fecha: asignado.fechainicio,
+                                empresa: asignado.empresa,
+                                timeControl: hrtransfin + ":" + mintransfin,
+                                kgControl: asignado.kgControl,
+                                eficienciasig: asignado.eficienciasig,
+                                actividad: asignado.actividad,
+                                numpersonas: responsables,
+                                asignados: responsablesid,
+                                kgactividad: asignado.kg,
+                            }
+                        })
+                        console.log(respuesta);
+                        res.status(200).json({
+                            respuesta
+                        })
+                    }
+                }) */
             }
             //console.log(respuesta);
         })
@@ -1810,6 +3376,7 @@ app.get('/Controlresponsable', (req, res) => {
         //console.log(respuesta);
     })
 })
+//AGREGA UN NUEVO QUERY PARA MODIFICAR LA EFIFIENCIA POR CONTROL EN ACT DE TIEMPO
 app.put('/actualizarTimefin', (req, res) => {
     const fecha = moment().format("YYYY-MM-DD");
     /* id, estatus, */
@@ -1847,6 +3414,12 @@ app.put('/actualizarTimefin', (req, res) => {
                 var diferenciaMinutos = minutosHasta - minutosDesde;
                 timestandar = diferenciaMinutos;
                 //console.log("Timestandar ", timestandar);
+
+                const tiempocontrolsumado = tiemponuevo.reduce((acumulador, filtro) => {
+                    return acumulador + filtro.timestandar;
+                }, 0);
+
+                //console.log("tiempocontrolsumado: ", tiempocontrolsumado);
 
                 editStatustiempo(idTiempos, horafin, timestandar, status, motivo, function (error, respuestaStatustiempo) {
                     if (error) {
@@ -1896,8 +3469,38 @@ app.put('/actualizarTimefin', (req, res) => {
                                                 }
                                                 else {
                                                     io.emit('escuchando', respuesta);
-                                                    res.status(200).json({
-                                                        mensaje: "El responsable finalizó su actividad"
+                                                    mostActif(function (error, respuesta) {
+                                                        if (error) {
+                                                            console.log(error)
+                                                            res.status(404).json({
+                                                                mensaje: respuesta.mensaje
+                                                            })
+                                                        }
+                                                        else {
+                                                            //console.log(req.body);
+                                                            const actividadRealizada = respuesta.respuesta.find((filtro) => filtro.idactividades === req.body.idactividades);
+                                                            const tiemporecord = actividadRealizada.timestandar;
+                                                            // CALCULAR EFICIENCIA CONTROL
+                                                            const eficienciacontrol = (tiemporecord / tiempocontrolsumado) * 100;
+                                                            const eficienciacontroltotal = Math.round((eficienciacontrol + Number.EPSILON) * 100) / 100;
+                                                            console.log("eficienciacontroltotal ", eficienciacontroltotal);
+                                                            console.log("idcontrol", idcontrol);
+
+                                                            editEficienciacontrol(idcontrol, eficienciacontroltotal, function (error, respuesta) {
+                                                                if (error) {
+                                                                    console.log(error)
+                                                                    res.status(404).json({
+                                                                        mensaje: respuesta.mensaje
+                                                                    })
+                                                                }
+                                                                else {
+                                                                    console.log("respuesta ", respuesta);
+                                                                    res.status(200).json({
+                                                                        mensaje: "El responsable finalizó su actividad"
+                                                                    })
+                                                                }
+                                                            })
+                                                        }
                                                     })
                                                 }
                                             })
@@ -1962,8 +3565,13 @@ app.put('/actualizarTimefin', (req, res) => {
                                                                         const eficienciatotal = Math.round((eficienciasig1 + Number.EPSILON) * 100) / 100;
                                                                         //console.log(eficienciatotal);
 
+                                                                        // CALCULAR EFICIENCIA CONTROL
+                                                                        const eficienciacontrol = (tiemporecord / tiempocontrolsumado) * 100;
+                                                                        const eficienciacontroltotal = Math.round((eficienciacontrol + Number.EPSILON) * 100) / 100;
+                                                                        console.log("eficienciacontroltotal ", eficienciacontroltotal);
+                                                                        console.log("idcontrol", idcontrol);
 
-                                                                        editEficacia(req.body.idasigactivi, eficacia, eficienciatotal, function (error, respuesta) {
+                                                                        editEficienciacontrol(idcontrol, eficienciacontroltotal, function (error, respuesta) {
                                                                             if (error) {
                                                                                 console.log(error)
                                                                                 res.status(404).json({
@@ -1971,60 +3579,72 @@ app.put('/actualizarTimefin', (req, res) => {
                                                                                 })
                                                                             }
                                                                             else {
-                                                                                io.emit('escuchando', respuesta.mensaje);
-                                                                                if (actividadRealizada.timestandar > timeasignacion) {
-                                                                                    //console.log(timeasignacion);
-                                                                                    if (timeasignacion <= 59) {
-                                                                                        const horafinal = 0;
-                                                                                        const eficienciafinal1 = 60 / timeasignacion;
-                                                                                        const eficienciafinal = Math.round((eficienciafinal1 + Number.EPSILON) * 100) / 100;
-                                                                                        editStatusactividadesT(req.body.idactividades, horafinal, timeasignacion, timeasignacion, eficienciafinal, function (error, respuestaStatusactividadesT) {
-                                                                                            if (error) {
-                                                                                                console.log(error)
-                                                                                                res.status(404).json({
-                                                                                                    mensaje: respuesta.mensaje
-                                                                                                })
-                                                                                            }
-                                                                                            else {
-                                                                                                io.emit('escuchando', respuestaStatusactividadesT.mensaje);
-                                                                                                res.status(200).json({
-                                                                                                    mensaje: respuestaStatusactividadesT.mensaje
-                                                                                                })
-                                                                                            }
-                                                                                            console.log(respuestaStatusactividadesT);
+                                                                                console.log("respuesta ", respuesta);
+                                                                                const estatusindividual = "false";
+                                                                                editEficacia(req.body.idasigactivi, eficacia, eficienciatotal, estatusindividual, function (error, respuesta) {
+                                                                                    if (error) {
+                                                                                        console.log(error)
+                                                                                        res.status(404).json({
+                                                                                            mensaje: respuesta.mensaje
                                                                                         })
                                                                                     }
                                                                                     else {
-                                                                                        //console.log("convertir el tiempo asignacion en horas y minutos");
-                                                                                        const eficienciafinal1 = 60 / timeasignacion;
-                                                                                        const eficienciafinal = Math.round((eficienciafinal1 + Number.EPSILON) * 100) / 100;
-
-                                                                                        const horas = Math.floor(timeasignacion / 60);
-                                                                                        const minutos = timeasignacion % 60;
-                                                                                        editStatusactividadesT(req.body.idactividades, horas, minutos, timeasignacion, eficienciafinal, function (error, respuestaStatusactividadesT) {
-                                                                                            if (error) {
-                                                                                                console.log(error)
-                                                                                                res.status(404).json({
-                                                                                                    mensaje: respuesta.mensaje
+                                                                                        io.emit('escuchando', respuesta.mensaje);
+                                                                                        if (actividadRealizada.timestandar > timeasignacion) {
+                                                                                            //console.log(timeasignacion);
+                                                                                            if (timeasignacion <= 59) {
+                                                                                                const horafinal = 0;
+                                                                                                const eficienciafinal1 = 60 / timeasignacion;
+                                                                                                const eficienciafinal = Math.round((eficienciafinal1 + Number.EPSILON) * 100) / 100;
+                                                                                                editStatusactividadesT(req.body.idactividades, horafinal, timeasignacion, timeasignacion, eficienciafinal, function (error, respuestaStatusactividadesT) {
+                                                                                                    if (error) {
+                                                                                                        console.log(error)
+                                                                                                        res.status(404).json({
+                                                                                                            mensaje: respuesta.mensaje
+                                                                                                        })
+                                                                                                    }
+                                                                                                    else {
+                                                                                                        io.emit('escuchando', respuestaStatusactividadesT.mensaje);
+                                                                                                        res.status(200).json({
+                                                                                                            mensaje: respuestaStatusactividadesT.mensaje
+                                                                                                        })
+                                                                                                    }
+                                                                                                    console.log(respuestaStatusactividadesT);
                                                                                                 })
                                                                                             }
                                                                                             else {
-                                                                                                io.emit('escuchando', respuestaStatusactividadesT.mensaje);
-                                                                                                res.status(200).json({
-                                                                                                    mensaje: respuestaStatusactividadesT.mensaje
+                                                                                                //console.log("convertir el tiempo asignacion en horas y minutos");
+                                                                                                const eficienciafinal1 = 60 / timeasignacion;
+                                                                                                const eficienciafinal = Math.round((eficienciafinal1 + Number.EPSILON) * 100) / 100;
+
+                                                                                                const horas = Math.floor(timeasignacion / 60);
+                                                                                                const minutos = timeasignacion % 60;
+                                                                                                editStatusactividadesT(req.body.idactividades, horas, minutos, timeasignacion, eficienciafinal, function (error, respuestaStatusactividadesT) {
+                                                                                                    if (error) {
+                                                                                                        console.log(error)
+                                                                                                        res.status(404).json({
+                                                                                                            mensaje: respuesta.mensaje
+                                                                                                        })
+                                                                                                    }
+                                                                                                    else {
+                                                                                                        io.emit('escuchando', respuestaStatusactividadesT.mensaje);
+                                                                                                        res.status(200).json({
+                                                                                                            mensaje: respuestaStatusactividadesT.mensaje
+                                                                                                        })
+                                                                                                    }
+                                                                                                    console.log(respuestaStatusactividadesT);
                                                                                                 })
                                                                                             }
-                                                                                            console.log(respuestaStatusactividadesT);
-                                                                                        })
-                                                                                    }
 
-                                                                                } else {
-                                                                                    res.status(200).json({
-                                                                                        mensaje: "Excedieron el tiempo de la actividad.."
-                                                                                    })
-                                                                                }
+                                                                                        } else {
+                                                                                            res.status(200).json({
+                                                                                                mensaje: "Excedieron el tiempo de la actividad.."
+                                                                                            })
+                                                                                        }
+                                                                                    }
+                                                                                    //console.log(respuesta);
+                                                                                })
                                                                             }
-                                                                            //console.log(respuesta);
                                                                         })
                                                                     }
                                                                     //console.log(respuesta);
@@ -2569,7 +4189,7 @@ async function asignacionaut() {
             })
         }
         else {
-            //console.log(respuesta.respuesta);
+            console.log(respuesta.respuesta);
             const datosneed = respuesta.respuesta.map((filtro) => ({
                 id: filtro.idactividades,
                 empresa: filtro.ubicacion,
@@ -2577,7 +4197,7 @@ async function asignacionaut() {
             }));
 
             const activiasignar = datosneed.flat();
-            //console.log(activiasignar.length);
+            //console.log(activiasignar);
             activiasignar.forEach((datos, index) => {
                 insertarAsigactivi(fecha, datos.nombre, fecha, datos.empresa, datos.id, status, timecontrol, kg, numpersonas, eficacia, eficienciasig, function (error, respuesta) {
                     if (error) {
@@ -2589,9 +4209,6 @@ async function asignacionaut() {
                     else {
                         io.emit('escuchando', respuesta.mensaje);
                         //console.log("Datos guardados", index);
-                        /* res.status(200).json({
-                            mensaje: respuesta.mensaje
-                        }) */
                     }
 
                 })
@@ -2604,7 +4221,7 @@ app.get('/actividadesaut', (req, res) => {
     asignacionaut();
 });
 // Tarea programada para ejecutarse todos los días a la hora que le indiques
-schedule.scheduleJob('11 08 * * *', function () {
+schedule.scheduleJob('01 10 * * *', function () {
     console.log('¡La tarea diaria se ejecutó a las 10:47 AM UTC!');
     asignacionaut();
 });
@@ -2904,11 +4521,11 @@ async function tiempo() {
         }
     }) */
 };
-/* Fin de Contador para actividades */
 app.get('/tiempo', async (req, res) => {
     tiempo();
 })
-//setInterval(tiempo, 1000);
+setInterval(tiempo, 1000);
+/* Fin de Contador para actividades */
 
 
 

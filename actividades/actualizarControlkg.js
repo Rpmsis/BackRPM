@@ -1,8 +1,8 @@
 const mysql = require('../database/index');
 
-function actualizar (id, kg, callback){
+function actualizar (id, kg, eficiencia, callback){
 
-    mysql.query(`Update controlactivi  set kg = '${kg}'  WHERE idcontrolactivi = '${id}' `, function(error,respuesta){
+    mysql.query(`Update controlactivi  set kg = '${kg}', eficienciacontrol = '${eficiencia}'  WHERE idcontrolactivi = '${id}' `, function(error,respuesta){
         
         if(error){
             callback(null,{
@@ -11,7 +11,7 @@ function actualizar (id, kg, callback){
         }
         else{
             callback(null,{
-                mensaje: 'Kilos actualizados ' //'Pregunta actualizado con el id => ' + id
+                mensaje: 'Kilos actualizados' //'Pregunta actualizado con el id => ' + id
             })
         }
         console.log(respuesta);
